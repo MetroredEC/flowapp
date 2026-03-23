@@ -1,0 +1,16 @@
+<!doctype html>
+<html>
+<head><meta charset="UTF-8"><title>Microsoft 365 Login</title></head>
+<body>
+<script>
+  (function () {
+    try {
+      if (window.opener) {
+        window.opener.postMessage({ source: 'flowmetrored-auth', search: window.location.search, hash: window.location.hash }, window.location.origin);
+      }
+    } catch (e) {}
+    window.close();
+  })();
+</script>
+</body>
+</html>
