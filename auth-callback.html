@@ -1,16 +1,27 @@
 <!doctype html>
-<html>
-<head><meta charset="UTF-8"><title>Microsoft 365 Login</title></head>
-<body>
-<script>
-  (function () {
-    try {
-      if (window.opener) {
-        window.opener.postMessage({ source: 'flowmetrored-auth', search: window.location.search, hash: window.location.hash }, window.location.origin);
-      }
-    } catch (e) {}
-    window.close();
-  })();
-</script>
-</body>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Autenticando...</title>
+  </head>
+  <body>
+    <script>
+      (function () {
+        try {
+          if (window.opener) {
+            window.opener.postMessage(
+              {
+                source: 'flowmetrored-auth',
+                search: window.location.search || '',
+              },
+              window.location.origin
+            );
+            window.close();
+            return;
+          }
+        } catch (e) {}
+        window.location.href = '/flowapp/';
+      })();
+    </script>
+  </body>
 </html>
