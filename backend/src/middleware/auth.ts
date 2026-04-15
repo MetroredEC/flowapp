@@ -39,8 +39,11 @@ async function verifyEntraToken(token: string, tenantId: string, audience: strin
   if (Date.now() / 1000 > payload.exp) throw new Error('Token expirado');
   const aud = Array.isArray(payload.aud) ? payload.aud : [payload.aud];
   if (!aud.some(a => a === audience || a === 'api://' + audience.replace('api://', ''))) throw new Error('Audience invalido');
-  const expectedIss = 'https://login.microsoftonline.com/' + tenantId + '/v2.0';
-  if (payload.iss !== expectedIss) throw new Error('Issuer invalido');
+  const validIssuers = [
+    'https://login.microsoftonline.com/' + tenantId + '/v2.0',
+    'https://sts.windows.net/' + tenantId + '/'
+  ];
+  if (!validIssuers.includes(payload.iss)) throw new Error('Issuer invalido');
   const jwks = await getJwks(tenantId, kv);
   const key = jwks.keys.find((k) => (k as JwkKey).kid === header.kid) as JwkKey | undefined;
   if (!key) throw new Error('Clave publica no encontrada');
