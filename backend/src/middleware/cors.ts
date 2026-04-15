@@ -1,9 +1,9 @@
-import { MiddlewareHandler } from 'hono';
+import { Context, Next } from 'hono';
 import { AppEnv } from '../types';
 
-export const corsMiddleware: MiddlewareHandler<AppEnv> = async (c, next) => {
+export async function corsMiddleware(c: Context<AppEnv>, next: Next): Promise<Response | void> {
   const origin = c.req.header('Origin') ?? '';
-  const allowed = c.env.ALLOWED_ORIGINS.split(',').map(s => s.trim());
+  const allowed = c.env.ALLOWED_ORIGINS.split(',').map((s: string) => s.trim());
   const allowOrigin = allowed.includes(origin) ? origin : allowed[0];
 
   c.header('Access-Control-Allow-Origin', allowOrigin);
@@ -12,6 +12,8 @@ export const corsMiddleware: MiddlewareHandler<AppEnv> = async (c, next) => {
   c.header('Access-Control-Max-Age', '86400');
   c.header('Vary', 'Origin');
 
-  if (c.req.method === 'OPTIONS') return c.text('', 204);
+  if (c.req.method === 'OPTIONS') {
+    return new Response(null, { status: 204 });
+  }
   await next();
-};
+}

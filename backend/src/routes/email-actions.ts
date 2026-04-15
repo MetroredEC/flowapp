@@ -109,7 +109,7 @@ function page(
 </html>`;
 }
 
-function rejectForm(token: string, platformUrl: string): string {
+function rejectForm(token: string, _platformUrl: string): string {
   return `<!DOCTYPE html>
 <html lang="es">
 <head>
