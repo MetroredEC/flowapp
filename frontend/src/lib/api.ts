@@ -3,12 +3,9 @@ import { msalInstance, loginRequest } from '../auth/msal';
 const BASE = import.meta.env.VITE_API_URL;
 
 async function getToken(): Promise<string> {
-  const accounts = msalInstance.getAllAccounts();
-  if (!accounts.length) throw new Error('No autenticado');
-  const result = await msalInstance.acquireTokenSilent({
-    ...loginRequest,
-    account: accounts[0],
-  });
+  const account = msalInstance.getActiveAccount() ?? msalInstance.getAllAccounts()[0];
+  if (!account) throw new Error('No autenticado');
+  const result = await msalInstance.acquireTokenSilent({ ...loginRequest, account });
   return result.accessToken;
 }
 
