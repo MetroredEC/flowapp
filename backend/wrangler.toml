@@ -27,7 +27,7 @@ id      = "095661415d644f4b924b8f11173896f0"
 
 [env.production]
 workers_dev = false
-routes = [{ pattern = "flowapp-api.metroredec.workers.dev", zone_name = "workers.dev" }]
+
 
 [env.production.vars]
 ALLOWED_ORIGINS    = "https://metroredec.github.io"
