@@ -5,7 +5,6 @@ import { buildApprovalEmail } from '../email/template';
 
 type Env = AppEnv['Bindings'];
 
-// ─── Crear solicitud completa con pasos ───────────────────────────────────────
 export async function createRequestWithSteps(
   params: {
     requestTypeId: string;
@@ -20,7 +19,6 @@ export async function createRequestWithSteps(
 ): Promise<string> {
   const db = env.DB;
 
-  // Obtener tipo y configuración de niveles
   const reqType = await db.prepare('SELECT * FROM request_types WHERE id = ? AND is_active = 1')
     .bind(params.requestTypeId).first<{ id: string; name: string }>();
   if (!reqType) throw new Error('Tipo de solicitud no encontrado');
@@ -34,7 +32,6 @@ export async function createRequestWithSteps(
   const totalLevels = configs.results.length;
   const requestId = crypto.randomUUID();
 
-  // Insertar solicitud
   await db.prepare(`
     INSERT INTO requests (id, request_type_id, request_type_name, title, description,
       requester_id, requester_name, requester_email, status, current_level, total_levels, campaign_data)
@@ -47,17 +44,15 @@ export async function createRequestWithSteps(
     params.campaignData ? JSON.stringify(params.campaignData) : null
   ).run();
 
-  // Crear pasos para todos los niveles
   const graphToken = await getAppToken(
     env.ENTRA_TENANT_ID, env.ENTRA_CLIENT_ID, env.ENTRA_CLIENT_SECRET, env.KV
   );
 
   for (const config of configs.results) {
-    let approverId = config.approver_value;
-    let approverName = config.approver_name ?? '';
+    let approverId   = config.approver_value;
+    let approverName  = config.approver_name ?? '';
     let approverEmail = config.approver_email ?? '';
 
-    // Si es por cargo, resolver desde Graph
     if (config.approver_type === 'job_title') {
       const user = await getUserById(config.approver_value, graphToken);
       if (user) {
@@ -74,13 +69,10 @@ export async function createRequestWithSteps(
     `).bind(stepId, requestId, config.level, config.label, approverId, approverName, approverEmail).run();
   }
 
-  // Notificar al aprobador del nivel 1
   await notifyApprover(requestId, 1, env);
-
   return requestId;
 }
 
-// ─── Notificar aprobador de un nivel ─────────────────────────────────────────
 export async function notifyApprover(requestId: string, level: number, env: Env): Promise<void> {
   const db = env.DB;
 
@@ -91,23 +83,19 @@ export async function notifyApprover(requestId: string, level: number, env: Env)
   ]);
   if (!request || !step) return;
 
-  // Crear tokens approve y reject
   const exp = Date.now() + 72 * 60 * 60 * 1000;
   const [approveToken, rejectToken] = await Promise.all([
     createMagicToken({ stepId: step.id, requestId, action: 'approve', exp }, env.TOKEN_SECRET, db),
     createMagicToken({ stepId: step.id, requestId, action: 'reject',  exp }, env.TOKEN_SECRET, db),
   ]);
 
-  // Obtener adjuntos con URLs firmadas de R2
   const atts = await db.prepare('SELECT * FROM attachments WHERE request_id = ?')
     .bind(requestId).all<{ filename: string; r2_key: string }>();
 
-  const attachments = await Promise.all(
-    (atts.results ?? []).map(async (a) => ({
-      filename: a.filename,
-      url: await signedR2Url(a.r2_key, env),
-    }))
-  );
+  const attachments = (atts.results ?? []).map((a) => ({
+    filename: a.filename,
+    url: `${env.PLATFORM_URL}/api/files/${encodeURIComponent(a.r2_key)}`,
+  }));
 
   const campaignData = request.campaign_data ? JSON.parse(request.campaign_data) : undefined;
 
@@ -121,8 +109,8 @@ export async function notifyApprover(requestId: string, level: number, env: Env)
     totalLevels:   request.total_levels,
     requestId,
     attachments,
-    approveUrl: `${env.PLATFORM_URL}/api/approve?token=${approveToken}`,
-    rejectUrl:  `${env.PLATFORM_URL}/api/reject?token=${rejectToken}`,
+    approveUrl:  `${env.PLATFORM_URL}/api/approve?token=${approveToken}`,
+    rejectUrl:   `${env.PLATFORM_URL}/api/reject?token=${rejectToken}`,
     platformUrl: env.PLATFORM_URL,
     campaignData,
   });
@@ -131,15 +119,12 @@ export async function notifyApprover(requestId: string, level: number, env: Env)
     env.ENTRA_TENANT_ID, env.ENTRA_CLIENT_ID, env.ENTRA_CLIENT_SECRET, env.KV
   );
 
-  // Enviar desde el solicitante (delegado) o desde una cuenta de servicio
-  const senderUpn = request.requester_email;
-  await sendMail({ to: step.approver_email, subject, html, text }, senderUpn, graphToken);
+  await sendMail({ to: step.approver_email, subject, html, text }, request.requester_email, graphToken);
 
   await db.prepare("UPDATE approval_steps SET notified_at = datetime('now') WHERE id = ?")
     .bind(step.id).run();
 }
 
-// ─── Procesar decisión de aprobación ─────────────────────────────────────────
 export async function processApproval(
   requestId: string, level: number, action: 'approve' | 'reject', comment: string, env: Env
 ): Promise<{ done: boolean; nextLevel?: number }> {
@@ -154,12 +139,10 @@ export async function processApproval(
   if (action === 'reject') {
     await db.prepare("UPDATE requests SET status='rejected', updated_at=datetime('now') WHERE id=?")
       .bind(requestId).run();
-    // Notificar al solicitante
     await notifyRequesterOutcome(requestId, 'rejected', comment, env);
     return { done: true };
   }
 
-  // Buscar siguiente nivel
   const request = await db.prepare('SELECT total_levels FROM requests WHERE id = ?')
     .bind(requestId).first<{ total_levels: number }>();
   const nextLevel = level + 1;
@@ -171,14 +154,12 @@ export async function processApproval(
     return { done: false, nextLevel };
   }
 
-  // Último nivel aprobado
   await db.prepare("UPDATE requests SET status='approved', updated_at=datetime('now') WHERE id=?")
     .bind(requestId).run();
   await notifyRequesterOutcome(requestId, 'approved', '', env);
   return { done: true };
 }
 
-// ─── Notificar al solicitante el resultado ────────────────────────────────────
 async function notifyRequesterOutcome(
   requestId: string, outcome: 'approved' | 'rejected', comment: string, env: Env
 ): Promise<void> {
@@ -188,8 +169,8 @@ async function notifyRequesterOutcome(
 
   const isApproved = outcome === 'approved';
   const subject = isApproved
-    ? `[FlowApp] Solicitud aprobada — ${request.title}`
-    : `[FlowApp] Solicitud rechazada — ${request.title}`;
+    ? `[FlowApp] Solicitud aprobada - ${request.title}`
+    : `[FlowApp] Solicitud rechazada - ${request.title}`;
 
   const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"></head>
 <body style="font-family:-apple-system,sans-serif;background:#F2F2F0;padding:32px 16px;">
@@ -211,7 +192,7 @@ async function notifyRequesterOutcome(
     </a>
   </td></tr>
   <tr><td style="background:#F2F2F0;border-radius:0 0 12px 12px;padding:14px 32px;text-align:center;">
-    <p style="margin:0;font-size:12px;color:#aaa;">FlowApp · Sistema de aprobaciones</p>
+    <p style="margin:0;font-size:12px;color:#aaa;">FlowApp - Sistema de aprobaciones</p>
   </td></tr>
 </table></body></html>`;
 
@@ -219,11 +200,4 @@ async function notifyRequesterOutcome(
     env.ENTRA_TENANT_ID, env.ENTRA_CLIENT_ID, env.ENTRA_CLIENT_SECRET, env.KV
   );
   await sendMail({ to: request.requester_email, subject, html, text: subject }, request.requester_email, graphToken);
-}
-
-// ─── URL firmada de R2 (1 hora de vigencia) ───────────────────────────────────
-async function signedR2Url(key: string, env: Env): Promise<string> {
-  // R2 public bucket URL o presigned — aquí usamos URL pública si el bucket es público
-  // Para bucket privado implementar presigned URL con Workers
-  return `${env.PLATFORM_URL}/api/files/${encodeURIComponent(key)}`;
 }

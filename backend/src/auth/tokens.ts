@@ -24,17 +24,17 @@ export async function verifyMagicToken(
   token: string, secret: string, db: D1Database
 ): Promise<{ ok: true; payload: TokenPayload } | { ok: false; error: string }> {
   const parts = token.split('.');
-  if (parts.length !== 2) return { ok: false, error: 'Formato inválido' };
+  if (parts.length !== 2) return { ok: false, error: 'Formato invalido' };
   const [enc, sigB64] = parts;
 
   const key = await hmacKey(secret);
   const sigBytes = b64urlBytes(sigB64);
   const valid = await crypto.subtle.verify('HMAC', key, sigBytes, te(enc));
-  if (!valid) return { ok: false, error: 'Firma inválida' };
+  if (!valid) return { ok: false, error: 'Firma invalida' };
 
   let payload: TokenPayload;
   try { payload = JSON.parse(atob(enc.replace(/-/g,'+').replace(/_/g,'/'))); }
-  catch { return { ok: false, error: 'Payload inválido' }; }
+  catch { return { ok: false, error: 'Payload invalido' }; }
 
   if (Date.now() > payload.exp) return { ok: false, error: 'Enlace expirado' };
 
@@ -56,15 +56,17 @@ export async function consumeMagicToken(token: string, db: D1Database): Promise<
   ).bind(hash).run();
 }
 
-// helpers
 async function hmacKey(secret: string): Promise<CryptoKey> {
   return crypto.subtle.importKey('raw', te(secret), { name:'HMAC', hash:'SHA-256' }, false, ['sign','verify']);
 }
+
 async function sha256(s: string): Promise<string> {
   const buf = await crypto.subtle.digest('SHA-256', te(s));
   return btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
 }
-function te(s: string) { return new TextEncoder().encode(s); }
+
+function te(s: string): Uint8Array { return new TextEncoder().encode(s); }
+
 function b64urlBytes(s: string): Uint8Array {
   const b64 = s.replace(/-/g,'+').replace(/_/g,'/');
   return Uint8Array.from(atob(b64 + '=='.slice(0,(4-b64.length%4)%4)), c => c.charCodeAt(0));
