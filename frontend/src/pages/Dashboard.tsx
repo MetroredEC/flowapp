@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMsal } from '@azure/msal-react';
 import { api, Stats, Request } from '../lib/api';
-import { Card, PageHeader, StatusBadge, Spinner, LevelStepper } from '../components/ui';
+import { Card, PageHeader, StatusBadge, Spinner } from '../components/ui';
 
 export default function Dashboard() {
   const { accounts } = useMsal();
@@ -15,7 +15,7 @@ export default function Dashboard() {
   useEffect(() => {
     Promise.all([
       api.getStats().then(r => setStats(r.data)),
-      api.getRequests({ limit: '5' } as never).then(r => setRecent(r.data)),
+      api.getRequests({} as never).then(r => setRecent(r.data.slice(0, 5))),
     ]).finally(() => setLoading(false));
   }, []);
 
@@ -43,7 +43,6 @@ export default function Dashboard() {
         }
       />
 
-      {/* Stats cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 32 }}>
         {(stats?.byStatus ?? []).map(s => (
           <Card key={s.status} style={{ padding: '20px 24px' }}>
@@ -60,9 +59,8 @@ export default function Dashboard() {
         )}
       </div>
 
-      {/* Por tipo */}
       {(stats?.byType?.length ?? 0) > 0 && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 32 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
           <Card>
             <h3 style={{ fontSize: 14, fontWeight: 700, color: '#333', marginBottom: 16 }}>Por tipo</h3>
             {stats!.byType.map(t => (
@@ -76,19 +74,14 @@ export default function Dashboard() {
             ))}
           </Card>
 
-          {/* Solicitudes recientes */}
           <Card>
             <h3 style={{ fontSize: 14, fontWeight: 700, color: '#333', marginBottom: 16 }}>
               Solicitudes recientes
             </h3>
-            {recent.slice(0, 5).map(r => (
-              <div key={r.id}
-                onClick={() => navigate(`/requests/${r.id}`)}
-                style={{
-                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                  padding: '10px 0', borderBottom: '1px solid #F2F2F0',
-                  cursor: 'pointer',
-                }}>
+            {recent.map(r => (
+              <div key={r.id} onClick={() => navigate(`/requests/${r.id}`)}
+                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  padding: '10px 0', borderBottom: '1px solid #F2F2F0', cursor: 'pointer' }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 13, fontWeight: 600, color: '#111',
                     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>

@@ -1,8 +1,8 @@
 import { useEffect, useState, useCallback } from 'react';
-import { api, RequestType, FlowConfig, FlowLevel, EntraUser } from '../lib/api';
-import { Card, PageHeader, Btn, Field, Input, Textarea, Select, Spinner, Btn as Button } from '../components/ui';
+import { api, RequestType, FlowLevel, EntraUser } from '../lib/api';
+import { Card, PageHeader, Btn, Field, Input, Select, Spinner } from '../components/ui';
 
-type Tab = 'types' | 'flows' | 'stats';
+type Tab = 'types' | 'flows';
 
 export default function AdminPanel() {
   const [tab, setTab] = useState<Tab>('types');
@@ -11,7 +11,6 @@ export default function AdminPanel() {
     <div style={{ padding: 32, maxWidth: 1000, margin: '0 auto' }}>
       <PageHeader title="Administración" subtitle="Tipos de solicitud, flujos de aprobación y configuración" />
 
-      {/* Tabs */}
       <div style={{ display: 'flex', gap: 4, marginBottom: 24, background: '#fff',
         padding: 4, borderRadius: 10, border: '1px solid #E8E8E4', width: 'fit-content' }}>
         {(['types','flows'] as Tab[]).map(t => (
@@ -20,7 +19,7 @@ export default function AdminPanel() {
             cursor: 'pointer', background: tab === t ? '#0C447C' : 'transparent',
             color: tab === t ? '#fff' : '#888', transition: 'all .15s',
           }}>
-            {{ types: 'Tipos de solicitud', flows: 'Flujos de aprobación' }[t]}
+            {t === 'types' ? 'Tipos de solicitud' : 'Flujos de aprobación'}
           </button>
         ))}
       </div>
@@ -31,14 +30,16 @@ export default function AdminPanel() {
   );
 }
 
-// ─── Panel: Tipos de solicitud ────────────────────────────────────────────────
 function TypesPanel() {
   const [types, setTypes] = useState<RequestType[]>([]);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding]   = useState(false);
   const [form, setForm]       = useState({ name: '', description: '' });
 
-  const load = () => api.getRequestTypes().then(r => setTypes(r.data)).finally(() => setLoading(false));
+  const load = () => {
+    setLoading(true);
+    api.getRequestTypes().then(r => setTypes(r.data)).finally(() => setLoading(false));
+  };
   useEffect(() => { load(); }, []);
 
   const save = async () => {
@@ -103,7 +104,6 @@ function TypesPanel() {
   );
 }
 
-// ─── Panel: Flujos de aprobación ──────────────────────────────────────────────
 function FlowsPanel() {
   const [types, setTypes]     = useState<RequestType[]>([]);
   const [selType, setSelType] = useState('');
@@ -128,7 +128,8 @@ function FlowsPanel() {
           approver_email: fc.approver_email ?? '',
         })));
       } else {
-        setLevels([{ level: 1, label: 'Aprobador directo', approver_type: 'fixed_user', approver_value: '', approver_name: '', approver_email: '' }]);
+        setLevels([{ level: 1, label: 'Aprobador directo', approver_type: 'fixed_user',
+          approver_value: '', approver_name: '', approver_email: '' }]);
       }
     }).finally(() => setLoading(false));
   }, [selType]);
@@ -182,7 +183,6 @@ function FlowsPanel() {
               onRemove={levels.length > 1 ? () => removeLevel(i) : undefined}
             />
           ))}
-
           <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
             {levels.length < 4 && (
               <button onClick={addLevel} style={{
@@ -200,14 +200,13 @@ function FlowsPanel() {
   );
 }
 
-// ─── Editor de un nivel ───────────────────────────────────────────────────────
 function LevelEditor({ index, level, onUpdate, onRemove }: {
   index: number; level: FlowLevel;
   onUpdate: (p: Partial<FlowLevel>) => void;
   onRemove?: () => void;
 }) {
-  const [query, setQuery]     = useState('');
-  const [results, setResults] = useState<EntraUser[]>([]);
+  const [query, setQuery]         = useState('');
+  const [results, setResults]     = useState<EntraUser[]>([]);
   const [searching, setSearching] = useState(false);
 
   const search = useCallback(async (q: string) => {
@@ -227,12 +226,8 @@ function LevelEditor({ index, level, onUpdate, onRemove }: {
   }, [query, search]);
 
   const pickUser = (u: EntraUser) => {
-    onUpdate({
-      approver_type: 'fixed_user',
-      approver_value: u.id,
-      approver_name: u.name,
-      approver_email: u.email,
-    });
+    onUpdate({ approver_type: 'fixed_user', approver_value: u.id,
+      approver_name: u.name, approver_email: u.email });
     setQuery('');
     setResults([]);
   };
@@ -257,7 +252,8 @@ function LevelEditor({ index, level, onUpdate, onRemove }: {
             placeholder="Ej: Gerencia de Marketing" />
         </Field>
         <Field label="Tipo de aprobador">
-          <Select value={level.approver_type} onChange={e => onUpdate({ approver_type: e.target.value as 'fixed_user' | 'job_title' })}>
+          <Select value={level.approver_type}
+            onChange={e => onUpdate({ approver_type: e.target.value as 'fixed_user' | 'job_title' })}>
             <option value="fixed_user">Usuario específico</option>
             <option value="job_title">Por cargo</option>
           </Select>
@@ -266,12 +262,14 @@ function LevelEditor({ index, level, onUpdate, onRemove }: {
 
       {level.approver_type === 'fixed_user' ? (
         <div>
-          {/* Buscador Entra ID */}
           <Field label="Buscar aprobador por nombre o cargo">
             <div style={{ position: 'relative' }}>
               <Input
                 value={query || level.approver_name || ''}
-                onChange={e => { setQuery(e.target.value); if (!e.target.value) onUpdate({ approver_value: '', approver_name: '', approver_email: '' }); }}
+                onChange={e => {
+                  setQuery(e.target.value);
+                  if (!e.target.value) onUpdate({ approver_value: '', approver_name: '', approver_email: '' });
+                }}
                 placeholder="Escribe nombre o cargo…"
               />
               {searching && (
@@ -286,12 +284,9 @@ function LevelEditor({ index, level, onUpdate, onRemove }: {
                   boxShadow: '0 4px 16px rgba(0,0,0,0.1)', zIndex: 100, maxHeight: 240, overflowY: 'auto',
                 }}>
                   {results.map(u => (
-                    <div key={u.id}
-                      onClick={() => pickUser(u)}
-                      style={{
-                        padding: '10px 14px', cursor: 'pointer', borderBottom: '1px solid #F2F2F0',
-                        display: 'flex', gap: 10, alignItems: 'center',
-                      }}
+                    <div key={u.id} onClick={() => pickUser(u)}
+                      style={{ padding: '10px 14px', cursor: 'pointer', borderBottom: '1px solid #F2F2F0',
+                        display: 'flex', gap: 10, alignItems: 'center' }}
                       onMouseEnter={e => (e.currentTarget.style.background = '#F8F8F6')}
                       onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                     >
@@ -313,10 +308,8 @@ function LevelEditor({ index, level, onUpdate, onRemove }: {
             </div>
           </Field>
           {level.approver_value && (
-            <div style={{
-              display: 'flex', gap: 8, alignItems: 'center', padding: '8px 12px',
-              background: '#E1F5EE', borderRadius: 8, fontSize: 13,
-            }}>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '8px 12px',
+              background: '#E1F5EE', borderRadius: 8, fontSize: 13 }}>
               <span style={{ fontSize: 16 }}>✓</span>
               <div>
                 <span style={{ fontWeight: 700, color: '#085041' }}>{level.approver_name}</span>
@@ -326,7 +319,8 @@ function LevelEditor({ index, level, onUpdate, onRemove }: {
           )}
         </div>
       ) : (
-        <Field label="Cargo (job title en Entra ID)" hint="El sistema resolverá el aprobador con este cargo al momento de crear la solicitud">
+        <Field label="Cargo (job title en Entra ID)"
+          hint="El sistema resolverá el aprobador con este cargo al crear la solicitud">
           <Input value={level.approver_value}
             onChange={e => onUpdate({ approver_value: e.target.value })}
             placeholder="Ej: Gerente de Marketing" />

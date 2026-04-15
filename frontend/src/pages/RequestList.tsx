@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api, Request } from '../lib/api';
-import { Card, PageHeader, StatusBadge, Spinner, Empty, Input, Select, LevelStepper } from '../components/ui';
+import { PageHeader, StatusBadge, Spinner, Empty, Input, Select, LevelStepper } from '../components/ui';
 
 export default function RequestList() {
   const navigate = useNavigate();
@@ -35,7 +35,6 @@ export default function RequestList() {
         }
       />
 
-      {/* Filtros */}
       <div style={{ display: 'flex', gap: 12, marginBottom: 20 }}>
         <Input
           placeholder="Buscar por título..."
@@ -62,13 +61,18 @@ export default function RequestList() {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {requests.map(r => (
-            <Card
+            <div
               key={r.id}
-              style={{ cursor: 'pointer', padding: '16px 20px', transition: 'border-color .15s' }}
               onClick={() => navigate(`/requests/${r.id}`)}
+              style={{
+                background: '#fff', borderRadius: 12, padding: '16px 20px',
+                border: '1px solid #E8E8E4', cursor: 'pointer',
+                transition: 'border-color .15s',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.borderColor = '#B5D4F4')}
+              onMouseLeave={e => (e.currentTarget.style.borderColor = '#E8E8E4')}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                {/* Info */}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
                     <span style={{ fontSize: 15, fontWeight: 700, color: '#111',
@@ -87,8 +91,6 @@ export default function RequestList() {
                     )}
                   </div>
                 </div>
-
-                {/* Nivel */}
                 <LevelStepper
                   current={r.current_level}
                   total={r.total_levels}
@@ -99,7 +101,7 @@ export default function RequestList() {
                   }))}
                 />
               </div>
-            </Card>
+            </div>
           ))}
         </div>
       )}
