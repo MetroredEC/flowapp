@@ -109,8 +109,8 @@ export async function notifyApprover(requestId: string, level: number, env: Env)
     totalLevels:   request.total_levels,
     requestId,
     attachments,
-    approveUrl:  `${env.PLATFORM_URL}/api/approve?token=${approveToken}`,
-    rejectUrl:   `${env.PLATFORM_URL}/api/reject?token=${rejectToken}`,
+    approveUrl:  `${env.PLATFORM_URL}/approve?token=${approveToken}`,
+    rejectUrl:   `${env.PLATFORM_URL}/reject?token=${rejectToken}`,
     platformUrl: env.PLATFORM_URL,
     campaignData,
   });
