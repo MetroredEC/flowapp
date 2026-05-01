@@ -35,7 +35,7 @@ export async function createRequestWithSteps(
   await db.prepare(`
     INSERT INTO requests (id, request_type_id, request_type_name, title, description,
       requester_id, requester_name, requester_email, status, current_level, total_levels, campaign_data)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'in_progress', 1, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'draft', 1, ?, ?)
   `).bind(
     requestId, params.requestTypeId, reqType.name,
     params.title, params.description,
@@ -69,7 +69,6 @@ export async function createRequestWithSteps(
     `).bind(stepId, requestId, config.level, config.label, approverId, approverName, approverEmail).run();
   }
 
-  await notifyApprover(requestId, 1, env);
   return requestId;
 }
 

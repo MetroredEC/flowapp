@@ -47,6 +47,8 @@ export default function NewRequest() {
       for (const file of files) {
         await api.uploadFile(data.id, file);
       }
+      // Confirmar y enviar (activa el flujo y envía correo con adjuntos)
+      await api.submitRequest(data.id);
       navigate(`/requests/${data.id}`);
     } catch (err) {
       alert((err as Error).message);

@@ -37,6 +37,8 @@ export const api = {
     request<{ data: RequestDetail }>('GET', `/api/requests/${id}`),
   createRequest: (body: CreateRequestBody) =>
     request<{ data: { id: string } }>('POST', '/api/requests', body),
+  submitRequest: (id: string) =>
+    request<{ data: { submitted: boolean } }>('PATCH', `/api/requests/${id}/submit`),
   cancelRequest: (id: string) =>
     request<{ data: unknown }>('PATCH', `/api/requests/${id}/cancel`),
   uploadFile: (requestId: string, file: File) => {
