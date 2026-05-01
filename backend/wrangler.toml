@@ -9,7 +9,7 @@ ALLOWED_ORIGINS    = "https://metroredec.github.io"
 ENTRA_TENANT_ID    = "480bd49c-6f89-4faa-b39e-c7728d95d130"
 ENTRA_CLIENT_ID    = "66130291-fc50-43f1-943c-6818dac1ba99"
 ENTRA_API_AUDIENCE = "api://66130291-fc50-43f1-943c-6818dac1ba99"
-PLATFORM_URL       = "http://localhost:5173"
+PLATFORM_URL       = "https://flowapp.dbermeo.workers.dev"
 APP_ENV            = "development"
 
 [[d1_databases]]

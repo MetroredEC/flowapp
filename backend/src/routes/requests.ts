@@ -28,7 +28,11 @@ router.get('/', async (c) => {
   sql += ' ORDER BY r.created_at DESC LIMIT 100';
 
   const rows = await c.env.DB.prepare(sql).bind(...params).all();
-  return c.json({ data: rows.results });
+  const data = (rows.results ?? []).map((r: Record<string, unknown>) => ({
+    ...r,
+    steps: typeof r.steps === 'string' ? JSON.parse(r.steps) : (r.steps ?? []),
+  }));
+  return c.json({ data });
 });
 
 // GET /requests/:id
@@ -47,7 +51,7 @@ router.get('/:id', async (c) => {
   const [steps, attachments, campaignCost] = await Promise.all([
     c.env.DB.prepare('SELECT * FROM approval_steps WHERE request_id = ? ORDER BY level')
       .bind(id).all(),
-    c.env.DB.prepare('SELECT id, filename, content_type, size_bytes, is_selected, created_at FROM attachments WHERE request_id = ?')
+    c.env.DB.prepare('SELECT id, filename, r2_key, content_type, size_bytes, is_selected, created_at FROM attachments WHERE request_id = ?')
       .bind(id).all(),
     c.env.DB.prepare('SELECT cc.*, json_group_array(json_object(\'vendor_name\',cv.vendor_name,\'amount\',cv.amount,\'is_selected\',cv.is_selected)) as vendors FROM campaign_costs cc LEFT JOIN campaign_vendors cv ON cv.campaign_cost_id = cc.id WHERE cc.request_id = ? GROUP BY cc.id')
       .bind(id).first(),

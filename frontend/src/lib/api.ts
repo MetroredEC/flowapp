@@ -85,7 +85,7 @@ export interface ApprovalStep {
   status: string; comment: string | null; decided_at: string | null;
 }
 export interface Attachment {
-  id: string; filename: string; content_type: string;
+  id: string; filename: string; r2_key: string; content_type: string;
   size_bytes: number; is_selected: number; created_at: string;
 }
 export interface RequestType {

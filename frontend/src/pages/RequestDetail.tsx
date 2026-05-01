@@ -105,7 +105,7 @@ export default function RequestDetail() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {data.attachments.map(a => (
                   <a key={a.id}
-                    href={`${API}/api/files/${encodeURIComponent(a.id)}`}
+                    href={`${API}/api/files/${encodeURIComponent((a as any).r2_key || a.id)}`}
                     target="_blank" rel="noreferrer"
                     style={{ display: 'flex', alignItems: 'center', gap: 10,
                       padding: '10px 12px', background: '#F8F8F6', borderRadius: 8,

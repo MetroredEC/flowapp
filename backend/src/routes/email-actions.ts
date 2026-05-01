@@ -54,7 +54,7 @@ router.get('/reject', async (c) => {
 });
 
 // GET /files/:key — servir archivos desde R2
-router.get('/files/:key{.+}', async (c) => {
+router.get('/:key{.+}', async (c) => {
   const key = c.req.param('key');
   const obj = await c.env.FILES.get(decodeURIComponent(key));
   if (!obj) return c.json({ error: 'not_found' }, 404);
