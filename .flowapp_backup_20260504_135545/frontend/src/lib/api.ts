@@ -1,6 +1,6 @@
 import { msalInstance, loginRequest } from '../auth/msal';
 
-const BASE = String(import.meta.env.VITE_API_URL || '').replace(/\/+$/, '');
+const BASE = import.meta.env.VITE_API_URL;
 
 async function getToken(): Promise<string> {
   const account = msalInstance.getActiveAccount() ?? msalInstance.getAllAccounts()[0];
@@ -12,7 +12,6 @@ async function getToken(): Promise<string> {
 async function request<T>(
   method: string, path: string, body?: unknown, isFormData = false
 ): Promise<T> {
-  if (!BASE) throw new Error('VITE_API_URL no esta configurado');
   const token = await getToken();
   const headers: Record<string, string> = { Authorization: `Bearer ${token}` };
   if (body && !isFormData) headers['Content-Type'] = 'application/json';
@@ -24,17 +23,17 @@ async function request<T>(
   });
 
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ message: res.statusText })) as { message?: string; error?: string };
-    throw new Error(err.message ?? err.error ?? `Error ${res.status}`);
+    const err = await res.json().catch(() => ({ message: res.statusText })) as { message?: string };
+    throw new Error(err.message ?? `Error ${res.status}`);
   }
   return res.json() as Promise<T>;
 }
 
 export const api = {
   // Requests
-  getRequests: (params?: Record<string, string>) =>
+  getRequests:  (params?: Record<string, string>) =>
     request<{ data: Request[] }>('GET', `/api/requests?${new URLSearchParams(params)}`),
-  getRequest: (id: string) =>
+  getRequest:   (id: string) =>
     request<{ data: RequestDetail }>('GET', `/api/requests/${id}`),
   createRequest: (body: CreateRequestBody) =>
     request<{ data: { id: string } }>('POST', '/api/requests', body),
@@ -44,7 +43,7 @@ export const api = {
     request<{ data: unknown }>('PATCH', `/api/requests/${id}/cancel`),
   uploadFile: (requestId: string, file: File) => {
     const fd = new FormData(); fd.append('file', file);
-    return request<{ data: { id: string; filename: string; size_bytes: number } }>(
+    return request<{ data: { id: string; filename: string } }>(
       'POST', `/api/requests/${requestId}/attachments`, fd, true
     );
   },
@@ -68,7 +67,7 @@ export const api = {
     request<{ data: { id: string } }>('POST', '/api/admin/campaign-costs', body),
 };
 
-// Types
+// ─── Types ────────────────────────────────────────────────────────────────────
 export interface Request {
   id: string; title: string; description: string;
   request_type_id: string; request_type_name: string;
@@ -108,14 +107,13 @@ export interface EntraUser {
   id: string; name: string; email: string; jobTitle: string; department: string;
 }
 export interface Stats {
-  totals: { total: number } | null;
+  totals: { total: number };
   byStatus: { status: string; count: number }[];
   byType: { request_type_name: string; count: number }[];
 }
 export interface CampaignCost {
   id: string; campaign_code: string; total_amount: number; currency: string;
-  execution_date: string; billing_date: string; notes: string | null;
-  vendors: CampaignVendor[];
+  execution_date: string; billing_date: string; notes: string | null; vendors: CampaignVendor[];
 }
 export interface CampaignVendor {
   vendor_name: string; amount: number; is_selected: number;

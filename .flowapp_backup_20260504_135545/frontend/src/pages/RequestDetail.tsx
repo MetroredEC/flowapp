@@ -5,7 +5,7 @@ import {
   Card, PageHeader, StatusBadge, StepBadge, Spinner, Btn, LevelStepper, Field, Input
 } from '../components/ui';
 
-const API = String(import.meta.env.VITE_API_URL || '').replace(/\/+$/, '');
+const API = import.meta.env.VITE_API_URL;
 
 export default function RequestDetail() {
   const { id } = useParams<{ id: string }>();
@@ -48,7 +48,7 @@ export default function RequestDetail() {
     <div style={{ padding: 32, maxWidth: 860, margin: '0 auto' }}>
       <PageHeader
         title={data.title}
-        subtitle={`${data.request_type_name} Â· ${data.requester_name}`}
+        subtitle={`${data.request_type_name} · ${data.requester_name}`}
         action={
           <div style={{ display: 'flex', gap: 10 }}>
             {canCancel && (
@@ -110,7 +110,7 @@ export default function RequestDetail() {
                     style={{ display: 'flex', alignItems: 'center', gap: 10,
                       padding: '10px 12px', background: '#F8F8F6', borderRadius: 8,
                       textDecoration: 'none' }}>
-                    <span style={{ fontSize: 11, fontWeight: 800, color: '#888' }}>DOC</span>
+                    <span style={{ fontSize: 18 }}>??</span>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 13, fontWeight: 600, color: '#185FA5',
                         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>

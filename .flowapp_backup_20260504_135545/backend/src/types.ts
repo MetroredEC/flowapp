@@ -10,9 +10,6 @@ export type AppEnv = {
     ENTRA_API_AUDIENCE: string;
     ALLOWED_ORIGINS: string;
     PLATFORM_URL: string;
-    FRONTEND_URL?: string;
-    PUBLIC_API_URL?: string;
-    MAIL_SENDER_UPN?: string;
     APP_ENV: string;
   };
   Variables: {
@@ -70,7 +67,7 @@ export interface FlowConfigRow {
 export interface GraphUser {
   id: string;
   displayName: string;
-  mail: string | null;
+  mail: string;
   userPrincipalName: string;
   jobTitle: string | null;
   department: string | null;

@@ -63,7 +63,7 @@ jobs:
 
       - run: npm ci
 
-      - name: Type check and build
+      - name: Build
         run: npm run build
         env:
           VITE_API_URL:          ${{ secrets.VITE_API_URL }}
@@ -71,8 +71,8 @@ jobs:
           VITE_ENTRA_TENANT_ID:  ${{ secrets.VITE_ENTRA_TENANT_ID }}
           VITE_ENTRA_SCOPE:      ${{ secrets.VITE_ENTRA_SCOPE }}
 
-      - name: SPA routing fallback
-        run: cp dist/index.html dist/404.html
+      # SPA routing: copiar index.html como 404.html para GitHub Pages
+      - run: cp dist/index.html dist/404.html
 
       - uses: actions/configure-pages@v4
       - uses: actions/upload-pages-artifact@v3

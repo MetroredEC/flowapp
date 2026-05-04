@@ -5,16 +5,12 @@ compatibility_flags = ["nodejs_compat"]
 workers_dev = true
 
 [vars]
-ALLOWED_ORIGINS    = "https://metroredec.github.io,http://localhost:5173"
+ALLOWED_ORIGINS    = "https://metroredec.github.io"
 ENTRA_TENANT_ID    = "480bd49c-6f89-4faa-b39e-c7728d95d130"
 ENTRA_CLIENT_ID    = "66130291-fc50-43f1-943c-6818dac1ba99"
 ENTRA_API_AUDIENCE = "api://66130291-fc50-43f1-943c-6818dac1ba99"
-FRONTEND_URL       = "https://metroredec.github.io/flowapp"
-PUBLIC_API_URL     = "https://flowapp.dbermeo.workers.dev"
-PLATFORM_URL       = "https://metroredec.github.io/flowapp"
+PLATFORM_URL       = "https://flowapp.dbermeo.workers.dev"
 APP_ENV            = "development"
-# Opcional: configura un buzon tecnico con Mail.Send. Si no existe, se usa el correo del solicitante.
-# MAIL_SENDER_UPN = "notificaciones@tu-dominio.com"
 
 [[d1_databases]]
 binding       = "DB"
@@ -30,18 +26,16 @@ binding = "KV"
 id      = "095661415d644f4b924b8f11173896f0"
 
 [env.production]
-workers_dev = true
+workers_dev = false
+
 
 [env.production.vars]
 ALLOWED_ORIGINS    = "https://metroredec.github.io"
 ENTRA_TENANT_ID    = "480bd49c-6f89-4faa-b39e-c7728d95d130"
 ENTRA_CLIENT_ID    = "66130291-fc50-43f1-943c-6818dac1ba99"
 ENTRA_API_AUDIENCE = "api://66130291-fc50-43f1-943c-6818dac1ba99"
-FRONTEND_URL       = "https://metroredec.github.io/flowapp"
-PUBLIC_API_URL     = "https://flowapp-production.dbermeo.workers.dev"
 PLATFORM_URL       = "https://metroredec.github.io/flowapp"
 APP_ENV            = "production"
-# MAIL_SENDER_UPN = "notificaciones@tu-dominio.com"
 
 [[env.production.d1_databases]]
 binding       = "DB"

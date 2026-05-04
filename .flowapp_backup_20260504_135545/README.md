@@ -169,32 +169,3 @@ Si rechaza → solicitud rechazada → notifica solicitante con comentario
 | PUT | `/api/admin/flows/:typeId` | JWT | Configurar flujo |
 | GET | `/api/admin/users/search?q=` | JWT | Buscar usuarios Entra ID |
 | POST | `/api/admin/campaign-costs` | JWT | Registrar costo campaña |
-
-## Deploy con PowerShell
-
-El repositorio incluye `scripts/deploy.ps1` para desplegar el Worker en Cloudflare y construir el frontend para GitHub Pages desde Windows PowerShell o PowerShell 7.
-
-```powershell
-# Desde la raíz del repositorio
-./scripts/deploy.ps1 -ApiUrl "https://flowapp.dbermeo.workers.dev"
-```
-
-Opciones útiles:
-
-```powershell
-# Aplica schema D1 y despliega el Worker de producción definido en wrangler.toml
-./scripts/deploy.ps1 -Production -ApplyDbSchema -ApiUrl "https://flowapp-production.dbermeo.workers.dev"
-
-# Publica el contenido de frontend/dist en la rama gh-pages
-./scripts/deploy.ps1 -PublishPagesBranch
-```
-
-Para evitar que los enlaces de correo apunten a GitHub Pages por error, el Worker usa dos URLs separadas:
-
-| Variable | Uso |
-|---|---|
-| `PUBLIC_API_URL` | Worker público para `/approve`, `/reject` y `/api/files/*` |
-| `FRONTEND_URL` | SPA publicada en GitHub Pages para `/requests/:id` |
-| `PLATFORM_URL` | Alias de compatibilidad; se mantiene apuntando al frontend |
-
-Si configuras un dominio personalizado de Cloudflare, cambia `PUBLIC_API_URL` en `backend/wrangler.toml` y en el secret `VITE_API_URL` de GitHub Actions.
