@@ -14,50 +14,10 @@ type DecisionInfo = Pick<RequestRow, 'id' | 'title' | 'description' | 'request_t
   step_status: string;
 };
 
-type ReviewInfo = DecisionInfo & {
-  requester_email?: string;
-};
-
-type ReviewAttachment = {
-  filename: string;
-  r2_key: string;
-  size_bytes?: number;
-};
-
-router.get('/review', async (c) => {
-  const token = c.req.query('token') ?? '';
-  if (!token) return c.html(page('error', 'Token faltante', 'No se proporciono un token.', frontendUrl(c.env)));
-
-  const check = await verifyMagicToken(token, c.env.TOKEN_SECRET, c.env.DB);
-  if (!check.ok) return c.html(page('error', errorTitle(check.error), errorMsg(check.error), frontendUrl(c.env)));
-
-  const { requestId, stepId } = check.payload;
-
-  const info = await c.env.DB.prepare(`
-    SELECT r.id, r.title, r.description, r.request_type_name, r.requester_name, r.requester_email,
-           s.level, s.approver_name, s.status as step_status
-      FROM requests r
-      JOIN approval_steps s ON s.request_id = r.id
-     WHERE r.id = ? AND s.id = ?
-  `).bind(requestId, stepId).first<ReviewInfo>();
-
-  if (!info) return c.html(page('error', 'Solicitud no encontrada', 'No se encontro la solicitud asociada al enlace.', frontendUrl(c.env)));
-  if (info.step_status !== 'pending') {
-    return c.html(page('error', 'Decision ya registrada', 'Este paso ya fue procesado y no puede modificarse desde el mismo enlace.', frontendUrl(c.env), info.id));
-  }
-
-  const files = await c.env.DB.prepare(`
-    SELECT filename, r2_key, size_bytes
-      FROM attachments
-     WHERE request_id = ?
-     ORDER BY created_at
-  `).bind(requestId).all<ReviewAttachment>();
-
-  return c.html(reviewPage(token, info, files.results ?? []));
-});
-
 router.get('/approve', async (c) => {
   const token = c.req.query('token') ?? '';
+  const confirm = c.req.query('confirm') === '1' || c.req.query('comment') !== undefined;
+  if (confirm) return completeDecision(c, 'approve', token, c.req.query('comment') ?? '');
   return renderDecisionForm(c, 'approve', token);
 });
 
@@ -68,6 +28,8 @@ router.post('/approve', async (c) => {
 
 router.get('/reject', async (c) => {
   const token = c.req.query('token') ?? '';
+  const comment = c.req.query('comment');
+  if (comment !== undefined) return completeDecision(c, 'reject', token, comment);
   return renderDecisionForm(c, 'reject', token);
 });
 
@@ -76,25 +38,8 @@ router.post('/reject', async (c) => {
   return completeDecision(c, 'reject', body.token, body.comment);
 });
 
-router.get('/review-file/:key{.+}', async (c) => {
-  const token = c.req.query('token') ?? '';
-  const check = await verifyMagicToken(token, c.env.TOKEN_SECRET, c.env.DB);
-  if (!check.ok) return c.html(page('error', errorTitle(check.error), errorMsg(check.error), frontendUrl(c.env)));
-
-  const key = safeDecode(c.req.param('key'));
-  if (!key.startsWith(check.payload.requestId + '/')) {
-    return c.html(page('error', 'Acceso denegado', 'El archivo no pertenece a esta solicitud.', frontendUrl(c.env)));
-  }
-
-  return streamFile(c, key);
-});
-
 router.get('/files/:key{.+}', async (c) => {
   const key = safeDecode(c.req.param('key'));
-  return streamFile(c, key);
-});
-
-async function streamFile(c: Context<AppEnv>, key: string): Promise<Response> {
   const obj = await c.env.FILES.get(key);
   if (!obj) return c.json({ error: 'not_found', message: 'Archivo no encontrado' }, 404);
 
@@ -102,19 +47,20 @@ async function streamFile(c: Context<AppEnv>, key: string): Promise<Response> {
   obj.writeHttpMetadata(headers);
   headers.set('Cache-Control', 'private, max-age=3600');
   headers.set('X-Content-Type-Options', 'nosniff');
-
   const metadata = (obj as unknown as { customMetadata?: Record<string, string> }).customMetadata ?? {};
   const filename = sanitizeHeaderValue(metadata.filename || key.split('/').pop() || 'archivo');
   headers.set('Content-Disposition', `inline; filename="${filename}"`);
-
   return new Response(obj.body, { headers });
-}
+});
 
 async function renderDecisionForm(c: Context<AppEnv>, action: Decision, token: string, formError = ''): Promise<Response> {
   if (!token) return c.html(page('error', 'Token faltante', 'No se proporciono un token.', frontendUrl(c.env)));
 
   const check = await verifyMagicToken(token, c.env.TOKEN_SECRET, c.env.DB);
   if (!check.ok) return c.html(page('error', errorTitle(check.error), errorMsg(check.error), frontendUrl(c.env)));
+  if (check.payload.action !== action) {
+    return c.html(page('error', 'Enlace incorrecto', 'Este enlace no corresponde a la accion seleccionada.', frontendUrl(c.env)));
+  }
 
   const info = await c.env.DB.prepare(`
     SELECT r.id, r.title, r.description, r.request_type_name, r.requester_name,
@@ -134,7 +80,6 @@ async function renderDecisionForm(c: Context<AppEnv>, action: Decision, token: s
 
 async function completeDecision(c: Context<AppEnv>, action: Decision, token: string, comment: string): Promise<Response> {
   if (!token) return c.html(page('error', 'Token faltante', 'No se proporciono un token.', frontendUrl(c.env)));
-
   const cleanComment = normalizeComment(comment);
   if (action === 'reject' && !cleanComment) {
     return renderDecisionForm(c, action, token, 'El comentario es obligatorio para rechazar.');
@@ -142,11 +87,13 @@ async function completeDecision(c: Context<AppEnv>, action: Decision, token: str
 
   const check = await verifyMagicToken(token, c.env.TOKEN_SECRET, c.env.DB);
   if (!check.ok) return c.html(page('error', errorTitle(check.error), errorMsg(check.error), frontendUrl(c.env)));
+  if (check.payload.action !== action) {
+    return c.html(page('error', 'Enlace incorrecto', 'Este enlace no corresponde a la accion seleccionada.', frontendUrl(c.env)));
+  }
 
   const { requestId, stepId } = check.payload;
   const step = await c.env.DB.prepare('SELECT level, status FROM approval_steps WHERE id = ?')
     .bind(stepId).first<Pick<ApprovalStepRow, 'level' | 'status'>>();
-
   if (!step) return c.html(page('error', 'Paso no encontrado', 'No se encontro el paso de aprobacion.', frontendUrl(c.env)));
   if (step.status !== 'pending') {
     return c.html(page('error', 'Decision ya registrada', 'Este paso ya fue procesado y no puede modificarse desde el mismo enlace.', frontendUrl(c.env), requestId));
@@ -163,7 +110,6 @@ async function completeDecision(c: Context<AppEnv>, action: Decision, token: str
     const msg = result.done
       ? 'La solicitud fue completamente aprobada. El solicitante fue notificado.'
       : `Tu aprobacion fue registrada. Se notifico al aprobador del nivel ${result.nextLevel}.`;
-
     return c.html(page('success', 'Aprobacion registrada', msg, frontendUrl(c.env), requestId));
   } catch (err) {
     console.error('EMAIL_DECISION_FAILED', err instanceof Error ? err.message : String(err));
@@ -179,110 +125,65 @@ async function readDecisionBody(c: Context<AppEnv>): Promise<{ token: string; co
   };
 }
 
-function reviewPage(token: string, info: ReviewInfo, files: ReviewAttachment[]): string {
-  const fileHtml = files.length
-    ? files.map(f => `
-      <a class="file" href="/review-file/${encodeURIComponent(f.r2_key)}?token=${encodeURIComponent(token)}" target="_blank" rel="noopener">
-        <span>${escapeHtml(f.filename)}</span>
-        <small>${formatBytes(f.size_bytes ?? 0)}</small>
-      </a>
-    `).join('')
-    : '<div class="empty">Esta solicitud no tiene archivos adjuntos.</div>';
-
-  return `<!doctype html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Revisar solicitud - FlowApp</title>
-  <style>
-    *{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;background:#F2F2F0;min-height:100vh;padding:24px;color:#222}
-    .wrap{max-width:880px;margin:0 auto}
-    .card{background:#fff;border-radius:16px;padding:28px;box-shadow:0 10px 30px rgba(0,0,0,.08);margin-bottom:18px}
-    .eyebrow{font-size:12px;color:#185FA5;font-weight:800;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px}
-    h1{font-size:24px;color:#111;margin-bottom:10px;font-weight:800}
-    h2{font-size:16px;color:#111;margin:22px 0 10px}
-    p{font-size:14px;color:#555;line-height:1.6;margin-bottom:10px}
-    .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px}
-    .meta{background:#F8FAFC;border:1px solid #ECECEA;border-radius:10px;padding:12px}
-    .meta span{display:block;font-size:11px;color:#777;text-transform:uppercase;font-weight:800;margin-bottom:4px}
-    .meta strong{font-size:14px;color:#222}
-    .files{display:grid;gap:8px}
-    .file{display:flex;justify-content:space-between;gap:16px;align-items:center;border:1px solid #E6E4DE;background:#FAFAF8;border-radius:10px;padding:12px 14px;text-decoration:none;color:#185FA5;font-weight:700}
-    .file small{color:#777;font-weight:500}
-    .empty{padding:14px;border:1px dashed #CCC;border-radius:10px;color:#777;font-size:14px}
-    label{display:block;font-size:13px;font-weight:800;color:#333;margin-bottom:6px}
-    textarea{width:100%;padding:12px;border:1.5px solid #D8D6CE;border-radius:10px;font-size:14px;resize:vertical;min-height:120px;font-family:inherit;outline:none}
-    textarea:focus{border-color:#185FA5}
-    .actions{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
-    button{padding:14px 18px;border-radius:10px;font-size:14px;font-weight:900;border:none;cursor:pointer;color:#fff}
-    .approve{background:#1D9E75}
-    .reject{background:#993C1D}
-    .note{font-size:12px;color:#888;margin-top:12px}
-    @media(max-width:720px){.grid,.actions{grid-template-columns:1fr}}
-  </style>
-</head>
-<body>
-  <div class="wrap">
-    <div class="card">
-      <div class="eyebrow">Nivel ${info.level} - ${escapeHtml(info.request_type_name)}</div>
-      <h1>${escapeHtml(info.title)}</h1>
-      <p>${escapeHtml(info.description)}</p>
-      <div class="grid">
-        <div class="meta"><span>Solicitante</span><strong>${escapeHtml(info.requester_name)}</strong></div>
-        <div class="meta"><span>Aprobador</span><strong>${escapeHtml(info.approver_name)}</strong></div>
-      </div>
-
-      <h2>Archivos adjuntos</h2>
-      <div class="files">${fileHtml}</div>
-    </div>
-
-    <div class="card">
-      <h2>Decision</h2>
-      <p>Escribe un comentario si necesitas dejar trazabilidad. Para rechazar, el comentario es obligatorio.</p>
-
-      <form method="POST" action="/approve">
-        <input type="hidden" name="token" value="${escapeAttr(token)}">
-        <label for="approve-comment">Comentario para aprobacion</label>
-        <textarea id="approve-comment" name="comment" maxlength="1200" placeholder="Comentario opcional..."></textarea>
-        <div class="actions">
-          <button type="submit" class="approve">Aprobar solicitud</button>
-          <button type="submit" formaction="/reject" class="reject">Rechazar solicitud</button>
-        </div>
-      </form>
-      <p class="note">El enlace vence y solo puede usarse una vez para decidir.</p>
-    </div>
-  </div>
-</body>
-</html>`;
-}
-
 function decisionForm(action: Decision, token: string, info: DecisionInfo, platformUrl: string, formError: string): string {
   const isReject = action === 'reject';
   const title = isReject ? 'Rechazar solicitud' : 'Aprobar solicitud';
   const button = isReject ? 'Enviar rechazo' : 'Confirmar aprobacion';
   const buttonColor = isReject ? '#993C1D' : '#1D9E75';
   const intro = isReject
-    ? 'Indica el motivo del rechazo. El solicitante recibira esta informacion.'
-    : 'Puedes agregar un comentario para dejar trazabilidad.';
+    ? 'Indica el motivo del rechazo. El solicitante recibira esta informacion para corregir o complementar su solicitud.'
+    : 'Puedes agregar un comentario para dejar trazabilidad de tu decision. El comentario es opcional para aprobar.';
   const required = isReject ? 'required' : '';
-  const errorHtml = formError ? `<div class="error">${escapeHtml(formError)}</div>` : '';
+  const errorHtml = formError
+    ? `<div class="error">${escapeHtml(formError)}</div>`
+    : '';
 
   return `<!doctype html>
 <html lang="es">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(title)} - FlowApp</title></head>
-<body style="font-family:Segoe UI,Arial,sans-serif;background:#F2F2F0;padding:24px;">
-  <div style="max-width:560px;margin:0 auto;background:#fff;border-radius:16px;padding:32px;">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>${escapeHtml(title)} - FlowApp</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;background:#F2F2F0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;color:#222}
+    .card{background:#fff;border-radius:16px;padding:32px;max-width:560px;width:100%;box-shadow:0 10px 30px rgba(0,0,0,.08)}
+    .eyebrow{font-size:12px;color:#185FA5;font-weight:800;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px}
+    h1{font-size:22px;color:#111;margin-bottom:8px;font-weight:800}
+    p{font-size:14px;color:#666;line-height:1.6;margin-bottom:18px}
+    .summary{background:#F8FAFC;border-left:4px solid #185FA5;border-radius:8px;padding:14px 16px;margin:18px 0}
+    .summary h2{font-size:16px;color:#111;margin-bottom:8px;line-height:1.35}
+    .summary div{font-size:12px;color:#666;margin-top:4px}
+    label{display:block;font-size:13px;font-weight:700;color:#333;margin-bottom:6px}
+    textarea{width:100%;padding:12px;border:1.5px solid #D8D6CE;border-radius:8px;font-size:14px;resize:vertical;min-height:120px;font-family:inherit;outline:none;transition:border-color .2s}
+    textarea:focus{border-color:#185FA5}
+    .actions{display:flex;gap:10px;margin-top:18px;align-items:center}
+    .primary{flex:1;padding:13px;border-radius:8px;font-size:14px;font-weight:800;border:none;cursor:pointer;background:${buttonColor};color:#fff}
+    .secondary{display:block;text-align:center;padding:13px 16px;border-radius:8px;font-size:14px;font-weight:700;text-decoration:none;background:#F2F2F0;color:#444}
+    .error{background:#FFF2EC;border:1px solid #F0997B;color:#993C1D;border-radius:8px;padding:10px 12px;font-size:13px;margin:10px 0 16px}
+    small{display:block;margin-top:22px;font-size:12px;color:#aaa;text-align:center}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="eyebrow">Nivel ${info.level} - ${escapeHtml(info.request_type_name)}</div>
     <h1>${escapeHtml(title)}</h1>
     <p>${escapeHtml(intro)}</p>
-    <p><strong>${escapeHtml(info.title)}</strong></p>
+    <div class="summary">
+      <h2>${escapeHtml(info.title)}</h2>
+      <div>Solicitado por <strong>${escapeHtml(info.requester_name)}</strong></div>
+      <div>Aprobador: <strong>${escapeHtml(info.approver_name)}</strong></div>
+    </div>
     ${errorHtml}
     <form method="POST" action="/${action}">
       <input type="hidden" name="token" value="${escapeAttr(token)}">
-      <textarea name="comment" maxlength="1200" ${required} style="width:100%;min-height:120px;"></textarea>
-      <button type="submit" style="margin-top:12px;background:${buttonColor};color:#fff;border:none;padding:12px 20px;border-radius:8px;">${escapeHtml(button)}</button>
+      <label for="comment">Comentarios ${isReject ? '' : '(opcional)'}</label>
+      <textarea id="comment" name="comment" maxlength="1200" ${required} placeholder="Escribe tus comentarios aqui..."></textarea>
+      <div class="actions">
+        <a class="secondary" href="${escapeAttr(joinUrl(platformUrl, '/requests/' + encodeURIComponent(info.id)))}">Ver solicitud</a>
+        <button type="submit" class="primary">${escapeHtml(button)}</button>
+      </div>
     </form>
-    <p><a href="${escapeAttr(joinUrl(platformUrl, '/requests/' + encodeURIComponent(info.id)))}">Ver solicitud en plataforma</a></p>
+    <small>FlowApp - Sistema de aprobaciones</small>
   </div>
 </body>
 </html>`;
@@ -367,13 +268,6 @@ function joinUrl(base: string, path: string): string {
 
 function normalizeComment(comment: string): string {
   return comment.trim().slice(0, 1200);
-}
-
-function formatBytes(bytes: number): string {
-  if (!bytes) return '';
-  if (bytes < 1024) return bytes + ' B';
-  if (bytes < 1024 * 1024) return Math.round(bytes / 1024) + ' KB';
-  return (bytes / 1024 / 1024).toFixed(1) + ' MB';
 }
 
 function escapeHtml(value: unknown): string {

@@ -117,16 +117,10 @@ export async function notifyApprover(requestId: string, level: number, env: Env)
   if (!request || !step) return;
   if (!step.approver_email?.trim()) throw new Error(`El aprobador del nivel ${level} no tiene correo configurado`);
 
-    
   const exp = Date.now() + 72 * 60 * 60 * 1000;
-  const reviewToken = await createMagicToken(
-    { stepId: step.id, requestId, action: 'approve', exp },
-    env.TOKEN_SECRET,
-    db
-  );
-
+  
   const apiUrl = publicApiUrl(env);
-  const reviewUrl = joinUrl(apiUrl, '/review?token=' + encodeURIComponent(reviewToken));
+  const frontend = frontendUrl(env);
   const atts = await db.prepare('SELECT filename, r2_key FROM attachments WHERE request_id = ? ORDER BY created_at')
     .bind(requestId).all<{ filename: string; r2_key: string }>();
 
@@ -145,9 +139,9 @@ export async function notifyApprover(requestId: string, level: number, env: Env)
     totalLevels: request.total_levels,
     requestId,
     attachments: attachments.map(a => ({ filename: a.filename, url: '' })),
-    approveUrl: reviewUrl,
-    rejectUrl: reviewUrl,
-    platformUrl: reviewUrl,
+    approveUrl: joinUrl(frontend, '/requests/' + encodeURIComponent(requestId)),
+    rejectUrl: joinUrl(frontend, '/requests/' + encodeURIComponent(requestId)),
+    platformUrl: joinUrl(frontend, '/requests/' + encodeURIComponent(requestId)),
     campaignData: request.campaign_data,
   });
 
