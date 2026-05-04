@@ -24,7 +24,7 @@ app.get('/reject', async (c) => {
 });
 app.get('/api/files/*', async (c) => {
   const key = c.req.path.replace('/api/files/', '');
-  return emailActionsRouter.request('/files/' + key, {}, c.env);
+  return emailActionsRouter.request('/' + encodeURIComponent(decodeURIComponent(key)), {}, c.env);
 });
 
 const api = new Hono<AppEnv>();
