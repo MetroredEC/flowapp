@@ -4,6 +4,7 @@ import { loginRequest } from './auth/msal';
 import Layout from './components/layout/Layout';
 import Dashboard from './pages/Dashboard';
 import RequestList from './pages/RequestList';
+import MyTasks from './pages/MyTasks';
 import RequestDetail from './pages/RequestDetail';
 import NewRequest from './pages/NewRequest';
 import AdminPanel from './pages/AdminPanel';
@@ -32,7 +33,7 @@ function LoginGate() {
           display: 'flex', alignItems: 'center', gap: 10,
         }}
       >
-        <MsLogo /> Iniciar sesión con Microsoft
+        <MsLogo /> Iniciar sesiÃƒÆ’Ã‚Â³n con Microsoft
       </button>
     </div>
   );
@@ -57,13 +58,14 @@ export default function App() {
     <BrowserRouter basename="/flowapp">
       <Layout>
         <Routes>
-          <Route path="/"               element={<Dashboard />} />
-          <Route path="/requests"       element={<RequestList />} />
-          <Route path="/requests/new"   element={<NewRequest />} />
-          <Route path="/requests/:id"   element={<RequestDetail />} />
-          <Route path="/admin"          element={<AdminPanel />} />
-          <Route path="*"               element={<Navigate to="/" />} />
-        </Routes>
+  <Route path="/"               element={<Dashboard />} />
+  <Route path="/requests"       element={<RequestList />} />
+  <Route path="/mis-tareas"     element={<MyTasks />} />
+  <Route path="/requests/new"   element={<NewRequest />} />
+  <Route path="/requests/:id"   element={<RequestDetail />} />
+  <Route path="/admin"          element={<AdminPanel />} />
+  <Route path="*"               element={<Navigate to="/" />} />
+</Routes>
       </Layout>
     </BrowserRouter>
   );

@@ -3,9 +3,10 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { useMsal } from '@azure/msal-react';
 
 const NAV = [
-  { to: '/',         label: 'Dashboard',   icon: '▦' },
-  { to: '/requests', label: 'Solicitudes',  icon: '☰' },
-  { to: '/admin',    label: 'Administrar',  icon: '⚙' },
+  { to: '/',           label: 'Dashboard',    icon: '▦' },
+  { to: '/requests',   label: 'Solicitudes',  icon: '☰' },
+  { to: '/mis-tareas', label: 'Mis tareas',   icon: '✓' },
+  { to: '/admin',      label: 'Administrar',  icon: '⚙' },
 ];
 
 export default function Layout({ children }: { children: ReactNode }) {
@@ -77,10 +78,10 @@ export default function Layout({ children }: { children: ReactNode }) {
           </div>
           <button
             onClick={() => instance.logoutRedirect()}
-            title="Cerrar sesión"
+            title="Cerrar sesiÃƒÆ’Ã‚Â³n"
             style={{ background: 'none', border: 'none', color: '#B5D4F4',
               cursor: 'pointer', fontSize: 14, padding: 4 }}
-          >⇥</button>
+          >ÃƒÂ¢Ã¢â‚¬Â¡Ã‚Â¥</button>
         </div>
       </aside>
 

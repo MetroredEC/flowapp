@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { AppEnv } from '../types';
 import { notifyApprover, createRequestWithSteps } from '../utils/approvals';
+import { startProcessByKey } from '../utils/bpm-engine';
 
 const router = new Hono<AppEnv>();
 
@@ -69,6 +70,7 @@ router.post('/', async (c) => {
   if (!body.request_type_id || !body.title?.trim() || !body.description?.trim()) {
     return c.json({ error: 'Campos requeridos: request_type_id, title, description' }, 400);
   }
+
   const requestId = await createRequestWithSteps({
     requestTypeId: body.request_type_id,
     title: body.title.trim(),
@@ -78,6 +80,20 @@ router.post('/', async (c) => {
     requesterEmail: c.get('userEmail'),
     campaignData: body.campaign_data,
   }, c.env);
+
+  console.log('BPM_TRIGGER', requestId);
+
+  try {
+    await startProcessByKey(
+      'compras',
+      requestId,
+      body.campaign_data || {},
+      c.env
+    );
+  } catch (e) {
+    console.error('BPM_START_ERROR', e instanceof Error ? e.message : String(e));
+  }
+
   return c.json({ data: { id: requestId } }, 201);
 });
 

@@ -30,7 +30,33 @@ async function request<T>(
   return res.json() as Promise<T>;
 }
 
+
+export interface BpmTask {
+  id: string;
+  title: string;
+  status: string;
+  assignee_email: string | null;
+  created_at: string;
+  completed_at: string | null;
+  request_id: string | null;
+  request_title: string | null;
+  request_type_name: string | null;
+  requester_name: string | null;
+}
+
+export interface BpmTaskDetail {
+  task: Record<string, unknown>;
+  attachments: Record<string, unknown>[];
+  events: Record<string, unknown>[];
+}
 export const api = {
+  bpmTasksMine: (all = false) =>
+    request<{ data: BpmTask[] }>('GET', '/api/bpm-tasks/mine' + (all ? '?all=1' : '')),
+
+  bpmTaskDetail: (id: string) => request<{ data: BpmTaskDetail }>('GET', '/api/bpm-tasks/' + id),
+
+  completeBpmTask: (id: string, body: { action: 'approve' | 'reject' | 'complete'; comment?: string }) => request<{ data: { completed: boolean; nextNodeId?: string | null } }>('POST', '/api/bpm-tasks/' + id + '/complete', body),
+
   // Requests
   getRequests: (params?: Record<string, string>) =>
     request<{ data: Request[] }>('GET', `/api/requests?${new URLSearchParams(params)}`),
