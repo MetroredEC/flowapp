@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api, BpmTask, BpmTaskDetail } from '../lib/api';
 
+const API_BASE = String(import.meta.env.VITE_API_URL || '').replace(/\/+$/, '');
+
 type Action = 'approve' | 'reject';
 
 export default function MyTasks() {
@@ -171,10 +173,10 @@ export default function MyTasks() {
                 >
                   <div style={{ fontWeight: 800, color: '#111', marginBottom: 5 }}>{task.title}</div>
                   <div style={{ fontSize: 13, color: '#555', lineHeight: 1.45 }}>
-                    {task.request_title || 'Solicitud sin título'}
+                    {task.request_title || 'Solicitud sin tÃ­tulo'}
                   </div>
                   <div style={{ fontSize: 12, color: '#888', marginTop: 6 }}>
-                    {task.request_type_name || 'Proceso'} · {task.requester_name || 'Solicitante'}
+                    {task.request_type_name || 'Proceso'} Â· {task.requester_name || 'Solicitante'}
                   </div>
                 </button>
               ))}
@@ -214,7 +216,7 @@ export default function MyTasks() {
               </h2>
 
               <p style={{ color: '#666', fontSize: 14, lineHeight: 1.6, marginBottom: 18 }}>
-                {String(detail?.task?.request_description ?? 'Sin descripción.')}
+                {String(detail?.task?.request_description ?? 'Sin descripciÃ³n.')}
               </p>
 
               <div style={{
@@ -231,21 +233,34 @@ export default function MyTasks() {
 
               <h3 style={{ fontSize: 15, fontWeight: 800, marginBottom: 10 }}>Adjuntos</h3>
               <div style={{ display: 'grid', gap: 8, marginBottom: 20 }}>
-                {detail?.attachments?.length ? detail.attachments.map((a, idx) => (
-                  <div
-                    key={idx}
-                    style={{
-                      border: '1px solid #ECECEA',
-                      background: '#FAFAF8',
-                      borderRadius: 10,
-                      padding: 12,
-                      fontSize: 13,
-                      color: '#333',
-                    }}
-                  >
-                    {String(a.filename ?? 'Archivo')}
-                  </div>
-                )) : (
+                {detail?.attachments?.length ? detail.attachments.map((a, idx) => {
+                  const key = String(a.r2_key ?? a.id ?? '');
+                  const href = API_BASE + '/api/files/' + encodeURIComponent(key);
+                  return (
+                    <a
+                      key={idx}
+                      href={href}
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{
+                        border: '1px solid #ECECEA',
+                        background: '#FAFAF8',
+                        borderRadius: 10,
+                        padding: 12,
+                        fontSize: 13,
+                        color: '#185FA5',
+                        fontWeight: 800,
+                        textDecoration: 'none',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        gap: 12,
+                      }}
+                    >
+                      <span>{String(a.filename ?? 'Archivo')}</span>
+                      <span style={{ color: '#777', fontWeight: 500 }}>Abrir</span>
+                    </a>
+                  );
+                }) : (
                   <div style={{ color: '#777', fontSize: 13 }}>Sin adjuntos.</div>
                 )}
               </div>
@@ -257,7 +272,7 @@ export default function MyTasks() {
                 value={comment}
                 onChange={e => setComment(e.target.value)}
                 maxLength={1200}
-                placeholder="Escribe un comentario para la decisión..."
+                placeholder="Escribe un comentario para la decisiÃ³n..."
                 style={{
                   width: '100%',
                   minHeight: 110,

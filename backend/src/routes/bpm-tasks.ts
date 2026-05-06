@@ -1,4 +1,4 @@
-﻿import { Hono } from 'hono';
+import { Hono } from 'hono';
 import { AppEnv } from '../types';
 import { completeTask } from '../utils/bpm-engine';
 
@@ -67,7 +67,7 @@ router.get('/:id', async (c) => {
   }
 
   const attachments = await c.env.DB.prepare(`
-    SELECT id, filename, content_type, size_bytes, created_at
+    SELECT id, filename, r2_key, content_type, size_bytes, created_at
       FROM attachments
      WHERE request_id = ?
      ORDER BY created_at

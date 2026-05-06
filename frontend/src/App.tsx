@@ -1,10 +1,11 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useIsAuthenticated, useMsal } from '@azure/msal-react';
 import { loginRequest } from './auth/msal';
 import Layout from './components/layout/Layout';
 import Dashboard from './pages/Dashboard';
 import RequestList from './pages/RequestList';
 import MyTasks from './pages/MyTasks';
+import Inventory from './pages/Inventory';
 import RequestDetail from './pages/RequestDetail';
 import NewRequest from './pages/NewRequest';
 import AdminPanel from './pages/AdminPanel';
@@ -33,7 +34,7 @@ function LoginGate() {
           display: 'flex', alignItems: 'center', gap: 10,
         }}
       >
-        <MsLogo /> Iniciar sesiÃƒÆ’Ã‚Â³n con Microsoft
+        <MsLogo /> Iniciar sesiÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³n con Microsoft
       </button>
     </div>
   );
@@ -55,18 +56,19 @@ export default function App() {
   if (!isAuth) return <LoginGate />;
 
   return (
-    <BrowserRouter basename="/flowapp">
+    <HashRouter>
       <Layout>
         <Routes>
   <Route path="/"               element={<Dashboard />} />
   <Route path="/requests"       element={<RequestList />} />
   <Route path="/mis-tareas"     element={<MyTasks />} />
+  <Route path="/inventario"     element={<Inventory />} />
   <Route path="/requests/new"   element={<NewRequest />} />
   <Route path="/requests/:id"   element={<RequestDetail />} />
   <Route path="/admin"          element={<AdminPanel />} />
   <Route path="*"               element={<Navigate to="/" />} />
 </Routes>
       </Layout>
-    </BrowserRouter>
+    </HashRouter>
   );
 }

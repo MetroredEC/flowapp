@@ -1,12 +1,13 @@
-import { ReactNode } from 'react';
+﻿import { ReactNode } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useMsal } from '@azure/msal-react';
 
 const NAV = [
-  { to: '/',           label: 'Dashboard',    icon: '▦' },
-  { to: '/requests',   label: 'Solicitudes',  icon: '☰' },
-  { to: '/mis-tareas', label: 'Mis tareas',   icon: '✓' },
-  { to: '/admin',      label: 'Administrar',  icon: '⚙' },
+  { to: '/',           label: 'Dashboard',    icon: '[#]' },
+  { to: '/requests',   label: 'Solicitudes',  icon: '[=]' },
+  { to: '/mis-tareas', label: 'Mis tareas',   icon: '[OK]' },
+  { to: '/inventario', label: 'Inventario',   icon: '[INV]' },
+  { to: '/admin',      label: 'Administrar',  icon: '[*]' },
 ];
 
 export default function Layout({ children }: { children: ReactNode }) {
@@ -40,7 +41,7 @@ export default function Layout({ children }: { children: ReactNode }) {
                 transition: 'all .15s',
               })}
             >
-              <span style={{ fontSize: 16, width: 20, textAlign: 'center' }}>{icon}</span>
+              <span style={{ fontSize: 14, width: 36 }}>{icon}</span>
               {label}
             </NavLink>
           ))}
@@ -55,33 +56,62 @@ export default function Layout({ children }: { children: ReactNode }) {
               borderRadius: 8, padding: '11px 0', fontSize: 14, fontWeight: 700,
               cursor: 'pointer',
             }}
-          >+ Nueva solicitud</button>
+          >
+            + Nueva solicitud
+          </button>
         </div>
 
         {/* User */}
         <div style={{
-          padding: '14px 16px', borderTop: '1px solid rgba(255,255,255,0.1)',
-          display: 'flex', alignItems: 'center', gap: 10,
+          padding: '14px 16px',
+          borderTop: '1px solid rgba(255,255,255,0.1)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
         }}>
           <div style={{
-            width: 32, height: 32, borderRadius: '50%', background: '#378ADD',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: '#fff', fontSize: 13, fontWeight: 700, flexShrink: 0,
+            width: 32,
+            height: 32,
+            borderRadius: '50%',
+            background: '#378ADD',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#fff',
+            fontSize: 13,
+            fontWeight: 700,
+            flexShrink: 0,
           }}>
             {user?.name?.charAt(0)?.toUpperCase() ?? '?'}
           </div>
+
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ color: '#fff', fontSize: 12, fontWeight: 600,
-              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <div style={{
+              color: '#fff',
+              fontSize: 12,
+              fontWeight: 600,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap'
+            }}>
               {user?.name ?? ''}
             </div>
           </div>
+
           <button
             onClick={() => instance.logoutRedirect()}
-            title="Cerrar sesiÃƒÆ’Ã‚Â³n"
-            style={{ background: 'none', border: 'none', color: '#B5D4F4',
-              cursor: 'pointer', fontSize: 14, padding: 4 }}
-          >ÃƒÂ¢Ã¢â‚¬Â¡Ã‚Â¥</button>
+            title="Cerrar sesión"
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#B5D4F4',
+              cursor: 'pointer',
+              fontSize: 14,
+              padding: 4
+            }}
+          >
+            EXIT
+          </button>
         </div>
       </aside>
 

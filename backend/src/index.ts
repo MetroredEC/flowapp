@@ -1,38 +1,60 @@
-import { Hono } from 'hono';
-import { AppEnv } from './types';
-import { corsMiddleware } from './middleware/cors';
+﻿import { Hono } from 'hono';
+import { cors } from 'hono/cors';
+
+import type { AppEnv } from './types';
+
 import { authMiddleware } from './middleware/auth';
-import requestsRouter from './routes/requests';
-import adminRouter from './routes/admin';
-import emailActionsRouter from './routes/email-actions';
+
+import requests from './routes/requests';
+import admin from './routes/admin';
+import adminBpm from './routes/admin-bpm';
+import bpmRun from './routes/bpm-run';
+import bpmTasks from './routes/bpm-tasks';
+import emailActions from './routes/email-actions';
+import inventory from './routes/inventory';
 
 const app = new Hono<AppEnv>();
 
-app.use('*', corsMiddleware);
+app.use('*', cors({
+  origin: (origin) => origin,
+  allowHeaders: ['Content-Type', 'Authorization'],
+  allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  exposeHeaders: ['Content-Length'],
+  maxAge: 600,
+  credentials: true,
+}));
 
-app.get('/health', (c) => c.json({ ok: true, ts: Date.now() }));
-
-// Public magic-link pages used from approval emails.
-app.route('/', emailActionsRouter);
-
-// Backwards-compatible public file route used by the frontend and email templates.
-app.get('/api/files/*', async (c) => {
-  const key = c.req.path.replace('/api/files/', '');
-  return emailActionsRouter.request('/files/' + key, {}, c.env);
+app.get('/', (c) => {
+  return c.json({
+    ok: true,
+    service: 'flowapp-api'
+  });
 });
 
-const api = new Hono<AppEnv>();
-api.use('*', corsMiddleware);
-api.use('*', authMiddleware);
-api.route('/requests', requestsRouter);
-api.route('/admin', adminRouter);
+app.use('/api/*', authMiddleware);
 
-app.route('/api', api);
+app.route('/api/requests', requests);
+app.route('/api/admin', admin);
+app.route('/api/bpm', adminBpm);
+app.route('/api/bpm-run', bpmRun);
+app.route('/api/bpm-tasks', bpmTasks);
+app.route('/api/email-actions', emailActions);
+app.route('/api/inventory', inventory);
 
-app.notFound((c) => c.json({ error: 'not_found', path: c.req.path }, 404));
+app.notFound((c) => {
+  return c.json({
+    error: 'not_found',
+    path: c.req.path
+  }, 404);
+});
+
 app.onError((err, c) => {
   console.error(err);
-  return c.json({ error: 'internal_error', message: err.message }, 500);
+
+  return c.json({
+    error: 'internal_error',
+    message: err.message
+  }, 500);
 });
 
 export default app;

@@ -49,7 +49,42 @@ export interface BpmTaskDetail {
   attachments: Record<string, unknown>[];
   events: Record<string, unknown>[];
 }
+
+export interface InventoryStockRow {
+  location_id: string;
+  item_id: string;
+  lot_id: string | null;
+  quantity_on_hand: number;
+  average_cost: number;
+  total_value: number;
+}
+
+export interface InventoryKardexRow {
+  created_at: string;
+  entry_type: string;
+  location_id: string;
+  location_name: string;
+  item_id: string;
+  item_name: string;
+  lot_id: string | null;
+  lot_code: string | null;
+  quantity_in: number;
+  quantity_out: number;
+  unit_cost: number;
+  total_cost: number;
+  balance_quantity: number;
+  balance_total_value: number;
+  movement_number: string;
+  movement_type: string;
+}
+
 export const api = {
+  inventoryStock: () =>
+    request<{ data: InventoryStockRow[] }>('GET', '/api/inventory/stock'),
+
+  inventoryKardex: () =>
+    request<{ data: InventoryKardexRow[] }>('GET', '/api/inventory/kardex'),
+
   bpmTasksMine: (all = false) =>
     request<{ data: BpmTask[] }>('GET', '/api/bpm-tasks/mine' + (all ? '?all=1' : '')),
 
