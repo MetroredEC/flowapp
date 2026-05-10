@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 import { api, type ProcessBlueprint } from '../lib/api';
 
 type FieldType = 'text' | 'number' | 'date' | 'textarea' | 'select' | 'checkbox';
@@ -56,31 +56,31 @@ const TEMPLATES: Template[] = [
   {
     key: 'suministros',
     name: 'Suministros',
-    description: 'Compras, presupuesto, despacho, recepcion y evidencia.',
+    description: 'Solicitud, compras, presupuesto, despacho y recepciÃ³n.',
     prompt: 'La supervisora del centro crea una solicitud de suministros. Compras recibe, cotiza y selecciona proveedor. Contabilidad valida presupuesto. Compras despacha. La supervisora recibe, valida cantidades reales y adjunta evidencia.',
   },
   {
     key: 'compras',
     name: 'Compras generales',
-    description: 'Solicitud, cotizacion, aprobacion y orden de compra.',
+    description: 'Compra, revisiÃ³n, aprobaciÃ³n y seguimiento.',
     prompt: 'El solicitante crea una solicitud de compra. Compras revisa y cotiza. El responsable aprueba la compra. Compras registra proveedor y fecha estimada. El solicitante recibe confirmacion.',
   },
   {
     key: 'marketing',
     name: 'Marketing',
-    description: 'Campanas, cotizaciones, aprobaciones y registro de costos.',
+    description: 'CampaÃ±as, aprobaciones, proveedores y costos.',
     prompt: 'Marketing solicita una campana. El responsable revisa objetivo y presupuesto. Compras o proveedor cotiza. Gerencia aprueba. Se ejecuta la campana y se registra costo final.',
   },
   {
     key: 'mantenimiento',
     name: 'Mantenimiento',
-    description: 'Reporte, diagnostico, aprobacion y cierre con evidencia.',
+    description: 'Reporte, revisiÃ³n, ejecuciÃ³n y cierre.',
     prompt: 'Un usuario reporta una necesidad de mantenimiento. Mantenimiento diagnostica. Administracion aprueba el gasto si aplica. El tecnico ejecuta el trabajo y sube evidencia de cierre.',
   },
   {
     key: 'talento-humano',
     name: 'Talento Humano',
-    description: 'Solicitudes internas, revision, aprobacion y registro.',
+    description: 'Solicitudes internas, revisiÃ³n y atenciÃ³n.',
     prompt: 'Un colaborador solicita apoyo de Talento Humano. Recursos Humanos revisa. Jefatura aprueba si corresponde. Recursos Humanos ejecuta y cierra el caso.',
   },
 ];
@@ -187,7 +187,7 @@ export default function ProcessBuilder() {
       setBlueprints(refreshed.data as BuilderBlueprint[]);
       setSelected(bp);
       setStep(2);
-      setMessage('Listo. La IA propuso un flujo editable.');
+      setMessage('Listo. Se preparÃ³ una estructura editable para revisar.');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'No se pudo analizar el proceso.');
     } finally {
@@ -217,7 +217,7 @@ export default function ProcessBuilder() {
     if (!selected || !proposal) return;
 
     if (!checklistOk) {
-      setError('Corrige los pendientes del checklist antes de desplegar.');
+      setError('Revisa los pendientes antes de publicar el proceso.');
       return;
     }
 
@@ -229,7 +229,7 @@ export default function ProcessBuilder() {
       await api.updateProcessBlueprintProposal(selected.id, proposal);
       await api.deployProcessBlueprint(selected.id);
       await load();
-      setMessage('Proceso desplegado. Ya queda disponible para uso.');
+      setMessage('Proceso publicado. Ya queda disponible para uso.');
       setStep(3);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'No se pudo desplegar el proceso.');
@@ -311,7 +311,7 @@ export default function ProcessBuilder() {
       const next: ProposalNode = {
         id,
         type: 'approval',
-        label: 'Nuevo paso',
+        label: 'Nueva etapa',
         description: 'Describe que debe hacer el responsable.',
         approver_type: 'email',
         approver_email: '',
@@ -374,7 +374,7 @@ export default function ProcessBuilder() {
                 ...fields,
                 {
                   key: 'campo_' + (fields.length + 1),
-                  label: 'Nuevo campo',
+                  label: 'Campo',
                   type: 'text',
                   required: false,
                 },
@@ -436,14 +436,14 @@ export default function ProcessBuilder() {
       {error && <Alert kind="error">{error}</Alert>}
 
       <div style={stepper}>
-        <StepPill active={step === 1} done={step > 1} number="1" label="Cargar proceso" />
-        <StepPill active={step === 2} done={step > 2} number="2" label="Editar y simular" />
-        <StepPill active={step === 3} done={false} number="3" label="Desplegar" />
+        <StepPill active={step === 1} done={step > 1} number="1" label="Definir proceso" />
+        <StepPill active={step === 2} done={step > 2} number="2" label="Revisar recorrido" />
+        <StepPill active={step === 3} done={false} number="3" label="Publicar" />
       </div>
 
       <div style={layout}>
         <aside style={leftPanel}>
-          <h2 style={sectionTitle}>Biblioteca</h2>
+          <h2 style={sectionTitle}>Mis procesos</h2>
 
           <button
             onClick={() => {
@@ -455,10 +455,10 @@ export default function ProcessBuilder() {
             }}
             style={newButton}
           >
-            + Nuevo proceso
+            + Crear proceso
           </button>
 
-          <div style={templateTitle}>Plantillas rapidas</div>
+          <div style={templateTitle}>Plantillas sugeridas</div>
 
           <div style={{ display: 'grid', gap: 9 }}>
             {TEMPLATES.map(template => (
@@ -469,7 +469,7 @@ export default function ProcessBuilder() {
             ))}
           </div>
 
-          <div style={templateTitle}>Procesos guardados</div>
+          <div style={templateTitle}>Procesos recientes</div>
 
           <div style={{ display: 'grid', gap: 10 }}>
             {blueprints.length === 0 && (
@@ -506,9 +506,9 @@ export default function ProcessBuilder() {
               <div style={cardHeader}>
                 <div>
                   <div style={eyebrow}>Paso 1</div>
-                  <h2 style={cardTitle}>Carga o describe el proceso</h2>
+                  <h2 style={cardTitle}>CuÃ©ntanos cÃ³mo funciona el proceso</h2>
                   <p style={muted}>
-                    Pega el proceso, usa una plantilla o sube un archivo de texto. La IA generara un arbol editable con formularios y adjuntos.
+                    Puedes partir de una plantilla, escribir los pasos o cargar un archivo. Luego revisas y ajustas cada etapa antes de publicarlo.
                   </p>
                 </div>
               </div>
@@ -524,8 +524,8 @@ export default function ProcessBuilder() {
               </div>
 
               <label style={dropZone}>
-                <div style={{ fontSize: 28, fontWeight: 950, color: '#0C447C' }}>Subir archivo</div>
-                <div style={muted}>TXT, CSV, MD, JSON. Si tienes PDF o Word, copia el texto del proceso por ahora.</div>
+                <div style={{ fontSize: 28, fontWeight: 950, color: '#0C447C' }}>Cargar documento</div>
+                <div style={muted}>TXT, CSV, MD, JSON. Puedes cargar archivos de texto. Para PDF o Word, copia el contenido principal en el campo inferior.</div>
                 <input
                   type="file"
                   accept=".txt,.csv,.md,.json,.log"
@@ -552,7 +552,7 @@ export default function ProcessBuilder() {
 
               <div style={actionsRow}>
                 <button onClick={createAndAnalyze} disabled={working || !sourceText.trim()} style={primaryButton}>
-                  {working ? 'Analizando...' : 'Generar propuesta IA'}
+                  {working ? 'Analizando...' : 'Sugerir estructura'}
                 </button>
               </div>
             </section>
@@ -564,19 +564,19 @@ export default function ProcessBuilder() {
                 <div style={cardHeader}>
                   <div>
                     <div style={eyebrow}>Paso 2</div>
-                    <h2 style={cardTitle}>Arbol de aprobaciones</h2>
+                    <h2 style={cardTitle}>Recorrido del proceso</h2>
                     <p style={muted}>
-                      Selecciona un paso para editar responsable, formulario, adjuntos y validaciones.
+                      Selecciona una etapa para definir quiÃ©n la atiende, quÃ© informaciÃ³n debe llenar y quÃ© evidencia debe adjuntar.
                     </p>
                   </div>
 
                   <button onClick={addNode} style={secondaryButton}>
-                    + Agregar paso
+                    + Agregar etapa
                   </button>
                 </div>
 
                 <div style={processMeta}>
-                  <Field label="Nombre visible">
+                  <Field label="Nombre del proceso">
                     <input
                       value={proposal.process_name}
                       onChange={e => updateProcessMeta({ process_name: e.target.value })}
@@ -584,7 +584,7 @@ export default function ProcessBuilder() {
                     />
                   </Field>
 
-                  <Field label="Codigo interno">
+                  <Field label="Identificador">
                     <input
                       value={proposal.process_key}
                       onChange={e => updateProcessMeta({ process_key: slug(e.target.value) })}
@@ -610,18 +610,18 @@ export default function ProcessBuilder() {
                         <small>{node.approver_type === 'requester' ? 'Solicitante' : node.approver_email || node.role || 'Sin responsable'}</small>
                       </span>
 
-                      <span style={nodeTypeBadge}>{node.type === 'approval' ? 'Aprobacion' : 'Tarea'}</span>
+                      <span style={nodeTypeBadge}>{node.type === 'approval' ? 'AprobaciÃ³n' : 'Tarea'}</span>
                     </button>
                   ))}
                 </div>
 
                 <div style={actionsRow}>
                   <button onClick={saveProposal} disabled={working} style={secondaryButton}>
-                    Guardar
+                    Guardar cambios
                   </button>
 
                   <button onClick={deploy} disabled={working || !checklistOk} style={primaryButton}>
-                    Desplegar
+                    Publicar
                   </button>
                 </div>
               </section>
@@ -635,23 +635,23 @@ export default function ProcessBuilder() {
                 <section style={{ ...glassCard, gridColumn: '1 / -1' }}>
                   <div style={cardHeader}>
                     <div>
-                      <div style={eyebrow}>Editor visual</div>
+                      <div style={eyebrow}>Detalle de la etapa</div>
                       <h2 style={cardTitle}>Paso {selectedNodeIndex + 1}: {currentNode.label}</h2>
                     </div>
 
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                       <button onClick={() => moveNode(selectedNodeIndex, -1)} style={tinyButton}>Subir</button>
                       <button onClick={() => moveNode(selectedNodeIndex, 1)} style={tinyButton}>Bajar</button>
-                      <button onClick={() => duplicateNode(selectedNodeIndex)} style={tinyButton}>Duplicar</button>
+                      <button onClick={() => duplicateNode(selectedNodeIndex)} style={tinyButton}>Duplicar etapa</button>
                       <button onClick={() => removeNode(selectedNodeIndex)} style={dangerButton}>Eliminar</button>
                     </div>
                   </div>
 
                   <div style={editorGrid}>
                     <div style={editorColumn}>
-                      <div style={subTitle}>Configuracion del paso</div>
+                      <div style={subTitle}>ConfiguraciÃ³n de la etapa</div>
 
-                      <Field label="Nombre del paso">
+                      <Field label="Nombre de la etapa">
                         <input
                           value={currentNode.label}
                           onChange={e => updateNode(selectedNodeIndex, { label: e.target.value })}
@@ -659,7 +659,7 @@ export default function ProcessBuilder() {
                         />
                       </Field>
 
-                      <Field label="ID tecnico">
+                      <Field label="Identificador">
                         <input
                           value={currentNode.id}
                           onChange={e => updateNode(selectedNodeIndex, { id: slug(e.target.value) })}
@@ -673,12 +673,12 @@ export default function ProcessBuilder() {
                           onChange={e => updateNode(selectedNodeIndex, { type: e.target.value as ProposalNode['type'] })}
                           style={input}
                         >
-                          <option value="approval">Aprobacion</option>
-                          <option value="task">Tarea operativa</option>
+                          <option value="approval">AprobaciÃ³n</option>
+                          <option value="task">Actividad</option>
                         </select>
                       </Field>
 
-                      <Field label="Que debe hacer este paso">
+                      <Field label="QuÃ© debe ocurrir en esta etapa">
                         <textarea
                           value={currentNode.description || ''}
                           onChange={e => updateNode(selectedNodeIndex, { description: e.target.value })}
@@ -763,7 +763,7 @@ export default function ProcessBuilder() {
 
                     <div style={editorColumn}>
                       <div style={subHeader}>
-                        <div style={subTitle}>Formulario interactivo</div>
+                        <div style={subTitle}>Formulario de la etapa</div>
                         <button onClick={() => addField(selectedNodeIndex)} style={tinyButton}>+ Campo</button>
                       </div>
 
@@ -809,7 +809,7 @@ export default function ProcessBuilder() {
 
                             <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                               <button onClick={() => removeField(selectedNodeIndex, fieldIndex)} style={dangerTiny}>
-                                Quitar campo
+                                Eliminar campo
                               </button>
                             </div>
                           </div>
@@ -818,7 +818,7 @@ export default function ProcessBuilder() {
                     </div>
 
                     <div style={editorColumn}>
-                      <div style={subTitle}>Vista previa del formulario</div>
+                      <div style={subTitle}>Vista previa</div>
                       <FormPreview node={currentNode} />
                     </div>
                   </div>
@@ -831,9 +831,9 @@ export default function ProcessBuilder() {
             <section style={glassCard}>
               <div style={{ textAlign: 'center', padding: 40 }}>
                 <div style={successIcon}>OK</div>
-                <h2 style={cardTitle}>Proceso desplegado</h2>
+                <h2 style={cardTitle}>Proceso publicado</h2>
                 <p style={muted}>
-                  El proceso ya quedo disponible para conectarse a tipos de solicitud y usarse por usuarios finales.
+                  El proceso quedÃ³ listo para usarse en las solicitudes de FlowApp.
                 </p>
               </div>
             </section>
@@ -848,15 +848,15 @@ function Hero() {
   return (
     <div style={hero}>
       <div>
-        <div style={eyebrow}>No-code BPM</div>
-        <h1 style={heroTitle}>Constructor de procesos</h1>
+        <div style={eyebrow}>DiseÃ±o de procesos</div>
+        <h1 style={heroTitle}>DiseÃ±ador de procesos</h1>
         <p style={heroText}>
-          Carga un proceso real, deja que la IA proponga el flujo, personaliza formularios y despliega sin programar.
+          Describe cÃ³mo trabaja tu equipo y FlowApp te ayuda a ordenar etapas, responsables, formularios y evidencias.
         </p>
       </div>
 
       <div style={heroBadge}>
-        Corazon de FlowApp
+        DiseÃ±o guiado
       </div>
     </div>
   );
@@ -880,7 +880,7 @@ function ChecklistPanel({ items }: { items: Array<{ label: string; ok: boolean; 
 
   return (
     <section style={miniPanel}>
-      <div style={miniPanelTitle}>Checklist de despliegue</div>
+      <div style={miniPanelTitle}>RevisiÃ³n antes de publicar</div>
       <div style={scoreBox}>{okCount}/{items.length} listo</div>
 
       <div style={{ display: 'grid', gap: 8, marginTop: 12 }}>
@@ -904,22 +904,22 @@ function ChecklistPanel({ items }: { items: Array<{ label: string; ok: boolean; 
 function SimulationPanel({ proposal }: { proposal: Proposal | null }) {
   return (
     <section style={miniPanel}>
-      <div style={miniPanelTitle}>Simulador</div>
-      <p style={mutedSmall}>Asi viajara una solicitud cuando el proceso este activo.</p>
+      <div style={miniPanelTitle}>Recorrido</div>
+      <p style={mutedSmall}>AsÃ­ avanzarÃ¡ una solicitud cuando este proceso estÃ© publicado.</p>
 
       <div style={{ display: 'grid', gap: 8, marginTop: 12 }}>
-        <SimStep label="Inicio" detail="El usuario crea la solicitud" index={0} />
+        <SimStep label="Inicio" detail="La solicitud inicia" index={0} />
 
         {(proposal?.nodes ?? []).map((node, index) => (
           <SimStep
             key={node.id + index}
             index={index + 1}
             label={node.label}
-            detail={node.approver_type === 'requester' ? 'Vuelve al solicitante' : node.approver_email || node.role || 'Responsable pendiente'}
+            detail={node.approver_type === 'requester' ? 'Solicitante' : node.approver_email || node.role || 'Responsable pendiente'}
           />
         ))}
 
-        <SimStep label="Fin" detail="Proceso cerrado" index={(proposal?.nodes.length ?? 0) + 1} />
+        <SimStep label="Fin" detail="Solicitud finalizada" index={(proposal?.nodes.length ?? 0) + 1} />
       </div>
     </section>
   );
@@ -972,7 +972,7 @@ function FormPreview({ node }: { node: ProposalNode }) {
 
       {node.attachment_rules?.required && (
         <div style={attachmentPreview}>
-          Adjuntos requeridos: {node.attachment_rules.label || 'Adjuntos'} ({node.attachment_rules.min_files || 1} minimo)
+          Evidencia requerida: {node.attachment_rules.label || 'Adjuntos'} ({node.attachment_rules.min_files || 1} minimo)
         </div>
       )}
     </div>
@@ -1036,17 +1036,17 @@ function getChecklist(proposal: Proposal | null): Array<{ label: string; ok: boo
     {
       label: 'Responsables definidos',
       ok: allOwners,
-      detail: allOwners ? 'Todos tienen responsable' : 'Falta aprobador o rol',
+      detail: allOwners ? 'Responsables completos' : 'Falta asignar responsables',
     },
     {
       label: 'Formularios validos',
       ok: allFormsValid,
-      detail: allFormsValid ? 'Campos completos' : 'Hay campos sin etiqueta o codigo',
+      detail: allFormsValid ? 'Formularios completos' : 'Hay campos sin etiqueta o codigo',
     },
     {
-      label: 'Adjuntos validos',
+      label: 'Evidencias vÃ¡lidas',
       ok: attachmentsValid,
-      detail: attachmentsValid ? 'Reglas correctas' : 'Corrige adjuntos obligatorios',
+      detail: attachmentsValid ? 'Evidencias completas' : 'Corrige adjuntos obligatorios',
     },
   ];
 }
@@ -1083,10 +1083,10 @@ const hero: CSSProperties = {
   gap: 20,
   alignItems: 'center',
   padding: 26,
-  borderRadius: 24,
-  background: 'rgba(255,255,255,.68)',
+  borderRadius: 28,
+  background: 'linear-gradient(135deg, rgba(255,255,255,.86), rgba(255,255,255,.58))',
   border: '1px solid rgba(255,255,255,.72)',
-  boxShadow: '0 18px 60px rgba(12,68,124,.10)',
+  boxShadow: '0 22px 70px rgba(16,24,40,.08)',
   backdropFilter: 'blur(18px)',
 };
 
@@ -1113,8 +1113,8 @@ const heroText: CSSProperties = {
 };
 
 const heroBadge: CSSProperties = {
-  background: '#0C447C',
-  color: '#fff',
+  background: 'rgba(12,68,124,.08)',
+  color: '#0C447C',
   borderRadius: 999,
   padding: '11px 16px',
   fontSize: 13,
@@ -1199,11 +1199,11 @@ const sideStack: CSSProperties = {
 };
 
 const glassCard: CSSProperties = {
-  background: 'rgba(255,255,255,.72)',
+  background: 'rgba(255,255,255,.78)',
   border: '1px solid rgba(255,255,255,.76)',
-  borderRadius: 24,
+  borderRadius: 28,
   padding: 22,
-  boxShadow: '0 18px 60px rgba(12,68,124,.10)',
+  boxShadow: '0 22px 70px rgba(16,24,40,.08)',
   backdropFilter: 'blur(18px)',
 };
 
@@ -1240,8 +1240,8 @@ const templateTitle: CSSProperties = {
 const newButton: CSSProperties = {
   width: '100%',
   border: 'none',
-  background: '#0C447C',
-  color: '#fff',
+  background: 'rgba(12,68,124,.08)',
+  color: '#0C447C',
   borderRadius: 14,
   padding: '12px 14px',
   fontWeight: 950,
@@ -1252,8 +1252,8 @@ const templateButton: CSSProperties = {
   width: '100%',
   textAlign: 'left',
   border: '1px solid #D6E8FA',
-  background: '#EFF8FF',
-  borderRadius: 15,
+  background: 'rgba(255,255,255,.76)',
+  borderRadius: 18,
   padding: 12,
   cursor: 'pointer',
   display: 'grid',
@@ -1374,8 +1374,8 @@ const actionsRow: CSSProperties = {
 };
 
 const primaryButton: CSSProperties = {
-  background: '#0C447C',
-  color: '#fff',
+  background: 'rgba(12,68,124,.08)',
+  color: '#0C447C',
   border: 'none',
   borderRadius: 14,
   padding: '12px 18px',
@@ -1453,8 +1453,8 @@ const nodeIndex: CSSProperties = {
   width: 36,
   height: 36,
   borderRadius: '50%',
-  background: '#0C447C',
-  color: '#fff',
+  background: 'rgba(12,68,124,.08)',
+  color: '#0C447C',
   display: 'grid',
   placeItems: 'center',
   fontWeight: 950,
@@ -1604,8 +1604,8 @@ const simIndex: CSSProperties = {
   borderRadius: '50%',
   display: 'grid',
   placeItems: 'center',
-  background: '#0C447C',
-  color: '#fff',
+  background: 'rgba(12,68,124,.08)',
+  color: '#0C447C',
   fontSize: 11,
   fontWeight: 950,
   flexShrink: 0,

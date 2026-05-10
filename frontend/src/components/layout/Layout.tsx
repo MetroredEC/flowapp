@@ -1,15 +1,15 @@
-﻿import { ReactNode } from 'react';
+import { ReactNode } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useMsal } from '@azure/msal-react';
 
 const NAV = [
-  { to: '/', label: 'Inicio', icon: '01', description: 'Resumen general' },
-  { to: '/requests', label: 'Solicitudes', icon: '02', description: 'Procesos activos' },
-  { to: '/requests/new', label: 'Nueva solicitud', icon: '03', description: 'Crear proceso' },
-  { to: '/mis-tareas', label: 'Mis tareas', icon: '04', description: 'Aprobaciones' },
-  { to: '/inventario', label: 'Inventario', icon: '05', description: 'Stock y Kardex' },
-  { to: '/process-builder', label: 'Constructor', icon: '06', description: 'No-code BPM' },
-  { to: '/admin', label: 'Administrar', icon: '07', description: 'Configuración' },
+  { to: '/', label: 'Inicio', icon: '01', description: 'Panel principal' },
+  { to: '/requests', label: 'Solicitudes', icon: '02', description: 'Seguimiento' },
+  { to: '/requests/new', label: 'Crear solicitud', icon: '03', description: 'Solicitar' },
+  { to: '/mis-tareas', label: 'Mis tareas', icon: '04', description: 'Pendientes' },
+  { to: '/inventario', label: 'Inventario', icon: '05', description: 'Control operativo' },
+  { to: '/process-builder', label: 'Procesos', icon: '06', description: 'Gestión guiada BPM' },
+  { to: '/admin', label: 'Administrar', icon: '07', description: 'Parámetros' },
 ];
 
 export default function Layout({ children }: { children: ReactNode }) {
@@ -34,7 +34,7 @@ export default function Layout({ children }: { children: ReactNode }) {
           <div style={brandMark}>M</div>
           <div>
             <div style={brandName}>Metrored</div>
-            <div style={brandSub}>FlowApp</div>
+            <div style={brandSub}>Procesos</div>
           </div>
         </div>
 
@@ -43,7 +43,7 @@ export default function Layout({ children }: { children: ReactNode }) {
           style={primaryAction}
         >
           <span style={primaryActionIcon}>+</span>
-          Nueva solicitud
+          Crear solicitud
         </button>
 
         <nav style={navList}>
@@ -67,16 +67,16 @@ export default function Layout({ children }: { children: ReactNode }) {
         </nav>
 
         <div style={helpCard}>
-          <div style={helpEyebrow}>No-code</div>
-          <div style={helpTitle}>Crea flujos sin programar</div>
+          <div style={helpEyebrow}>Gestión guiada</div>
+          <div style={helpTitle}>Diseña procesos guiados</div>
           <div style={helpText}>
-            Usa el constructor para convertir procesos reales en flujos aprobables.
+            Convierte procedimientos internos en solicitudes claras, aprobables y fáciles de seguir.
           </div>
           <button
             onClick={() => navigate('/process-builder')}
             style={helpButton}
           >
-            Abrir constructor
+            Diseñar proceso
           </button>
         </div>
 
@@ -102,7 +102,7 @@ export default function Layout({ children }: { children: ReactNode }) {
         <header style={topbar}>
           <div>
             <div style={topbarEyebrow}>Plataforma corporativa</div>
-            <div style={topbarTitle}>Procesos, aprobaciones e inventario</div>
+            <div style={topbarTitle}>Gestión simple de procesos internos</div>
           </div>
 
           <div style={topbarRight}>
@@ -110,7 +110,7 @@ export default function Layout({ children }: { children: ReactNode }) {
               onClick={() => navigate('/process-builder')}
               style={ghostButton}
             >
-              Constructor no-code
+              Procesos no-code
             </button>
 
             <button
