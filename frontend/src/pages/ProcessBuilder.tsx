@@ -57,33 +57,33 @@ const TEMPLATES: Template[] = [
   {
     key: 'suministros',
     name: 'Suministros',
-    description: 'Solicitud, compras, presupuesto, despacho y recepciÃƒÆ’Ã‚Â³n.',
+    description: 'Solicitud, compras, presupuesto, despacho y recepciÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³n.',
     prompt: 'La supervisora del centro crea una solicitud de suministros. Compras recibe, cotiza y selecciona proveedor. Contabilidad valida presupuesto. Compras despacha. La supervisora recibe, valida cantidades reales y adjunta evidencia.',
   },
   {
     key: 'compras',
     name: 'Compras generales',
-    description: 'RevisiÃƒÆ’Ã‚Â³n, cotizaciÃƒÆ’Ã‚Â³n, aprobaciÃƒÆ’Ã‚Â³n y seguimiento.',
-    prompt: 'El solicitante crea una solicitud de compra. Compras revisa y cotiza. El responsable aprueba la compra. Compras registra proveedor y fecha estimada. El solicitante recibe confirmaciÃƒÆ’Ã‚Â³n.',
+    description: 'RevisiÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³n, cotizaciÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³n, aprobaciÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³n y seguimiento.',
+    prompt: 'El solicitante crea una solicitud de compra. Compras revisa y cotiza. El responsable aprueba la compra. Compras registra proveedor y fecha estimada. El solicitante recibe confirmaciÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³n.',
   },
   {
     key: 'marketing',
     name: 'Marketing',
-    description: 'CampaÃƒÆ’Ã‚Â±as, aprobaciones, proveedores y costos.',
-    prompt: 'Marketing solicita una campaÃƒÆ’Ã‚Â±a. El responsable revisa objetivo y presupuesto. Compras o proveedor cotiza. Gerencia aprueba. Se ejecuta la campaÃƒÆ’Ã‚Â±a y se registra costo final.',
+    description: 'CampaÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±as, aprobaciones, proveedores y costos.',
+    prompt: 'Marketing solicita una campaÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±a. El responsable revisa objetivo y presupuesto. Compras o proveedor cotiza. Gerencia aprueba. Se ejecuta la campaÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±a y se registra costo final.',
   },
   {
     key: 'mantenimiento',
     name: 'Mantenimiento',
-    description: 'Reporte, revisiÃƒÆ’Ã‚Â³n, ejecuciÃƒÆ’Ã‚Â³n y cierre.',
-    prompt: 'Un usuario reporta una necesidad de mantenimiento. Mantenimiento diagnostica. AdministraciÃƒÆ’Ã‚Â³n aprueba el gasto si aplica. El tÃƒÆ’Ã‚Â©cnico ejecuta el trabajo y sube evidencia de cierre.',
+    description: 'Reporte, revisiÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³n, ejecuciÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³n y cierre.',
+    prompt: 'Un usuario reporta una necesidad de mantenimiento. Mantenimiento diagnostica. AdministraciÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³n aprueba el gasto si aplica. El tÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©cnico ejecuta el trabajo y sube evidencia de cierre.',
   },
 ];
 
 const FIELD_TYPES: Array<{ value: FieldType; label: string }> = [
   { value: 'text', label: 'Texto' },
   { value: 'textarea', label: 'Texto largo' },
-  { value: 'number', label: 'NÃƒÆ’Ã‚Âºmero' },
+  { value: 'number', label: 'NÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Âºmero' },
   { value: 'date', label: 'Fecha' },
   { value: 'checkbox', label: 'Casilla' },
   { value: 'select', label: 'Lista' },
@@ -99,7 +99,7 @@ export default function ProcessBuilder() {
   const [showCreate, setShowCreate] = useState(false);
 
   const [name, setName] = useState('Proceso de suministros');
-  const [description, setDescription] = useState('Solicitud, revisiÃƒÆ’Ã‚Â³n, despacho y recepciÃƒÆ’Ã‚Â³n');
+  const [description, setDescription] = useState('Solicitud, revisiÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³n, despacho y recepciÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³n');
   const [sourceText, setSourceText] = useState(TEMPLATES[0].prompt);
   const [fileName, setFileName] = useState('');
 
@@ -163,7 +163,7 @@ export default function ProcessBuilder() {
     } else {
       setSourceText(prev => {
         const prefix = prev.trim() ? prev.trim() + '\n\n' : '';
-        return prefix + 'Archivo cargado: ' + file.name + '. Resume aquÃƒÆ’Ã‚Â­ el contenido principal.';
+        return prefix + 'Archivo cargado: ' + file.name + '. Resume aquÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â­ el contenido principal.';
       });
     }
   }
@@ -263,7 +263,7 @@ export default function ProcessBuilder() {
         id: 'etapa-' + (prev.nodes.length + 1),
         type: 'approval',
         label: 'Nueva etapa',
-        description: 'Describe quÃƒÆ’Ã‚Â© debe ocurrir en esta etapa.',
+        description: 'Describe quÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â© debe ocurrir en esta etapa.',
         approver_type: 'email',
         approver_email: '',
         form: {
@@ -365,7 +365,7 @@ export default function ProcessBuilder() {
                 ...fields,
                 {
                   key: 'campo_' + (fields.length + 1),
-                  label: 'Nuevo campo',
+                  label: 'Campo',
                   type: 'text',
                   required: false,
                 },
@@ -424,11 +424,11 @@ export default function ProcessBuilder() {
       <header style={header}>
         <div>
           <h1 style={title}>Procesos</h1>
-          <p style={subtitle}>Administra formularios, etapas, responsables y publicaciÃƒÆ’Ã‚Â³n.</p>
+          <p style={subtitle}>Administra formularios, etapas, responsables y publicaciÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³n.</p>
         </div>
 
         <button onClick={() => startNew()} style={primaryButton}>
-          Nuevo proceso
+          Crear proceso
         </button>
       </header>
 
@@ -442,7 +442,7 @@ export default function ProcessBuilder() {
 
             <div style={{ display: 'grid', gap: 8, marginTop: 10 }}>
               {blueprints.length === 0 && (
-                <div style={emptyBox}>TodavÃƒÆ’Ã‚Â­a no hay procesos creados.</div>
+                <div style={emptyBox}>TodavÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â­a no hay procesos creados.</div>
               )}
 
               {blueprints.map(item => (
@@ -460,8 +460,8 @@ export default function ProcessBuilder() {
                   }}
                 >
                   <span style={{ minWidth: 0, display: 'grid', gap: 2, overflow: 'hidden' }}>
-                    <strong>{item.name}</strong>
-                    <small>{item.description || 'Sin descripciÃƒÆ’Ã‚Â³n'}</small>
+                    <strong style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</strong>
+                    <small>{item.description || 'Sin descripciÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³n'}</small>
                   </span>
                   <span style={statusStyle(item.status)}>{statusLabel(item.status)}</span>
                 </button>
@@ -475,8 +475,8 @@ export default function ProcessBuilder() {
             <div style={{ display: 'grid', gap: 8, marginTop: 10 }}>
               {TEMPLATES.map(template => (
                 <button key={template.key} onClick={() => startNew(template)} style={templateItem}>
-                  <strong>{template.name}</strong>
-                  <small>{template.description}</small>
+                  <strong style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{template.name}</strong>
+                  <small style={{ overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>{template.description}</small>
                 </button>
               ))}
             </div>
@@ -488,8 +488,8 @@ export default function ProcessBuilder() {
             <section style={card}>
               <div style={sectionHeader}>
                 <div>
-                  <h2 style={sectionTitle}>Nuevo proceso</h2>
-                  <p style={sectionSubtitle}>Completa la informaciÃƒÆ’Ã‚Â³n inicial para preparar la estructura.</p>
+                  <h2 style={sectionTitle}>Crear proceso</h2>
+                  <p style={sectionSubtitle}>Completa la informaciÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³n inicial para preparar la estructura.</p>
                 </div>
               </div>
 
@@ -498,7 +498,7 @@ export default function ProcessBuilder() {
                   <input value={name} onChange={e => setName(e.target.value)} style={input} />
                 </Field>
 
-                <Field label="DescripciÃƒÆ’Ã‚Â³n">
+                <Field label="DescripciÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³n">
                   <input value={description} onChange={e => setDescription(e.target.value)} style={input} />
                 </Field>
               </div>
@@ -522,7 +522,7 @@ export default function ProcessBuilder() {
                 <div style={infoBox}>Archivo cargado: {fileName}</div>
               )}
 
-              <Field label="DescripciÃƒÆ’Ã‚Â³n del proceso">
+              <Field label="DescripciÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³n del proceso">
                 <textarea
                   value={sourceText}
                   onChange={e => setSourceText(e.target.value)}
@@ -549,9 +549,9 @@ export default function ProcessBuilder() {
           {!showCreate && !proposal && (
             <section style={emptyState}>
               <div style={emptyStateInner}>
-                <h2>Selecciona o crea un proceso</h2>
-                <p>Usa una plantilla o crea un proceso nuevo para configurar su formulario y recorrido.</p>
-                <button onClick={() => startNew()} style={primaryButton}>Nuevo proceso</button>
+                <h2>Selecciona un proceso</h2>
+                <p>Elige un proceso existente o crea uno nuevo.</p>
+                <button onClick={() => startNew()} style={primaryButton}>Crear proceso</button>
               </div>
             </section>
           )}
@@ -561,11 +561,11 @@ export default function ProcessBuilder() {
               <div style={sectionHeader}>
                 <div>
                   <h2 style={sectionTitle}>{proposal.process_name}</h2>
-                  <p style={sectionSubtitle}>Edita el formulario, define el recorrido y publica cuando estÃƒÆ’Ã‚Â© listo.</p>
+                  <p style={sectionSubtitle}>Edita el formulario, define el recorrido y publica cuando estÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â© listo.</p>
                 </div>
 
                 <div style={topActions}>
-                  <button onClick={saveProposal} disabled={working} style={secondaryButton}>Guardar</button>
+                  <button onClick={saveProposal} disabled={working} style={secondaryButton}>Guardar cambios</button>
                   <button onClick={publishProcess} disabled={working} style={primaryButton}>Publicar</button>
                 </div>
               </div>
@@ -573,7 +573,7 @@ export default function ProcessBuilder() {
               <nav style={tabs}>
                 <TabButton active={activeTab === 'form'} onClick={() => setActiveTab('form')}>Formulario</TabButton>
                 <TabButton active={activeTab === 'workflow'} onClick={() => setActiveTab('workflow')}>Flujo</TabButton>
-                <TabButton active={activeTab === 'settings'} onClick={() => setActiveTab('settings')}>ConfiguraciÃƒÆ’Ã‚Â³n</TabButton>
+                <TabButton active={activeTab === 'settings'} onClick={() => setActiveTab('settings')}>ConfiguraciÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³n</TabButton>
                 <TabButton active={activeTab === 'publish'} onClick={() => setActiveTab('publish')}>Publicar</TabButton>
               </nav>
 
@@ -656,7 +656,7 @@ export default function ProcessBuilder() {
                       ))}
 
                       {(currentNode.form?.fields ?? []).length === 0 && (
-                        <div style={emptyBox}>Esta etapa todavÃƒÆ’Ã‚Â­a no tiene campos.</div>
+                        <div style={emptyBox}>Esta etapa todavÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â­a no tiene campos.</div>
                       )}
                     </div>
                   </div>
@@ -674,7 +674,7 @@ export default function ProcessBuilder() {
                     <div style={toolbar}>
                       <div>
                         <div style={panelTitle}>Flujo</div>
-                        <p style={sectionSubtitle}>Orden de atenciÃƒÆ’Ã‚Â³n de la solicitud.</p>
+                        <p style={sectionSubtitle}>Orden de atenciÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³n de la solicitud.</p>
                       </div>
                       <button onClick={addNode} style={smallButton}>Agregar etapa</button>
                     </div>
@@ -721,7 +721,7 @@ export default function ProcessBuilder() {
                           onChange={e => updateNode(selectedNodeIndex, { type: e.target.value as ProposalNode['type'] })}
                           style={input}
                         >
-                          <option value="approval">AprobaciÃƒÆ’Ã‚Â³n</option>
+                          <option value="approval">AprobaciÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³n</option>
                           <option value="task">Actividad</option>
                         </select>
                       </Field>
@@ -742,7 +742,7 @@ export default function ProcessBuilder() {
                           onChange={e => updateNode(selectedNodeIndex, { approver_type: e.target.value as ProposalNode['approver_type'] })}
                           style={input}
                         >
-                          <option value="email">Correo especÃƒÆ’Ã‚Â­fico</option>
+                          <option value="email">Correo especÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â­fico</option>
                           <option value="requester">Solicitante</option>
                           <option value="role">Rol</option>
                         </select>
@@ -777,7 +777,7 @@ export default function ProcessBuilder() {
                         />
                       </Field>
 
-                      <Field label="Archivos mÃƒÆ’Ã‚Â­nimos">
+                      <Field label="Archivos mÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â­nimos">
                         <input
                           type="number"
                           min="0"
@@ -845,13 +845,13 @@ export default function ProcessBuilder() {
               {activeTab === 'publish' && (
                 <div style={publishGrid}>
                   <div style={softPanel}>
-                    <div style={panelTitle}>RevisiÃƒÆ’Ã‚Â³n</div>
+                    <div style={panelTitle}>RevisiÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³n</div>
 
                     <div style={{ display: 'grid', gap: 10, marginTop: 12 }}>
                       {checklist.map(item => (
                         <div key={item.label} style={checkItem}>
                           <span style={{ ...checkDot, background: item.ok ? '#12B76A' : '#F79009' }}>
-                            {item.ok ? 'ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“' : '!'}
+                            {item.ok ? 'ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“' : '!'}
                           </span>
                           <span>
                             <strong>{item.label}</strong>
@@ -920,12 +920,12 @@ function StageList({
             ...(dragIndex === index ? stageItemDragging : {}),
           }}
         >
-          <span style={stageGrab}>ÃƒÂ¢Ã¢â‚¬Â¹Ã‚Â®ÃƒÂ¢Ã¢â‚¬Â¹Ã‚Â®</span>
+          <span style={stageGrab}>ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¹ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â®ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¹ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â®</span>
           <span style={stageNumber}>{index + 1}</span>
 
           <span style={{ flex: 1, minWidth: 0, display: 'grid', gap: 2, overflow: 'hidden' }}>
-            <strong>{node.label}</strong>
-            <small>{ownerLabel(node)}</small>
+            <strong style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{node.label}</strong>
+            <small style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>{ownerLabel(node)}</small>
           </span>
         </button>
       ))}
@@ -949,8 +949,8 @@ function ProcessPath({ proposal, onSelect }: { proposal: Proposal; onSelect?: (i
           style={pathButton}
         >
           <span>{index + 2}</span>
-          <strong>{node.label}</strong>
-          <small>{ownerLabel(node)}</small>
+          <strong style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{node.label}</strong>
+          <small style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>{ownerLabel(node)}</small>
         </button>
       ))}
 
@@ -984,7 +984,7 @@ function FormPreview({ node }: { node: ProposalNode }) {
             {field.type === 'textarea' ? (
               <textarea disabled style={{ ...input, minHeight: 76 }} placeholder="Respuesta" />
             ) : field.type === 'checkbox' ? (
-              <div style={checkLabel}><input type="checkbox" disabled /> Marcar opciÃƒÆ’Ã‚Â³n</div>
+              <div style={checkLabel}><input type="checkbox" disabled /> Marcar opciÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³n</div>
             ) : field.type === 'select' ? (
               <select disabled style={input}><option>Selecciona...</option></select>
             ) : (
@@ -1081,7 +1081,7 @@ function getChecklist(proposal: Proposal | null): Array<{ label: string; ok: boo
     {
       label: 'Formularios completos',
       ok: allFormsValid,
-      detail: allFormsValid ? 'Campos completos' : 'Hay campos incompletos',
+      detail: allFormsValid ? 'Formularios completos' : 'Hay campos incompletos',
     },
     {
       label: 'Evidencias correctas',
@@ -1099,7 +1099,7 @@ function ownerLabel(node: ProposalNode): string {
 
 function statusLabel(status: string): string {
   if (status === 'deployed') return 'Publicado';
-  if (status === 'analyzed') return 'En ediciÃƒÆ’Ã‚Â³n';
+  if (status === 'analyzed') return 'En ediciÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³n';
   return 'Borrador';
 }
 
@@ -1191,7 +1191,7 @@ const card: CSSProperties = {
 };
 
 const emptyState: CSSProperties = {
-  minHeight: 480,
+  minHeight: 360,
   display: 'grid',
   placeItems: 'center',
   borderRadius: 18,
@@ -1246,6 +1246,7 @@ const formGrid: CSSProperties = {
 const input: CSSProperties = {
   width: '100%',
   maxWidth: '100%',
+  minWidth: 0,
   boxSizing: 'border-box',
   border: '1px solid #D0D5DD',
   borderRadius: 10,
@@ -1361,18 +1362,19 @@ const tabButtonActive: CSSProperties = {
 };
 
 const processItem: CSSProperties = {
-  boxSizing: 'border-box',
-  display: 'flex',
-  gap: 10,
-  alignItems: 'flex-start',
-  justifyContent: 'space-between',
+  display: 'grid',
+  gridTemplateColumns: 'minmax(0, 1fr) auto',
+  gap: 8,
+  alignItems: 'start',
   width: '100%',
-  padding: 9,
-  borderRadius: 11,
+  padding: 10,
+  borderRadius: 12,
   border: '1px solid #EAECF0',
   background: '#FFFFFF',
   textAlign: 'left',
   cursor: 'pointer',
+  boxSizing: 'border-box',
+  overflow: 'hidden',
 };
 
 const processItemActive: CSSProperties = {
@@ -1381,17 +1383,18 @@ const processItemActive: CSSProperties = {
 };
 
 const templateItem: CSSProperties = {
-  boxSizing: 'border-box',
   display: 'grid',
-  gap: 4,
+  gap: 3,
   width: '100%',
-  padding: 9,
-  borderRadius: 11,
+  padding: 10,
+  borderRadius: 12,
   border: '1px solid #EAECF0',
   background: '#F8FAFC',
   textAlign: 'left',
   cursor: 'pointer',
   color: '#101828',
+  boxSizing: 'border-box',
+  overflow: 'hidden',
 };
 
 const emptyBox: CSSProperties = {
@@ -1406,14 +1409,14 @@ const emptyBox: CSSProperties = {
 
 const twoColumn: CSSProperties = {
   display: 'grid',
-  gridTemplateColumns: '240px minmax(0, 1fr)',
+  gridTemplateColumns: '230px minmax(0, 1fr)',
   gap: 12,
   alignItems: 'start',
 };
 
 const twoColumnWorkflow: CSSProperties = {
   display: 'grid',
-  gridTemplateColumns: '270px minmax(0, 1fr)',
+  gridTemplateColumns: '280px minmax(0, 1fr)',
   gap: 12,
   alignItems: 'start',
 };
@@ -1458,18 +1461,19 @@ const toolbar: CSSProperties = {
 };
 
 const stageItem: CSSProperties = {
-  minWidth: 0,
-  boxSizing: 'border-box',
-  display: 'flex',
-  gap: 10,
+  display: 'grid',
+  gridTemplateColumns: '22px 30px minmax(0, 1fr)',
+  gap: 8,
   alignItems: 'center',
   width: '100%',
-  padding: 10,
+  padding: 9,
   borderRadius: 12,
   border: '1px solid #EAECF0',
   background: '#FFFFFF',
   textAlign: 'left',
   cursor: 'pointer',
+  boxSizing: 'border-box',
+  overflow: 'hidden',
 };
 
 const stageItemActive: CSSProperties = {
@@ -1576,7 +1580,7 @@ const settingsGrid: CSSProperties = {
 
 const publishGrid: CSSProperties = {
   display: 'grid',
-  gridTemplateColumns: '1fr 1fr',
+  gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
   gap: 14,
 };
 

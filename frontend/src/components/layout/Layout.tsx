@@ -8,8 +8,8 @@ const NAV = [
   { to: '/requests/new', label: 'Crear solicitud', icon: '03', description: 'Solicitar' },
   { to: '/mis-tareas', label: 'Mis tareas', icon: '04', description: 'Pendientes' },
   { to: '/inventario', label: 'Inventario', icon: '05', description: 'Control operativo' },
-  { to: '/process-builder', label: 'Procesos', icon: '06', description: 'Gestión guiada BPM' },
-  { to: '/admin', label: 'Administrar', icon: '07', description: 'Parámetros' },
+  { to: '/process-builder', label: 'Procesos', icon: '06', description: 'GestiÃ³n guiada BPM' },
+  { to: '/admin', label: 'Administrar', icon: '07', description: 'ParÃ¡metros' },
 ];
 
 export default function Layout({ children }: { children: ReactNode }) {
@@ -67,16 +67,16 @@ export default function Layout({ children }: { children: ReactNode }) {
         </nav>
 
         <div style={helpCard}>
-          <div style={helpEyebrow}>Gestión guiada</div>
-          <div style={helpTitle}>Diseña procesos guiados</div>
+          <div style={helpEyebrow}>GestiÃ³n guiada</div>
+          <div style={helpTitle}>DiseÃ±a procesos guiados</div>
           <div style={helpText}>
-            Convierte procedimientos internos en solicitudes claras, aprobables y fáciles de seguir.
+            Convierte procedimientos internos en solicitudes claras, aprobables y fÃ¡ciles de seguir.
           </div>
           <button
             onClick={() => navigate('/process-builder')}
             style={helpButton}
           >
-            Diseñar proceso
+            DiseÃ±ar proceso
           </button>
         </div>
 
@@ -90,7 +90,7 @@ export default function Layout({ children }: { children: ReactNode }) {
 
           <button
             onClick={() => instance.logoutRedirect()}
-            title="Cerrar sesión"
+            title="Cerrar sesiÃ³n"
             style={logoutButton}
           >
             Salir
@@ -102,7 +102,7 @@ export default function Layout({ children }: { children: ReactNode }) {
         <header style={topbar}>
           <div>
             <div style={topbarEyebrow}>Plataforma corporativa</div>
-            <div style={topbarTitle}>Gestión simple de procesos internos</div>
+            <div style={topbarTitle}>GestiÃ³n simple de procesos internos</div>
           </div>
 
           <div style={topbarRight}>
@@ -110,7 +110,7 @@ export default function Layout({ children }: { children: ReactNode }) {
               onClick={() => navigate('/process-builder')}
               style={ghostButton}
             >
-              Procesos no-code
+              Diseñar procesos
             </button>
 
             <button
@@ -168,12 +168,12 @@ const sidebar: React.CSSProperties = {
   position: 'sticky',
   top: 0,
   height: '100vh',
-  width: 292,
+  width: 260,
   flexShrink: 0,
   display: 'flex',
   flexDirection: 'column',
-  gap: 18,
-  padding: 18,
+  gap: 12,
+  padding: 14,
   background: 'rgba(12, 68, 124, .78)',
   borderRight: '1px solid rgba(255,255,255,.20)',
   boxShadow: '24px 0 80px rgba(12,68,124,.16)',
@@ -190,22 +190,22 @@ const brandBlock: React.CSSProperties = {
 };
 
 const brandMark: React.CSSProperties = {
-  width: 48,
-  height: 48,
+  width: 42,
+  height: 42,
   borderRadius: 16,
   display: 'grid',
   placeItems: 'center',
   background: 'linear-gradient(145deg, #FFFFFF 0%, #DCEEFF 100%)',
   color: '#0C447C',
   fontWeight: 950,
-  fontSize: 23,
+  fontSize: 20,
   boxShadow: '0 16px 36px rgba(0,0,0,.18)',
 };
 
 const brandName: React.CSSProperties = {
   color: '#FFFFFF',
   fontWeight: 950,
-  fontSize: 18,
+  fontSize: 16,
   letterSpacing: -0.3,
 };
 
@@ -219,8 +219,8 @@ const brandSub: React.CSSProperties = {
 const primaryAction: React.CSSProperties = {
   width: '100%',
   border: '1px solid rgba(255,255,255,.28)',
-  borderRadius: 18,
-  padding: '13px 14px',
+  borderRadius: 14,
+  padding: '9px 10px',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
@@ -255,7 +255,7 @@ const navItem: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   gap: 12,
-  padding: '11px 12px',
+  padding: '9px 10px',
   borderRadius: 16,
   textDecoration: 'none',
   color: '#D9ECFF',
@@ -308,7 +308,7 @@ const navDescription: React.CSSProperties = {
 const helpCard: React.CSSProperties = {
   marginTop: 'auto',
   padding: 16,
-  borderRadius: 20,
+  borderRadius: 16,
   background: 'rgba(255,255,255,.12)',
   border: '1px solid rgba(255,255,255,.18)',
   boxShadow: 'inset 0 1px 0 rgba(255,255,255,.12)',
@@ -353,7 +353,7 @@ const userBlock: React.CSSProperties = {
   alignItems: 'center',
   gap: 10,
   padding: 12,
-  borderRadius: 18,
+  borderRadius: 14,
   background: 'rgba(255,255,255,.12)',
   border: '1px solid rgba(255,255,255,.18)',
 };
@@ -409,7 +409,7 @@ const mainArea: React.CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
   padding: 22,
-  gap: 18,
+  gap: 12,
 };
 
 const topbar: React.CSSProperties = {
@@ -417,7 +417,7 @@ const topbar: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'space-between',
-  gap: 18,
+  gap: 12,
   padding: '14px 18px',
   borderRadius: 24,
   background: 'rgba(255,255,255,.62)',
@@ -437,7 +437,7 @@ const topbarEyebrow: React.CSSProperties = {
 
 const topbarTitle: React.CSSProperties = {
   color: '#111827',
-  fontSize: 18,
+  fontSize: 16,
   fontWeight: 950,
   marginTop: 2,
   letterSpacing: -0.3,
