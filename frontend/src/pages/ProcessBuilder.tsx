@@ -99,7 +99,7 @@ const TOUR_STEPS = [
   },
   {
     title: 'Formulario',
-    text: 'En esta pestaÃ±a defines que informacion debe completar cada responsable.',
+    text: 'En esta pestaÃƒÂ±a defines que informacion debe completar cada responsable.',
     hint: 'Usa Campos sugeridos para avanzar mas rapido.',
   },
   {
@@ -511,55 +511,19 @@ export default function ProcessBuilder() {
 
         <main style={main}>
           {showCreate && (
-            <section style={card}>
-              <div style={sectionHeader}>
-                <div>
-                  <h2 style={sectionTitle}>Crear proceso</h2>
-                  <p style={sectionSubtitle}>Completa la informacion inicial para preparar la estructura.</p>
-                </div>
-              </div>
-
-              <div style={formGrid}>
-                <Field label="Nombre">
-                  <input value={name} onChange={e => setName(e.target.value)} style={input} />
-                </Field>
-                <Field label="Descripcion">
-                  <input value={description} onChange={e => setDescription(e.target.value)} style={input} />
-                </Field>
-              </div>
-
-              <label style={uploadBox}>
-                <strong>Cargar documento</strong>
-                <span>Archivos de texto, CSV, JSON o Markdown.</span>
-                <input
-                  type="file"
-                  accept=".txt,.csv,.md,.json,.log"
-                  style={{ display: 'none' }}
-                  onChange={e => {
-                    const file = e.target.files?.[0];
-                    if (file) void readUploadedFile(file);
-                    e.target.value = '';
-                  }}
-                />
-              </label>
-
-              {fileName && <div style={infoBox}>Archivo cargado: {fileName}</div>}
-
-              <Field label="Descripcion del proceso">
-                <textarea
-                  value={sourceText}
-                  onChange={e => setSourceText(e.target.value)}
-                  style={{ ...input, minHeight: 190, resize: 'vertical' }}
-                />
-              </Field>
-
-              <div style={footerActions}>
-                <button onClick={() => setShowCreate(false)} style={secondaryButton}>Cancelar</button>
-                <button onClick={createProcess} disabled={working || !sourceText.trim()} style={primaryButton}>
-                  {working ? 'Preparando...' : 'Preparar proceso'}
-                </button>
-              </div>
-            </section>
+            <CreateProcessModal
+              name={name}
+              description={description}
+              sourceText={sourceText}
+              fileName={fileName}
+              working={working}
+              onNameChange={setName}
+              onDescriptionChange={setDescription}
+              onSourceTextChange={setSourceText}
+              onFileSelected={readUploadedFile}
+              onClose={() => setShowCreate(false)}
+              onCreate={createProcess}
+            />
           )}
 
           {!showCreate && !proposal && (
@@ -961,6 +925,89 @@ function TabButton({ active, onClick, children }: { active: boolean; onClick: ()
   return <button onClick={onClick} style={{ ...tabButton, ...(active ? tabButtonActive : {}) }}>{children}</button>;
 }
 
+function CreateProcessModal({
+  name,
+  description,
+  sourceText,
+  fileName,
+  working,
+  onNameChange,
+  onDescriptionChange,
+  onSourceTextChange,
+  onFileSelected,
+  onClose,
+  onCreate,
+}: {
+  name: string;
+  description: string;
+  sourceText: string;
+  fileName: string;
+  working: boolean;
+  onNameChange: (value: string) => void;
+  onDescriptionChange: (value: string) => void;
+  onSourceTextChange: (value: string) => void;
+  onFileSelected: (file: File) => void;
+  onClose: () => void;
+  onCreate: () => void;
+}) {
+  return (
+    <div style={modalBackdrop}>
+      <div style={modalCard} className="flow-tour-card">
+        <div style={modalHeader}>
+          <div>
+            <div style={guideEyebrow}>Nuevo proceso</div>
+            <h2 style={modalTitle}>Crear proceso</h2>
+            <p style={sectionSubtitle}>Completa la informacion inicial y FlowApp preparara una estructura editable.</p>
+          </div>
+
+          <button onClick={onClose} style={tourClose}>Cerrar</button>
+        </div>
+
+        <div style={formGrid}>
+          <Field label="Nombre">
+            <input value={name} onChange={e => onNameChange(e.target.value)} style={input} />
+          </Field>
+
+          <Field label="Descripcion">
+            <input value={description} onChange={e => onDescriptionChange(e.target.value)} style={input} />
+          </Field>
+        </div>
+
+        <label style={uploadBox}>
+          <strong>Cargar documento</strong>
+          <span>Archivos de texto, CSV, JSON o Markdown.</span>
+          <input
+            type="file"
+            accept=".txt,.csv,.md,.json,.log"
+            style={{ display: 'none' }}
+            onChange={e => {
+              const file = e.target.files?.[0];
+              if (file) void onFileSelected(file);
+              e.target.value = '';
+            }}
+          />
+        </label>
+
+        {fileName && <div style={infoBox}>Archivo cargado: {fileName}</div>}
+
+        <Field label="Descripcion del proceso">
+          <textarea
+            value={sourceText}
+            onChange={e => onSourceTextChange(e.target.value)}
+            style={{ ...input, minHeight: 190, resize: 'vertical' }}
+          />
+        </Field>
+
+        <div style={footerActions}>
+          <button onClick={onClose} style={secondaryButton}>Cancelar</button>
+          <button onClick={onCreate} disabled={working || !sourceText.trim()} style={primaryButton}>
+            {working ? 'Preparando...' : 'Preparar proceso'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 function TourOverlay({
   step,
   total,
@@ -985,7 +1032,7 @@ function TourOverlay({
       <div style={tourCard} className="flow-tour-card">
         <div style={tourHeader}>
           <div>
-            <div style={guideEyebrow}>Guia del diseÃ±ador</div>
+            <div style={guideEyebrow}>Guia del diseÃƒÂ±ador</div>
             <h2 style={tourTitle}>{title}</h2>
           </div>
 
@@ -1883,4 +1930,42 @@ const tourClose: CSSProperties = {
   fontSize: 12,
   fontWeight: 800,
   cursor: 'pointer',
+};
+const modalBackdrop: CSSProperties = {
+  position: 'fixed',
+  inset: 0,
+  zIndex: 90,
+  display: 'grid',
+  placeItems: 'center',
+  padding: 24,
+  background: 'rgba(16, 24, 40, .32)',
+  backdropFilter: 'blur(7px)',
+};
+
+const modalCard: CSSProperties = {
+  width: 'min(780px, 100%)',
+  maxHeight: 'calc(100vh - 64px)',
+  overflowY: 'auto',
+  display: 'grid',
+  gap: 14,
+  padding: 18,
+  borderRadius: 18,
+  background: '#FFFFFF',
+  border: '1px solid #EAECF0',
+  boxShadow: '0 28px 90px rgba(16, 24, 40, .24)',
+};
+
+const modalHeader: CSSProperties = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  gap: 14,
+  alignItems: 'flex-start',
+};
+
+const modalTitle: CSSProperties = {
+  margin: '3px 0 0',
+  fontSize: 22,
+  fontWeight: 900,
+  color: '#101828',
+  letterSpacing: -0.3,
 };
