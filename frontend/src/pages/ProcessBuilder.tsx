@@ -57,33 +57,33 @@ const TEMPLATES: Template[] = [
   {
     key: 'suministros',
     name: 'Suministros',
-    description: 'Solicitud, compras, presupuesto, despacho y recepciÃ³n.',
+    description: 'Solicitud, compras, presupuesto, despacho y recepciÃƒÆ’Ã‚Â³n.',
     prompt: 'La supervisora del centro crea una solicitud de suministros. Compras recibe, cotiza y selecciona proveedor. Contabilidad valida presupuesto. Compras despacha. La supervisora recibe, valida cantidades reales y adjunta evidencia.',
   },
   {
     key: 'compras',
     name: 'Compras generales',
-    description: 'RevisiÃ³n, cotizaciÃ³n, aprobaciÃ³n y seguimiento.',
-    prompt: 'El solicitante crea una solicitud de compra. Compras revisa y cotiza. El responsable aprueba la compra. Compras registra proveedor y fecha estimada. El solicitante recibe confirmaciÃ³n.',
+    description: 'RevisiÃƒÆ’Ã‚Â³n, cotizaciÃƒÆ’Ã‚Â³n, aprobaciÃƒÆ’Ã‚Â³n y seguimiento.',
+    prompt: 'El solicitante crea una solicitud de compra. Compras revisa y cotiza. El responsable aprueba la compra. Compras registra proveedor y fecha estimada. El solicitante recibe confirmaciÃƒÆ’Ã‚Â³n.',
   },
   {
     key: 'marketing',
     name: 'Marketing',
-    description: 'CampaÃ±as, aprobaciones, proveedores y costos.',
-    prompt: 'Marketing solicita una campaÃ±a. El responsable revisa objetivo y presupuesto. Compras o proveedor cotiza. Gerencia aprueba. Se ejecuta la campaÃ±a y se registra costo final.',
+    description: 'CampaÃƒÆ’Ã‚Â±as, aprobaciones, proveedores y costos.',
+    prompt: 'Marketing solicita una campaÃƒÆ’Ã‚Â±a. El responsable revisa objetivo y presupuesto. Compras o proveedor cotiza. Gerencia aprueba. Se ejecuta la campaÃƒÆ’Ã‚Â±a y se registra costo final.',
   },
   {
     key: 'mantenimiento',
     name: 'Mantenimiento',
-    description: 'Reporte, revisiÃ³n, ejecuciÃ³n y cierre.',
-    prompt: 'Un usuario reporta una necesidad de mantenimiento. Mantenimiento diagnostica. AdministraciÃ³n aprueba el gasto si aplica. El tÃ©cnico ejecuta el trabajo y sube evidencia de cierre.',
+    description: 'Reporte, revisiÃƒÆ’Ã‚Â³n, ejecuciÃƒÆ’Ã‚Â³n y cierre.',
+    prompt: 'Un usuario reporta una necesidad de mantenimiento. Mantenimiento diagnostica. AdministraciÃƒÆ’Ã‚Â³n aprueba el gasto si aplica. El tÃƒÆ’Ã‚Â©cnico ejecuta el trabajo y sube evidencia de cierre.',
   },
 ];
 
 const FIELD_TYPES: Array<{ value: FieldType; label: string }> = [
   { value: 'text', label: 'Texto' },
   { value: 'textarea', label: 'Texto largo' },
-  { value: 'number', label: 'NÃºmero' },
+  { value: 'number', label: 'NÃƒÆ’Ã‚Âºmero' },
   { value: 'date', label: 'Fecha' },
   { value: 'checkbox', label: 'Casilla' },
   { value: 'select', label: 'Lista' },
@@ -99,7 +99,7 @@ export default function ProcessBuilder() {
   const [showCreate, setShowCreate] = useState(false);
 
   const [name, setName] = useState('Proceso de suministros');
-  const [description, setDescription] = useState('Solicitud, revisiÃ³n, despacho y recepciÃ³n');
+  const [description, setDescription] = useState('Solicitud, revisiÃƒÆ’Ã‚Â³n, despacho y recepciÃƒÆ’Ã‚Â³n');
   const [sourceText, setSourceText] = useState(TEMPLATES[0].prompt);
   const [fileName, setFileName] = useState('');
 
@@ -163,7 +163,7 @@ export default function ProcessBuilder() {
     } else {
       setSourceText(prev => {
         const prefix = prev.trim() ? prev.trim() + '\n\n' : '';
-        return prefix + 'Archivo cargado: ' + file.name + '. Resume aquÃ­ el contenido principal.';
+        return prefix + 'Archivo cargado: ' + file.name + '. Resume aquÃƒÆ’Ã‚Â­ el contenido principal.';
       });
     }
   }
@@ -263,7 +263,7 @@ export default function ProcessBuilder() {
         id: 'etapa-' + (prev.nodes.length + 1),
         type: 'approval',
         label: 'Nueva etapa',
-        description: 'Describe quÃ© debe ocurrir en esta etapa.',
+        description: 'Describe quÃƒÆ’Ã‚Â© debe ocurrir en esta etapa.',
         approver_type: 'email',
         approver_email: '',
         form: {
@@ -424,7 +424,7 @@ export default function ProcessBuilder() {
       <header style={header}>
         <div>
           <h1 style={title}>Procesos</h1>
-          <p style={subtitle}>Administra formularios, etapas, responsables y publicaciÃ³n.</p>
+          <p style={subtitle}>Administra formularios, etapas, responsables y publicaciÃƒÆ’Ã‚Â³n.</p>
         </div>
 
         <button onClick={() => startNew()} style={primaryButton}>
@@ -442,7 +442,7 @@ export default function ProcessBuilder() {
 
             <div style={{ display: 'grid', gap: 8, marginTop: 10 }}>
               {blueprints.length === 0 && (
-                <div style={emptyBox}>TodavÃ­a no hay procesos creados.</div>
+                <div style={emptyBox}>TodavÃƒÆ’Ã‚Â­a no hay procesos creados.</div>
               )}
 
               {blueprints.map(item => (
@@ -459,9 +459,9 @@ export default function ProcessBuilder() {
                     ...(selected?.id === item.id ? processItemActive : {}),
                   }}
                 >
-                  <span style={{ minWidth: 0 }}>
+                  <span style={{ minWidth: 0, display: 'grid', gap: 2, overflow: 'hidden' }}>
                     <strong>{item.name}</strong>
-                    <small>{item.description || 'Sin descripciÃ³n'}</small>
+                    <small>{item.description || 'Sin descripciÃƒÆ’Ã‚Â³n'}</small>
                   </span>
                   <span style={statusStyle(item.status)}>{statusLabel(item.status)}</span>
                 </button>
@@ -489,7 +489,7 @@ export default function ProcessBuilder() {
               <div style={sectionHeader}>
                 <div>
                   <h2 style={sectionTitle}>Nuevo proceso</h2>
-                  <p style={sectionSubtitle}>Completa la informaciÃ³n inicial para preparar la estructura.</p>
+                  <p style={sectionSubtitle}>Completa la informaciÃƒÆ’Ã‚Â³n inicial para preparar la estructura.</p>
                 </div>
               </div>
 
@@ -498,7 +498,7 @@ export default function ProcessBuilder() {
                   <input value={name} onChange={e => setName(e.target.value)} style={input} />
                 </Field>
 
-                <Field label="DescripciÃ³n">
+                <Field label="DescripciÃƒÆ’Ã‚Â³n">
                   <input value={description} onChange={e => setDescription(e.target.value)} style={input} />
                 </Field>
               </div>
@@ -522,7 +522,7 @@ export default function ProcessBuilder() {
                 <div style={infoBox}>Archivo cargado: {fileName}</div>
               )}
 
-              <Field label="DescripciÃ³n del proceso">
+              <Field label="DescripciÃƒÆ’Ã‚Â³n del proceso">
                 <textarea
                   value={sourceText}
                   onChange={e => setSourceText(e.target.value)}
@@ -561,7 +561,7 @@ export default function ProcessBuilder() {
               <div style={sectionHeader}>
                 <div>
                   <h2 style={sectionTitle}>{proposal.process_name}</h2>
-                  <p style={sectionSubtitle}>Edita el formulario, define el recorrido y publica cuando estÃ© listo.</p>
+                  <p style={sectionSubtitle}>Edita el formulario, define el recorrido y publica cuando estÃƒÆ’Ã‚Â© listo.</p>
                 </div>
 
                 <div style={topActions}>
@@ -573,7 +573,7 @@ export default function ProcessBuilder() {
               <nav style={tabs}>
                 <TabButton active={activeTab === 'form'} onClick={() => setActiveTab('form')}>Formulario</TabButton>
                 <TabButton active={activeTab === 'workflow'} onClick={() => setActiveTab('workflow')}>Flujo</TabButton>
-                <TabButton active={activeTab === 'settings'} onClick={() => setActiveTab('settings')}>ConfiguraciÃ³n</TabButton>
+                <TabButton active={activeTab === 'settings'} onClick={() => setActiveTab('settings')}>ConfiguraciÃƒÆ’Ã‚Â³n</TabButton>
                 <TabButton active={activeTab === 'publish'} onClick={() => setActiveTab('publish')}>Publicar</TabButton>
               </nav>
 
@@ -656,7 +656,7 @@ export default function ProcessBuilder() {
                       ))}
 
                       {(currentNode.form?.fields ?? []).length === 0 && (
-                        <div style={emptyBox}>Esta etapa todavÃ­a no tiene campos.</div>
+                        <div style={emptyBox}>Esta etapa todavÃƒÆ’Ã‚Â­a no tiene campos.</div>
                       )}
                     </div>
                   </div>
@@ -674,7 +674,7 @@ export default function ProcessBuilder() {
                     <div style={toolbar}>
                       <div>
                         <div style={panelTitle}>Flujo</div>
-                        <p style={sectionSubtitle}>Orden de atenciÃ³n de la solicitud.</p>
+                        <p style={sectionSubtitle}>Orden de atenciÃƒÆ’Ã‚Â³n de la solicitud.</p>
                       </div>
                       <button onClick={addNode} style={smallButton}>Agregar etapa</button>
                     </div>
@@ -721,7 +721,7 @@ export default function ProcessBuilder() {
                           onChange={e => updateNode(selectedNodeIndex, { type: e.target.value as ProposalNode['type'] })}
                           style={input}
                         >
-                          <option value="approval">AprobaciÃ³n</option>
+                          <option value="approval">AprobaciÃƒÆ’Ã‚Â³n</option>
                           <option value="task">Actividad</option>
                         </select>
                       </Field>
@@ -742,7 +742,7 @@ export default function ProcessBuilder() {
                           onChange={e => updateNode(selectedNodeIndex, { approver_type: e.target.value as ProposalNode['approver_type'] })}
                           style={input}
                         >
-                          <option value="email">Correo especÃ­fico</option>
+                          <option value="email">Correo especÃƒÆ’Ã‚Â­fico</option>
                           <option value="requester">Solicitante</option>
                           <option value="role">Rol</option>
                         </select>
@@ -777,7 +777,7 @@ export default function ProcessBuilder() {
                         />
                       </Field>
 
-                      <Field label="Archivos mÃ­nimos">
+                      <Field label="Archivos mÃƒÆ’Ã‚Â­nimos">
                         <input
                           type="number"
                           min="0"
@@ -845,13 +845,13 @@ export default function ProcessBuilder() {
               {activeTab === 'publish' && (
                 <div style={publishGrid}>
                   <div style={softPanel}>
-                    <div style={panelTitle}>RevisiÃ³n</div>
+                    <div style={panelTitle}>RevisiÃƒÆ’Ã‚Â³n</div>
 
                     <div style={{ display: 'grid', gap: 10, marginTop: 12 }}>
                       {checklist.map(item => (
                         <div key={item.label} style={checkItem}>
                           <span style={{ ...checkDot, background: item.ok ? '#12B76A' : '#F79009' }}>
-                            {item.ok ? 'âœ“' : '!'}
+                            {item.ok ? 'ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“' : '!'}
                           </span>
                           <span>
                             <strong>{item.label}</strong>
@@ -920,10 +920,10 @@ function StageList({
             ...(dragIndex === index ? stageItemDragging : {}),
           }}
         >
-          <span style={stageGrab}>â‹®â‹®</span>
+          <span style={stageGrab}>ÃƒÂ¢Ã¢â‚¬Â¹Ã‚Â®ÃƒÂ¢Ã¢â‚¬Â¹Ã‚Â®</span>
           <span style={stageNumber}>{index + 1}</span>
 
-          <span style={{ flex: 1, minWidth: 0 }}>
+          <span style={{ flex: 1, minWidth: 0, display: 'grid', gap: 2, overflow: 'hidden' }}>
             <strong>{node.label}</strong>
             <small>{ownerLabel(node)}</small>
           </span>
@@ -984,7 +984,7 @@ function FormPreview({ node }: { node: ProposalNode }) {
             {field.type === 'textarea' ? (
               <textarea disabled style={{ ...input, minHeight: 76 }} placeholder="Respuesta" />
             ) : field.type === 'checkbox' ? (
-              <div style={checkLabel}><input type="checkbox" disabled /> Marcar opciÃ³n</div>
+              <div style={checkLabel}><input type="checkbox" disabled /> Marcar opciÃƒÆ’Ã‚Â³n</div>
             ) : field.type === 'select' ? (
               <select disabled style={input}><option>Selecciona...</option></select>
             ) : (
@@ -1099,7 +1099,7 @@ function ownerLabel(node: ProposalNode): string {
 
 function statusLabel(status: string): string {
   if (status === 'deployed') return 'Publicado';
-  if (status === 'analyzed') return 'En ediciÃ³n';
+  if (status === 'analyzed') return 'En ediciÃƒÆ’Ã‚Â³n';
   return 'Borrador';
 }
 
@@ -1125,22 +1125,23 @@ function slug(value: string): string {
 }
 
 const page: CSSProperties = {
-  padding: 26,
+  padding: 18,
   display: 'grid',
-  gap: 16,
+  gap: 14,
   color: '#101828',
 };
 
 const header: CSSProperties = {
   display: 'flex',
   justifyContent: 'space-between',
-  gap: 18,
+  gap: 14,
   alignItems: 'center',
+  padding: '2px 4px 0',
 };
 
 const title: CSSProperties = {
   margin: 0,
-  fontSize: 30,
+  fontSize: 26,
   fontWeight: 900,
   letterSpacing: -0.6,
 };
@@ -1154,15 +1155,17 @@ const subtitle: CSSProperties = {
 
 const workspace: CSSProperties = {
   display: 'grid',
-  gridTemplateColumns: '280px minmax(0, 1fr)',
+  gridTemplateColumns: '250px minmax(0, 1fr)',
   gap: 16,
   alignItems: 'start',
 };
 
 const sidebar: CSSProperties = {
   display: 'grid',
-  gap: 14,
-  padding: 14,
+  gap: 12,
+  padding: 12,
+  maxHeight: 'calc(100vh - 130px)',
+  overflowY: 'auto',
   borderRadius: 18,
   background: '#FFFFFF',
   border: '1px solid #EAECF0',
@@ -1179,7 +1182,7 @@ const main: CSSProperties = {
 };
 
 const card: CSSProperties = {
-  padding: 20,
+  padding: 16,
   overflow: 'hidden',
   borderRadius: 18,
   background: '#FFFFFF',
@@ -1214,7 +1217,7 @@ const sectionHeader: CSSProperties = {
 };
 
 const sectionTitle: CSSProperties = {
-  fontSize: 22,
+  fontSize: 20,
   fontWeight: 900,
   margin: 0,
   letterSpacing: -0.3,
@@ -1242,6 +1245,7 @@ const formGrid: CSSProperties = {
 
 const input: CSSProperties = {
   width: '100%',
+  maxWidth: '100%',
   boxSizing: 'border-box',
   border: '1px solid #D0D5DD',
   borderRadius: 10,
@@ -1357,13 +1361,14 @@ const tabButtonActive: CSSProperties = {
 };
 
 const processItem: CSSProperties = {
+  boxSizing: 'border-box',
   display: 'flex',
   gap: 10,
   alignItems: 'flex-start',
   justifyContent: 'space-between',
   width: '100%',
-  padding: 11,
-  borderRadius: 12,
+  padding: 9,
+  borderRadius: 11,
   border: '1px solid #EAECF0',
   background: '#FFFFFF',
   textAlign: 'left',
@@ -1376,11 +1381,12 @@ const processItemActive: CSSProperties = {
 };
 
 const templateItem: CSSProperties = {
+  boxSizing: 'border-box',
   display: 'grid',
   gap: 4,
   width: '100%',
-  padding: 11,
-  borderRadius: 12,
+  padding: 9,
+  borderRadius: 11,
   border: '1px solid #EAECF0',
   background: '#F8FAFC',
   textAlign: 'left',
@@ -1400,44 +1406,47 @@ const emptyBox: CSSProperties = {
 
 const twoColumn: CSSProperties = {
   display: 'grid',
-  gridTemplateColumns: '260px minmax(0, 1fr)',
-  gap: 14,
+  gridTemplateColumns: '240px minmax(0, 1fr)',
+  gap: 12,
   alignItems: 'start',
 };
 
 const twoColumnWorkflow: CSSProperties = {
   display: 'grid',
-  gridTemplateColumns: '300px minmax(0, 1fr)',
-  gap: 14,
+  gridTemplateColumns: '270px minmax(0, 1fr)',
+  gap: 12,
   alignItems: 'start',
 };
 
 const leftWork: CSSProperties = {
-  display: 'grid',
   minWidth: 0,
+  boxSizing: 'border-box',
+  display: 'grid',
   gap: 10,
-  padding: 14,
-  borderRadius: 14,
+  padding: 12,
+  borderRadius: 12,
   border: '1px solid #EAECF0',
   background: '#F8FAFC',
 };
 
 const rightWork: CSSProperties = {
+  boxSizing: 'border-box',
   display: 'grid',
-  minWidth: 0,
   gap: 12,
-  padding: 14,
-  borderRadius: 14,
+  padding: 12,
+  borderRadius: 12,
   border: '1px solid #EAECF0',
   background: '#FFFFFF',
 };
 
 const previewPanel: CSSProperties = {
-  gridColumn: '2 / 3',
-  padding: 14,
-  borderRadius: 14,
+  gridColumn: '1 / -1',
+  padding: 12,
+  borderRadius: 12,
   border: '1px solid #EAECF0',
   background: '#FFFFFF',
+  maxWidth: '100%',
+  overflow: 'hidden',
 };
 
 const toolbar: CSSProperties = {
@@ -1449,6 +1458,8 @@ const toolbar: CSSProperties = {
 };
 
 const stageItem: CSSProperties = {
+  minWidth: 0,
+  boxSizing: 'border-box',
   display: 'flex',
   gap: 10,
   alignItems: 'center',
@@ -1507,10 +1518,11 @@ const pathButton: CSSProperties = {
 };
 
 const fieldCard: CSSProperties = {
+  boxSizing: 'border-box',
   display: 'grid',
   gap: 10,
-  padding: 12,
-  borderRadius: 12,
+  padding: 10,
+  borderRadius: 11,
   border: '1px solid #EAECF0',
   background: '#FFFFFF',
 };
@@ -1525,6 +1537,7 @@ const checkLabel: CSSProperties = {
 };
 
 const previewBox: CSSProperties = {
+  boxSizing: 'border-box',
   display: 'grid',
   gap: 12,
   marginTop: 12,
@@ -1546,8 +1559,8 @@ const previewField: CSSProperties = {
 
 const evidenceBox: CSSProperties = {
   marginTop: 4,
-  padding: 12,
-  borderRadius: 12,
+  padding: 10,
+  borderRadius: 11,
   background: '#FFFAEB',
   border: '1px solid #FEC84B',
   color: '#93370D',
@@ -1568,8 +1581,9 @@ const publishGrid: CSSProperties = {
 };
 
 const softPanel: CSSProperties = {
-  padding: 14,
-  borderRadius: 14,
+  boxSizing: 'border-box',
+  padding: 12,
+  borderRadius: 12,
   border: '1px solid #EAECF0',
   background: '#FFFFFF',
 };
@@ -1593,8 +1607,8 @@ const checkItem: CSSProperties = {
   display: 'flex',
   gap: 10,
   alignItems: 'flex-start',
-  padding: 11,
-  borderRadius: 12,
+  padding: 9,
+  borderRadius: 11,
   background: '#F8FAFC',
   border: '1px solid #EAECF0',
 };
