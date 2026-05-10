@@ -292,6 +292,28 @@ export default function ProcessBuilder() {
     });
   }
 
+  function addPresetField(nodeIndex: number, field: ProposalField) {
+    setProposal(prev => {
+      if (!prev) return prev;
+
+      return {
+        ...prev,
+        nodes: prev.nodes.map((node, i) => {
+          if (i !== nodeIndex) return node;
+
+          const fields = node.form?.fields ?? [];
+          const exists = fields.some(existing => existing.key === field.key);
+
+          return {
+            ...node,
+            form: {
+              fields: exists ? fields : [...fields, field],
+            },
+          };
+        }),
+      };
+    });
+  }
   function addField(nodeIndex: number) {
     setProposal(prev => {
       if (!prev) return prev;
@@ -544,6 +566,19 @@ export default function ProcessBuilder() {
                           {showPreview ? 'Ocultar vista' : 'Vista previa'}
                         </button>
                         <button onClick={() => addField(selectedNodeIndex)} style={smallButton}>Agregar campo</button>
+                      </div>
+                    </div>
+
+                    <div style={quickFields}>
+                      <div style={quickTitle}>Campos sugeridos</div>
+                      <div style={quickGrid}>
+                        <button style={presetButton} onClick={() => addPresetField(selectedNodeIndex, { key: 'comentario', label: 'Comentario', type: 'textarea', required: false })}>Comentario</button>
+                        <button style={presetButton} onClick={() => addPresetField(selectedNodeIndex, { key: 'monto', label: 'Monto', type: 'number', required: true })}>Monto</button>
+                        <button style={presetButton} onClick={() => addPresetField(selectedNodeIndex, { key: 'fecha', label: 'Fecha', type: 'date', required: true })}>Fecha</button>
+                        <button style={presetButton} onClick={() => addPresetField(selectedNodeIndex, { key: 'aprobado', label: 'Aprobado', type: 'checkbox', required: true })}>Aprobado</button>
+                        <button style={presetButton} onClick={() => addPresetField(selectedNodeIndex, { key: 'centro_costo', label: 'Centro de costo', type: 'text', required: false })}>Centro de costo</button>
+                        <button style={presetButton} onClick={() => addPresetField(selectedNodeIndex, { key: 'cantidad', label: 'Cantidad', type: 'number', required: true })}>Cantidad</button>
+                        <button style={presetButton} onClick={() => addPresetField(selectedNodeIndex, { key: 'proveedor', label: 'Proveedor', type: 'text', required: false })}>Proveedor</button>
                       </div>
                     </div>
 
@@ -1595,6 +1630,37 @@ const secondarySmallButton: CSSProperties = {
   background: '#F8FAFC',
   color: '#344054',
   border: '1px solid #D0D5DD',
+  borderRadius: 999,
+  padding: '7px 10px',
+  fontSize: 12,
+  fontWeight: 800,
+  cursor: 'pointer',
+};
+const quickFields: CSSProperties = {
+  display: 'grid',
+  gap: 8,
+  padding: 10,
+  borderRadius: 12,
+  background: '#F8FAFC',
+  border: '1px solid #EAECF0',
+};
+
+const quickTitle: CSSProperties = {
+  fontSize: 12,
+  fontWeight: 900,
+  color: '#344054',
+};
+
+const quickGrid: CSSProperties = {
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: 8,
+};
+
+const presetButton: CSSProperties = {
+  background: '#FFFFFF',
+  color: '#185FA5',
+  border: '1px solid #B5D4F4',
   borderRadius: 999,
   padding: '7px 10px',
   fontSize: 12,
