@@ -99,7 +99,7 @@ const TOUR_STEPS = [
   },
   {
     title: 'Formulario',
-    text: 'En esta pestaÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±a defines que informacion debe completar cada responsable.',
+    text: 'En esta pestaÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±a defines que informacion debe completar cada responsable.',
     hint: 'Usa Campos sugeridos para avanzar mas rapido.',
   },
   {
@@ -123,6 +123,7 @@ export default function ProcessBuilder() {
   const [showGuide, setShowGuide] = useState(true);
   const [showPreview, setShowPreview] = useState(false);
   const [showStageEditor, setShowStageEditor] = useState(false);
+  const [showPublishConfirm, setShowPublishConfirm] = useState(false);
   const [showTour, setShowTour] = useState(false);
   const [tourStep, setTourStep] = useState(0);
 
@@ -726,6 +727,18 @@ export default function ProcessBuilder() {
                 </div>
               )}
 
+              {showPublishConfirm && proposal && (
+                <PublishConfirmModal
+                  checklist={checklist}
+                  checklistOk={checklistOk}
+                  working={working}
+                  onClose={() => setShowPublishConfirm(false)}
+                  onPublish={() => {
+                    setShowPublishConfirm(false);
+                    void publishProcess();
+                  }}
+                />
+              )}
               {showStageEditor && currentNode && (
                 <StageEditorModal
                   node={currentNode}
@@ -758,7 +771,7 @@ export default function ProcessBuilder() {
                     <div style={panelTitle}>Recorrido</div>
                     <ProcessPath proposal={proposal} />
                     <div style={footerActions}>
-                      <button onClick={publishProcess} disabled={working || !checklistOk} style={primaryButton}>Publicar proceso</button>
+                      <button onClick={() => setShowPublishConfirm(true)} disabled={working || !checklistOk} style={primaryButton}>Publicar proceso</button>
                     </div>
                   </div>
                 </div>
@@ -887,6 +900,70 @@ function TabButton({ active, onClick, children }: { active: boolean; onClick: ()
   return <button onClick={onClick} style={{ ...tabButton, ...(active ? tabButtonActive : {}) }}>{children}</button>;
 }
 
+function PublishConfirmModal({
+  checklist,
+  checklistOk,
+  working,
+  onClose,
+  onPublish,
+}: {
+  checklist: Array<{ label: string; ok: boolean; detail: string }>;
+  checklistOk: boolean;
+  working: boolean;
+  onClose: () => void;
+  onPublish: () => void;
+}) {
+  return (
+    <div style={modalBackdrop}>
+      <div style={publishModalCard} className="flow-tour-card">
+        <div style={modalHeader}>
+          <div>
+            <div style={guideEyebrow}>Publicar proceso</div>
+            <h2 style={modalTitle}>Revision final</h2>
+            <p style={sectionSubtitle}>
+              Confirma que el proceso esta listo antes de dejarlo disponible.
+            </p>
+          </div>
+
+          <button onClick={onClose} style={tourClose}>Cerrar</button>
+        </div>
+
+        <div style={fieldList}>
+          {checklist.map(item => (
+            <div key={item.label} style={checkItem}>
+              <span style={{ ...checkDot, background: item.ok ? '#12B76A' : '#F79009' }}>
+                {item.ok ? 'OK' : '!'}
+              </span>
+              <span style={itemText}>
+                <strong style={ellipsis}>{item.label}</strong>
+                <small style={smallEllipsis}>{item.detail}</small>
+              </span>
+            </div>
+          ))}
+        </div>
+
+        {!checklistOk && (
+          <div style={warningBox}>
+            Hay pendientes por corregir. Revisa el formulario, responsables o evidencias antes de publicar.
+          </div>
+        )}
+
+        {checklistOk && (
+          <div style={successBox}>
+            Todo esta listo. Al publicar, el proceso quedara disponible para uso.
+          </div>
+        )}
+
+        <div style={footerActions}>
+          <button onClick={onClose} style={secondaryButton}>Cancelar</button>
+          <button onClick={onPublish} disabled={working || !checklistOk} style={primaryButton}>
+            {working ? 'Publicando...' : 'Publicar proceso'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 function StageEditorModal({
   node,
   index,
@@ -1145,7 +1222,7 @@ function TourOverlay({
       <div style={tourCard} className="flow-tour-card">
         <div style={tourHeader}>
           <div>
-            <div style={guideEyebrow}>Guia del diseÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±ador</div>
+            <div style={guideEyebrow}>Guia del diseÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±ador</div>
             <h2 style={tourTitle}>{title}</h2>
           </div>
 
@@ -2113,4 +2190,36 @@ const stageModalCard: CSSProperties = {
   background: '#FFFFFF',
   border: '1px solid #EAECF0',
   boxShadow: '0 28px 90px rgba(16, 24, 40, .24)',
+};
+const publishModalCard: CSSProperties = {
+  width: 'min(620px, 100%)',
+  maxHeight: 'calc(100vh - 64px)',
+  overflowY: 'auto',
+  display: 'grid',
+  gap: 14,
+  padding: 18,
+  borderRadius: 18,
+  background: '#FFFFFF',
+  border: '1px solid #EAECF0',
+  boxShadow: '0 28px 90px rgba(16, 24, 40, .24)',
+};
+
+const warningBox: CSSProperties = {
+  padding: 12,
+  borderRadius: 12,
+  background: '#FFFAEB',
+  border: '1px solid #FEC84B',
+  color: '#93370D',
+  fontSize: 13,
+  fontWeight: 800,
+};
+
+const successBox: CSSProperties = {
+  padding: 12,
+  borderRadius: 12,
+  background: '#ECFDF3',
+  border: '1px solid #ABEFC6',
+  color: '#027A48',
+  fontSize: 13,
+  fontWeight: 800,
 };
