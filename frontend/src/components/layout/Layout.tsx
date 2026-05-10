@@ -101,7 +101,7 @@ export default function Layout({ children }: { children: ReactNode }) {
 
           <button
             onClick={() => instance.logoutRedirect()}
-            title="Cerrar sesión"
+            title="Cerrar sesiÃ³n"
             style={{
               background: 'none',
               border: 'none',

@@ -1,6 +1,6 @@
 import { msalInstance, loginRequest } from '../auth/msal';
 
-const BASE = String(import.meta.env.VITE_API_URL || '').replace(/\/+$/, '');
+const BASE = String(import.meta.env.VITE_API_URL || 'https://flowapp.dbermeo.workers.dev').replace(/\/+$/, '');
 
 async function getToken(): Promise<string> {
   const account = msalInstance.getActiveAccount() ?? msalInstance.getAllAccounts()[0];

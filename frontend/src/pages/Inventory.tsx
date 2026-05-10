@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { api, InventoryKardexRow, InventoryStockRow } from '../lib/api';
 
 export default function Inventory() {
