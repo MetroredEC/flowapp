@@ -99,7 +99,7 @@ const TOUR_STEPS = [
   },
   {
     title: 'Formulario',
-    text: 'En esta pestaÃƒÂ±a defines que informacion debe completar cada responsable.',
+    text: 'En esta pestaÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â±a defines que informacion debe completar cada responsable.',
     hint: 'Usa Campos sugeridos para avanzar mas rapido.',
   },
   {
@@ -644,13 +644,10 @@ export default function ProcessBuilder() {
                   </div>
 
                   {showPreview && (
-                    <div style={previewPanel}>
-                      <div style={panelHeader}>
-                        <div style={panelTitle}>Vista previa</div>
-                        <button onClick={() => setShowPreview(false)} style={secondarySmallButton}>Cerrar</button>
-                      </div>
-                      <FormPreview node={currentNode} />
-                    </div>
+                    <PreviewModal
+                      node={currentNode}
+                      onClose={() => setShowPreview(false)}
+                    />
                   )}
                 </div>
               )}
@@ -925,6 +922,31 @@ function TabButton({ active, onClick, children }: { active: boolean; onClick: ()
   return <button onClick={onClick} style={{ ...tabButton, ...(active ? tabButtonActive : {}) }}>{children}</button>;
 }
 
+function PreviewModal({
+  node,
+  onClose,
+}: {
+  node: ProposalNode;
+  onClose: () => void;
+}) {
+  return (
+    <div style={modalBackdrop}>
+      <div style={previewModalCard} className="flow-tour-card">
+        <div style={modalHeader}>
+          <div>
+            <div style={guideEyebrow}>Vista previa</div>
+            <h2 style={modalTitle}>{node.label}</h2>
+            <p style={sectionSubtitle}>Asi vera el responsable el formulario de esta etapa.</p>
+          </div>
+
+          <button onClick={onClose} style={tourClose}>Cerrar</button>
+        </div>
+
+        <FormPreview node={node} />
+      </div>
+    </div>
+  );
+}
 function CreateProcessModal({
   name,
   description,
@@ -1032,7 +1054,7 @@ function TourOverlay({
       <div style={tourCard} className="flow-tour-card">
         <div style={tourHeader}>
           <div>
-            <div style={guideEyebrow}>Guia del diseÃƒÂ±ador</div>
+            <div style={guideEyebrow}>Guia del diseÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â±ador</div>
             <h2 style={tourTitle}>{title}</h2>
           </div>
 
@@ -1522,18 +1544,6 @@ const workPanel: CSSProperties = {
   boxSizing: 'border-box',
 };
 
-const previewPanel: CSSProperties = {
-  gridColumn: '1 / -1',
-  maxHeight: '260px',
-  overflowY: 'auto',
-  padding: 9,
-  borderRadius: 10,
-  border: '1px solid #EAECF0',
-  background: '#FFFFFF',
-  maxWidth: '100%',
-  overflow: 'hidden',
-  boxSizing: 'border-box',
-};
 
 const panelHeader: CSSProperties = {
   display: 'flex',
@@ -1968,4 +1978,16 @@ const modalTitle: CSSProperties = {
   fontWeight: 900,
   color: '#101828',
   letterSpacing: -0.3,
+};
+const previewModalCard: CSSProperties = {
+  width: 'min(640px, 100%)',
+  maxHeight: 'calc(100vh - 64px)',
+  overflowY: 'auto',
+  display: 'grid',
+  gap: 14,
+  padding: 18,
+  borderRadius: 18,
+  background: '#FFFFFF',
+  border: '1px solid #EAECF0',
+  boxShadow: '0 28px 90px rgba(16, 24, 40, .24)',
 };
