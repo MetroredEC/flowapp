@@ -354,7 +354,7 @@ export default function ProcessBuilder() {
   }
 
   return (
-    <div style={page}>
+    <div style={page} className="process-designer">
       <header style={header}>
         <div>
           <h1 style={title}>Procesos</h1>
@@ -842,7 +842,7 @@ function Metric({ label, value }: { label: string; value: string }) {
 
 function Alert({ children, kind }: { children: ReactNode; kind: 'ok' | 'error' }) {
   return (
-    <div style={{
+    <div className="flow-alert" style={{
       background: kind === 'ok' ? '#ECFDF3' : '#FFF2EC',
       border: '1px solid ' + (kind === 'ok' ? '#ABEFC6' : '#F0997B'),
       color: kind === 'ok' ? '#027A48' : '#993C1D',

@@ -1,8 +1,13 @@
 import { StrictMode } from 'react';
+import './index.css';
 import { createRoot } from 'react-dom/client';
+import './index.css';
 import { MsalProvider } from '@azure/msal-react';
+import './index.css';
 import { msalInstance } from './auth/msal';
+import './index.css';
 import App from './App';
+import './index.css';
 
 async function bootstrap() {
   await msalInstance.initialize();
