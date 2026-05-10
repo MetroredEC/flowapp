@@ -104,6 +104,9 @@ export const api = {
   analyzeProcessBlueprint: (id: string) =>
     request<{ data: any }>('POST', '/api/process-builder/blueprints/' + id + '/analyze'),
 
+  updateProcessBlueprintProposal: (id: string, proposal: unknown) =>
+    request<{ data: { saved: boolean } }>('PUT', '/api/process-builder/blueprints/' + id + '/proposal', { proposal }),
+
   deployProcessBlueprint: (id: string) =>
     request<{ data: { deployed: boolean; process_definition_id: string } }>('POST', '/api/process-builder/blueprints/' + id + '/deploy'),
 
