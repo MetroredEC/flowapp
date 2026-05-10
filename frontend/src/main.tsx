@@ -7,6 +7,7 @@ import './index.css';
 import { msalInstance } from './auth/msal';
 import './index.css';
 import App from './App';
+import ErrorBoundary from './components/feedback/ErrorBoundary';
 import './index.css';
 
 async function bootstrap() {
@@ -21,7 +22,9 @@ async function bootstrap() {
   createRoot(document.getElementById('root')!).render(
     <StrictMode>
       <MsalProvider instance={msalInstance}>
-        <App />
+        <ErrorBoundary>
+    <App />
+  </ErrorBoundary>
       </MsalProvider>
     </StrictMode>
   );
