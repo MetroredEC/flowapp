@@ -94,6 +94,7 @@ export default function ProcessBuilder() {
   const [selectedNodeIndex, setSelectedNodeIndex] = useState(0);
   const [showCreate, setShowCreate] = useState(false);
   const [showGuide, setShowGuide] = useState(true);
+  const [showPreview, setShowPreview] = useState(false);
 
   const [name, setName] = useState('Proceso de suministros');
   const [description, setDescription] = useState('Solicitud, revision, despacho y recepcion');
@@ -538,7 +539,12 @@ export default function ProcessBuilder() {
                         <div style={panelTitle}>Formulario</div>
                         <p style={sectionSubtitle}>{currentNode.label}</p>
                       </div>
-                      <button onClick={() => addField(selectedNodeIndex)} style={smallButton}>Agregar campo</button>
+                      <div style={topActions}>
+                        <button onClick={() => setShowPreview(value => !value)} style={secondarySmallButton}>
+                          {showPreview ? 'Ocultar vista' : 'Vista previa'}
+                        </button>
+                        <button onClick={() => addField(selectedNodeIndex)} style={smallButton}>Agregar campo</button>
+                      </div>
                     </div>
 
                     <div style={fieldList}>
@@ -574,10 +580,15 @@ export default function ProcessBuilder() {
                     </div>
                   </div>
 
-                  <div style={previewPanel}>
-                    <div style={panelTitle}>Vista previa</div>
-                    <FormPreview node={currentNode} />
-                  </div>
+                  {showPreview && (
+                    <div style={previewPanel}>
+                      <div style={panelHeader}>
+                        <div style={panelTitle}>Vista previa</div>
+                        <button onClick={() => setShowPreview(false)} style={secondarySmallButton}>Cerrar</button>
+                      </div>
+                      <FormPreview node={currentNode} />
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1579,4 +1590,14 @@ const guideNumber: CSSProperties = {
   color: '#0C447C',
   fontSize: 12,
   fontWeight: 900,
+};
+const secondarySmallButton: CSSProperties = {
+  background: '#F8FAFC',
+  color: '#344054',
+  border: '1px solid #D0D5DD',
+  borderRadius: 999,
+  padding: '7px 10px',
+  fontSize: 12,
+  fontWeight: 800,
+  cursor: 'pointer',
 };
