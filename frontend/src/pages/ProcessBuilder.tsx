@@ -89,28 +89,33 @@ const FIELD_TYPES: Array<{ value: FieldType; label: string }> = [
 const TOUR_STEPS = [
   {
     title: 'Procesos',
-    text: 'Aqui ves los procesos creados. Selecciona uno para editarlo o crea uno nuevo.',
-    hint: 'Empieza por Crear proceso si es la primera vez.',
+    text: 'Aqui puedes seleccionar un proceso existente o crear uno nuevo.',
+    hint: 'Usa Crear proceso para empezar.',
+    target: 'process-list',
   },
   {
     title: 'Plantillas',
     text: 'Las plantillas te dan una base lista para ajustar.',
     hint: 'Elige la plantilla mas parecida a tu caso.',
+    target: 'templates',
   },
   {
     title: 'Formulario',
     text: 'Define que informacion debe completar cada responsable.',
     hint: 'Usa Campos sugeridos para avanzar mas rapido.',
+    target: 'tabs',
   },
   {
     title: 'Flujo',
     text: 'Ordena las etapas, asigna responsables y define evidencias.',
     hint: 'Puedes arrastrar etapas para cambiar el orden.',
+    target: 'stages',
   },
   {
     title: 'Publicar',
-    text: 'Revisa que el proceso tenga etapas, responsables y formularios completos.',
-    hint: 'Publica solo cuando la revision este completa.',
+    text: 'Revisa que todo este completo antes de publicar.',
+    hint: 'Publica solo cuando la revision este lista.',
+    target: 'publish',
   },
 ];
 export default function ProcessBuilder() {
@@ -499,6 +504,7 @@ export default function ProcessBuilder() {
           title={TOUR_STEPS[tourStep].title}
           text={TOUR_STEPS[tourStep].text}
           hint={TOUR_STEPS[tourStep].hint}
+          target={TOUR_STEPS[tourStep].target}
           onClose={() => {
             window.localStorage.setItem('flowapp.processDesignerTourSeen', '1');
             setShowTour(false);
@@ -697,7 +703,7 @@ export default function ProcessBuilder() {
                             <span style={itemText}>
                               <strong style={ellipsis}>{field.label}</strong>
                               <small style={smallEllipsis}>
-                                {field.key}{field.required ? ' †š¬…¡‚¬Å¡· Obligatorio' : ' †š¬…¡‚¬Å¡· Opcional'}
+                                {field.key}{field.required ? ' ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· Obligatorio' : ' ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· Opcional'}
                               </small>
                             </span>
 
@@ -1371,6 +1377,7 @@ function TourOverlay({
   title,
   text,
   hint,
+  target,
   onClose,
   onBack,
   onNext,
@@ -1380,16 +1387,77 @@ function TourOverlay({
   title: string;
   text: string;
   hint: string;
+  target: string;
   onClose: () => void;
   onBack: () => void;
   onNext: () => void;
 }) {
+  const [rect, setRect] = useState<DOMRect | null>(null);
+
+  useEffect(() => {
+    const update = () => {
+      const element = document.querySelector(`[data-tour="${target}"]`);
+
+      if (!element) {
+        setRect(null);
+        return;
+      }
+
+      element.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+        inline: 'center',
+      });
+
+      window.setTimeout(() => {
+        const nextRect = element.getBoundingClientRect();
+        setRect(nextRect);
+      }, 260);
+    };
+
+    update();
+
+    window.addEventListener('resize', update);
+    window.addEventListener('scroll', update, true);
+
+    return () => {
+      window.removeEventListener('resize', update);
+      window.removeEventListener('scroll', update, true);
+    };
+  }, [target, step]);
+
+  const cardStyle = getTourCardPosition(rect);
+
   return (
     <div style={tourBackdrop}>
-      <div style={tourCard} className="flow-tour-card">
+      {rect && (
+        <>
+          <div
+            style={{
+              ...tourSpotlight,
+              top: Math.max(8, rect.top - 8),
+              left: Math.max(8, rect.left - 8),
+              width: rect.width + 16,
+              height: rect.height + 16,
+            }}
+          />
+
+          <div
+            style={{
+              ...tourPulse,
+              top: Math.max(8, rect.top - 13),
+              left: Math.max(8, rect.left - 13),
+              width: rect.width + 26,
+              height: rect.height + 26,
+            }}
+          />
+        </>
+      )}
+
+      <div style={{ ...tourCard, ...cardStyle }} className="flow-tour-card">
         <div style={tourHeader}>
           <div>
-            <div style={guideEyebrow}>Guia del dise† ‚¬„‚¬ š¬†š¬ ‚¬Å¡¬‚¬Å† ‚¬„‚¬Å¡¬ †š¬…¡¬š¬…† ‚¬„‚¬ š¬†š¬…¡¬‚¬Å¡ † ‚¬„‚¬Å¡†‚¬Å¡¬¦¡‚¬Å¡¬†‚¬Å¡¬¦‚¬Å¡† ‚¬„‚¬ š¬†š¬ ‚¬Å¡¬‚¬Å† ‚¬„‚¬Å¡†‚¬Å¡¬¦¡‚¬Å¡¬†š¬…¡‚¬Å¡ † ‚¬„‚¬ š¬†š¬…¡‚¬Å¡† ‚¬„‚¬Å¡†š¬…¡¬‚¬¦¡†š¬…¡‚¬Å¡¬† ‚¬„‚¬Å¡†š¬…¡¬‚¬¦†š¬…¡‚¬Å¡† ‚¬„‚¬ š¬†š¬ ‚¬Å¡¬‚¬Å† ‚¬„‚¬Å¡¬ †š¬…¡¬š¬…† ‚¬„‚¬ š¬†š¬…¡‚¬Å¡† ‚¬„‚¬Å¡†š¬…¡¬‚¬¦¡†š¬…¡‚¬Å¡¬† ‚¬„‚¬Å¡¬¦¡†š¬…¡‚¬Å¡ † ‚¬„‚¬ š¬†š¬ ‚¬Å¡¬‚¬Å† ‚¬„‚¬Å¡¬¦¡†š¬…¡‚¬Å¡† ‚¬„‚¬ š¬†š¬…¡‚¬Å¡† ‚¬„‚¬Å¡†‚¬Å¡¬¦¡‚¬Å¡¬†š¬¦‚¬Å¡¡† ‚¬„‚¬Å¡¬¦¡†š¬…¡‚¬Å¡¬† ‚¬„‚¬ š¬†š¬…¡‚¬Å¡† ‚¬„‚¬Å¡†‚¬Å¡¬¦¡‚¬Å¡¬†š¬¦‚¬Å¡† ‚¬„‚¬Å¡¬¦¡†š¬…¡‚¬Å¡† ‚¬„‚¬ š¬†š¬ ‚¬Å¡¬‚¬Å† ‚¬„‚¬Å¡¬ †š¬…¡¬š¬…† ‚¬„‚¬ š¬†š¬…¡¬‚¬Å¡ † ‚¬„‚¬Å¡†‚¬Å¡¬¦¡‚¬Å¡¬†‚¬Å¡¬¦‚¬Å¡† ‚¬„‚¬ š¬†š¬ ‚¬Å¡¬‚¬Å† ‚¬„‚¬Å¡¬¦¡†š¬…¡‚¬Å¡† ‚¬„‚¬ š¬†š¬…¡‚¬Å¡† ‚¬„‚¬Å¡†‚¬Å¡¬¦¡‚¬Å¡¬†š¬¦‚¬Å¡¡† ‚¬„‚¬Å¡¬¦¡†š¬…¡‚¬Å¡¬† ‚¬„‚¬ š¬†š¬…¡¬‚¬¦¡† ‚¬„‚¬Å¡¬¦¡†š¬…¡‚¬Å¡ † ‚¬„‚¬ š¬†š¬ ‚¬Å¡¬‚¬Å† ‚¬„‚¬Å¡¬ †š¬…¡¬š¬…† ‚¬„‚¬ š¬†š¬…¡¬‚¬¦¡† ‚¬„‚¬Å¡¬¦¡†š¬…¡‚¬Å¡† ‚¬„‚¬ š¬†š¬ ‚¬Å¡¬‚¬Å† ‚¬„‚¬Å¡¬¦¡†š¬…¡‚¬Å¡† ‚¬„‚¬ š¬†š¬…¡‚¬Å¡† ‚¬„‚¬Å¡†š¬…¡¬‚¬¦¡†š¬…¡‚¬Å¡¬† ‚¬„‚¬Å¡¬¦†š¬…¡‚¬Å¡¡† ‚¬„‚¬ š¬†š¬…¡¬‚¬¦¡† ‚¬„‚¬Å¡¬¦¡†š¬…¡‚¬Å¡¬† ‚¬„‚¬ š¬†š¬ ‚¬Å¡¬‚¬Å† ‚¬„‚¬Å¡¬¦¡†š¬…¡‚¬Å¡† ‚¬„‚¬ š¬†š¬…¡‚¬Å¡† ‚¬„‚¬Å¡†š¬…¡¬‚¬¦¡†š¬…¡‚¬Å¡¬† ‚¬„‚¬Å¡¬¦†š¬…¡‚¬Å¡† ‚¬„‚¬ š¬†š¬…¡¬‚¬¦¡† ‚¬„‚¬Å¡¬¦¡†š¬…¡‚¬Å¡† ‚¬„‚¬ š¬†š¬ ‚¬Å¡¬‚¬Å† ‚¬„‚¬Å¡¬ †š¬…¡¬š¬…† ‚¬„‚¬ š¬†š¬…¡¬‚¬Å¡ † ‚¬„‚¬Å¡†‚¬Å¡¬¦¡‚¬Å¡¬†‚¬Å¡¬¦‚¬Å¡† ‚¬„‚¬ š¬†š¬ ‚¬Å¡¬‚¬Å† ‚¬„‚¬Å¡†‚¬Å¡¬¦¡‚¬Å¡¬†š¬…¡‚¬Å¡ † ‚¬„‚¬ š¬†š¬…¡‚¬Å¡† ‚¬„‚¬Å¡†š¬…¡¬‚¬¦¡†š¬…¡‚¬Å¡¬† ‚¬„‚¬Å¡†š¬…¡¬‚¬¦†š¬…¡‚¬Å¡† ‚¬„‚¬ š¬†š¬ ‚¬Å¡¬‚¬Å† ‚¬„‚¬Å¡¬ †š¬…¡¬š¬…† ‚¬„‚¬ š¬†š¬…¡¬‚¬¦¡† ‚¬„‚¬Å¡¬¦¡†š¬…¡‚¬Å¡† ‚¬„‚¬ š¬†š¬ ‚¬Å¡¬‚¬Å† ‚¬„‚¬Å¡¬¦¡†š¬…¡‚¬Å¡† ‚¬„‚¬ š¬†š¬…¡‚¬Å¡† ‚¬„‚¬Å¡†š¬…¡¬‚¬¦¡†š¬…¡‚¬Å¡¬† ‚¬„‚¬Å¡¬¦†š¬…¡‚¬Å¡¡† ‚¬„‚¬ š¬†š¬…¡¬‚¬¦¡† ‚¬„‚¬Å¡¬¦¡†š¬…¡‚¬Å¡¬† ‚¬„‚¬ š¬†š¬ ‚¬Å¡¬‚¬Å† ‚¬„‚¬Å¡†‚¬Å¡¬¦¡‚¬Å¡¬†š¬…¡‚¬Å¡¦† ‚¬„‚¬ š¬†š¬…¡¬‚¬¦¡† ‚¬„‚¬Å¡¬¦¡†š¬…¡‚¬Å¡¡† ‚¬„‚¬ š¬†š¬ ‚¬Å¡¬‚¬Å† ‚¬„‚¬Å¡¬ †š¬…¡¬š¬…† ‚¬„‚¬ š¬†š¬…¡¬‚¬Å¡ † ‚¬„‚¬Å¡†‚¬Å¡¬¦¡‚¬Å¡¬†‚¬Å¡¬¦‚¬Å¡† ‚¬„‚¬ š¬†š¬ ‚¬Å¡¬‚¬Å† ‚¬„‚¬Å¡¬¦¡†š¬…¡‚¬Å¡† ‚¬„‚¬ š¬†š¬…¡‚¬Å¡† ‚¬„‚¬Å¡†‚¬Å¡¬¦¡‚¬Å¡¬†š¬¦‚¬Å¡¡† ‚¬„‚¬Å¡¬¦¡†š¬…¡‚¬Å¡¬† ‚¬„‚¬ š¬†š¬…¡¬‚¬Å¡¦† ‚¬„‚¬Å¡¬¦¡†š¬…¡‚¬Å¡¡† ‚¬„‚¬ š¬†š¬ ‚¬Å¡¬‚¬Å† ‚¬„‚¬Å¡¬ †š¬…¡¬š¬…† ‚¬„‚¬ š¬†š¬…¡‚¬Å¡† ‚¬„‚¬Å¡†š¬…¡¬‚¬¦¡†š¬…¡‚¬Å¡¬† ‚¬„‚¬Å¡¬¦†š¬…¡‚¬Å¡¡† ‚¬„‚¬ š¬†š¬ ‚¬Å¡¬‚¬Å† ‚¬„‚¬Å¡†‚¬Å¡¬¦¡‚¬Å¡¬†š¬¦‚¬Å¡¡† ‚¬„‚¬ š¬†š¬…¡¬‚¬¦¡† ‚¬„‚¬Å¡¬¦¡†š¬…¡‚¬Å¡ador</div>
+            <div style={tourEyebrow}>Tutorial</div>
             <h2 style={tourTitle}>{title}</h2>
           </div>
 
@@ -1398,9 +1466,7 @@ function TourOverlay({
 
         <p style={tourText}>{text}</p>
 
-        <div style={tourHint}>
-          {hint}
-        </div>
+        <div style={tourHint}>{hint}</div>
 
         <div style={tourProgress}>
           {Array.from({ length: total }).map((_, index) => (
@@ -1427,6 +1493,49 @@ function TourOverlay({
     </div>
   );
 }
+
+function getTourCardPosition(rect: DOMRect | null): CSSProperties {
+  if (!rect) {
+    return {
+      position: 'fixed',
+      top: '50%',
+      left: '50%',
+      transform: 'translate(-50%, -50%)',
+    };
+  }
+
+  const width = 420;
+  const margin = 20;
+  const viewportWidth = window.innerWidth;
+  const viewportHeight = window.innerHeight;
+
+  const canPlaceRight = rect.right + width + margin < viewportWidth;
+  const canPlaceLeft = rect.left - width - margin > 0;
+
+  let left = rect.right + margin;
+
+  if (!canPlaceRight && canPlaceLeft) {
+    left = rect.left - width - margin;
+  }
+
+  if (!canPlaceRight && !canPlaceLeft) {
+    left = Math.max(margin, Math.min(viewportWidth - width - margin, rect.left));
+  }
+
+  const top = Math.max(
+    margin,
+    Math.min(viewportHeight - 260, rect.top)
+  );
+
+  return {
+    position: 'fixed',
+    width,
+    top,
+    left,
+    transform: 'none',
+  };
+}
+
 function GuideStep({ number, title, text }: { number: string; title: string; text: string }) {
   return (
     <div style={guideStep}>
@@ -2190,24 +2299,21 @@ const presetButton: CSSProperties = {
 const tourBackdrop: CSSProperties = {
   position: 'fixed',
   inset: 0,
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  padding: 24,
-  background: 'rgba(16, 24, 40, .22)',
-  backdropFilter: 'blur(5px)',
   zIndex: 80,
+  pointerEvents: 'auto',
+  background: 'rgba(16, 24, 40, .34)',
+  backdropFilter: 'blur(4px)',
 };
 
 const tourCard: CSSProperties = {
-  width: 'min(460px, 92vw)',
   display: 'grid',
   gap: 12,
   padding: 18,
   borderRadius: 18,
   background: '#FFFFFF',
   border: '1px solid #EAECF0',
-  boxShadow: '0 28px 80px rgba(16, 24, 40, .20)',
+  boxShadow: '0 28px 80px rgba(16, 24, 40, .24)',
+  zIndex: 83,
 };
 
 const tourHeader: CSSProperties = {
@@ -2478,4 +2584,29 @@ const guideActions: CSSProperties = {
   display: 'flex',
   justifyContent: 'flex-end',
   gap: 8,
+};
+const tourEyebrow: CSSProperties = {
+  color: '#185FA5',
+  fontSize: 11,
+  fontWeight: 900,
+  textTransform: 'uppercase',
+  letterSpacing: .6,
+};
+const tourSpotlight: CSSProperties = {
+  position: 'fixed',
+  borderRadius: 16,
+  background: 'rgba(255,255,255,.08)',
+  border: '2px solid #84CAFF',
+  boxShadow: '0 0 0 9999px rgba(16, 24, 40, .18), 0 18px 44px rgba(12, 68, 124, .24)',
+  pointerEvents: 'none',
+  zIndex: 81,
+};
+
+const tourPulse: CSSProperties = {
+  position: 'fixed',
+  borderRadius: 20,
+  border: '2px solid rgba(24, 95, 165, .52)',
+  pointerEvents: 'none',
+  zIndex: 82,
+  animation: 'tourPulse 1400ms ease-in-out infinite',
 };
