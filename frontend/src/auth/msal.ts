@@ -1,4 +1,4 @@
-﻿import { PublicClientApplication, LogLevel } from '@azure/msal-browser';
+import { PublicClientApplication, LogLevel } from '@azure/msal-browser';
 
 const tenantId = import.meta.env.VITE_ENTRA_TENANT_ID || '480bd49c-6f89-4faa-b39e-c7728d95d130';
 const clientId = import.meta.env.VITE_ENTRA_CLIENT_ID || '66130291-fc50-43f1-943c-6818dac1ba99';
@@ -12,7 +12,7 @@ export const msalConfig = {
   auth: {
     clientId,
     authority: 'https://login.microsoftonline.com/' + tenantId,
-    redirectUri: window.location.origin + '/flowapp/',
+    redirectUri: window.location.origin + '/flowapp/blank.html',
     postLogoutRedirectUri: window.location.origin + '/flowapp/',
     navigateToLoginRequestUrl: false,
   },

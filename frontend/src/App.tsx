@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useIsAuthenticated, useMsal } from '@azure/msal-react';
 
@@ -39,7 +39,11 @@ function LoginGate() {
 
     try {
       clearMsalInteractionLock();
-      await instance.loginRedirect(loginRequest);
+      const response = await instance.loginPopup(loginRequest);
+      if (response.account) {
+        instance.setActiveAccount(response.account);
+      }
+      window.location.reload();
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
 
