@@ -1,4 +1,4 @@
-﻿import { Hono } from 'hono';
+import { Hono } from 'hono';
 import { AppEnv } from '../types';
 
 const router = new Hono<AppEnv>();
@@ -385,7 +385,22 @@ router.post('/blueprints/:id/deploy', async (c) => {
   }
 
   const processDefinitionId = crypto.randomUUID();
-  const processKey = proposal.process_key || slugify(blueprint.name);
+  const baseProcessKey = proposal.process_key || slugify(blueprint.name);
+
+  const existingKey = await c.env.DB.prepare(`
+    SELECT COUNT(*) as count
+      FROM process_definitions
+     WHERE key = ?
+        OR key LIKE ?
+  `).bind(
+    baseProcessKey,
+    baseProcessKey + '-v%'
+  ).first<{ count: number }>();
+
+  const existingCount = Number(existingKey?.count || 0);
+  const processKey = existingCount > 0
+    ? baseProcessKey + '-v' + String(existingCount + 1)
+    : baseProcessKey;
 
   await c.env.DB.prepare(`
     INSERT INTO process_definitions (

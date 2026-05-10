@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 import { api, type ProcessBlueprint } from '../lib/api';
 
 type FieldType = 'text' | 'number' | 'date' | 'textarea' | 'select' | 'checkbox';
@@ -44,7 +44,7 @@ type BuilderBlueprint = ProcessBlueprint & {
   status: string;
 };
 
-type Tab = 'summary' | 'form' | 'workflow' | 'publish';
+type Tab = 'form' | 'workflow' | 'settings' | 'publish';
 
 type Template = {
   key: string;
@@ -57,33 +57,33 @@ const TEMPLATES: Template[] = [
   {
     key: 'suministros',
     name: 'Suministros',
-    description: 'Compras, presupuesto, despacho y recepción.',
+    description: 'Solicitud, compras, presupuesto, despacho y recepciÃ³n.',
     prompt: 'La supervisora del centro crea una solicitud de suministros. Compras recibe, cotiza y selecciona proveedor. Contabilidad valida presupuesto. Compras despacha. La supervisora recibe, valida cantidades reales y adjunta evidencia.',
   },
   {
     key: 'compras',
     name: 'Compras generales',
-    description: 'Revisión, cotización, aprobación y seguimiento.',
-    prompt: 'El solicitante crea una solicitud de compra. Compras revisa y cotiza. El responsable aprueba la compra. Compras registra proveedor y fecha estimada. El solicitante recibe confirmación.',
+    description: 'RevisiÃ³n, cotizaciÃ³n, aprobaciÃ³n y seguimiento.',
+    prompt: 'El solicitante crea una solicitud de compra. Compras revisa y cotiza. El responsable aprueba la compra. Compras registra proveedor y fecha estimada. El solicitante recibe confirmaciÃ³n.',
   },
   {
     key: 'marketing',
     name: 'Marketing',
-    description: 'Campañas, proveedores, aprobaciones y costos.',
-    prompt: 'Marketing solicita una campaña. El responsable revisa objetivo y presupuesto. Compras o proveedor cotiza. Gerencia aprueba. Se ejecuta la campaña y se registra costo final.',
+    description: 'CampaÃ±as, aprobaciones, proveedores y costos.',
+    prompt: 'Marketing solicita una campaÃ±a. El responsable revisa objetivo y presupuesto. Compras o proveedor cotiza. Gerencia aprueba. Se ejecuta la campaÃ±a y se registra costo final.',
   },
   {
     key: 'mantenimiento',
     name: 'Mantenimiento',
-    description: 'Reporte, revisión, ejecución y cierre.',
-    prompt: 'Un usuario reporta una necesidad de mantenimiento. Mantenimiento diagnostica. Administración aprueba el gasto si aplica. El técnico ejecuta el trabajo y sube evidencia de cierre.',
+    description: 'Reporte, revisiÃ³n, ejecuciÃ³n y cierre.',
+    prompt: 'Un usuario reporta una necesidad de mantenimiento. Mantenimiento diagnostica. AdministraciÃ³n aprueba el gasto si aplica. El tÃ©cnico ejecuta el trabajo y sube evidencia de cierre.',
   },
 ];
 
 const FIELD_TYPES: Array<{ value: FieldType; label: string }> = [
   { value: 'text', label: 'Texto' },
   { value: 'textarea', label: 'Texto largo' },
-  { value: 'number', label: 'Número' },
+  { value: 'number', label: 'NÃºmero' },
   { value: 'date', label: 'Fecha' },
   { value: 'checkbox', label: 'Casilla' },
   { value: 'select', label: 'Lista' },
@@ -94,13 +94,15 @@ export default function ProcessBuilder() {
   const [selected, setSelected] = useState<BuilderBlueprint | null>(null);
   const [proposal, setProposal] = useState<Proposal | null>(null);
 
+  const [activeTab, setActiveTab] = useState<Tab>('form');
+  const [selectedNodeIndex, setSelectedNodeIndex] = useState(0);
+  const [showCreate, setShowCreate] = useState(false);
+
   const [name, setName] = useState('Proceso de suministros');
-  const [description, setDescription] = useState('Solicitud, revisión, despacho y recepción');
+  const [description, setDescription] = useState('Solicitud, revisiÃ³n, despacho y recepciÃ³n');
   const [sourceText, setSourceText] = useState(TEMPLATES[0].prompt);
   const [fileName, setFileName] = useState('');
 
-  const [activeTab, setActiveTab] = useState<Tab>('summary');
-  const [selectedNodeIndex, setSelectedNodeIndex] = useState(0);
   const [working, setWorking] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -127,35 +129,25 @@ export default function ProcessBuilder() {
   useEffect(() => {
     setProposal(parsedSelectedProposal);
     setSelectedNodeIndex(0);
-    setActiveTab(parsedSelectedProposal ? 'workflow' : 'summary');
+    if (parsedSelectedProposal) setActiveTab('form');
   }, [parsedSelectedProposal]);
 
   const currentNode = proposal?.nodes[selectedNodeIndex] ?? null;
   const checklist = useMemo(() => getChecklist(proposal), [proposal]);
   const checklistOk = checklist.every(item => item.ok);
 
-  function resetNewProcess() {
+  function startNew(template?: Template) {
+    const selectedTemplate = template ?? TEMPLATES[0];
+
+    setName(selectedTemplate.name);
+    setDescription(selectedTemplate.description);
+    setSourceText(selectedTemplate.prompt);
+    setFileName('');
     setSelected(null);
     setProposal(null);
-    setActiveTab('summary');
-    setSelectedNodeIndex(0);
-    setName('Proceso de suministros');
-    setDescription('Solicitud, revisión, despacho y recepción');
-    setSourceText(TEMPLATES[0].prompt);
-    setFileName('');
     setMessage('');
     setError('');
-  }
-
-  function useTemplate(template: Template) {
-    setName(template.name);
-    setDescription(template.description);
-    setSourceText(template.prompt);
-    setSelected(null);
-    setProposal(null);
-    setActiveTab('summary');
-    setMessage('Plantilla cargada. Puedes revisarla antes de continuar.');
-    setError('');
+    setShowCreate(true);
   }
 
   async function readUploadedFile(file: File) {
@@ -171,12 +163,12 @@ export default function ProcessBuilder() {
     } else {
       setSourceText(prev => {
         const prefix = prev.trim() ? prev.trim() + '\n\n' : '';
-        return prefix + 'Archivo cargado: ' + file.name + '. Resume aquí el contenido principal.';
+        return prefix + 'Archivo cargado: ' + file.name + '. Resume aquÃ­ el contenido principal.';
       });
     }
   }
 
-  async function createAndAnalyze() {
+  async function createProcess() {
     setWorking(true);
     setError('');
     setMessage('');
@@ -195,9 +187,10 @@ export default function ProcessBuilder() {
 
       setBlueprints(refreshed.data as BuilderBlueprint[]);
       setSelected(bp);
-      setMessage('Estructura preparada. Revisa el recorrido antes de publicar.');
+      setShowCreate(false);
+      setMessage('Proceso preparado. Revisa el formulario y el flujo antes de publicarlo.');
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'No se pudo preparar el proceso.');
+      setError(e instanceof Error ? e.message : 'No se pudo crear el proceso.');
     } finally {
       setWorking(false);
     }
@@ -270,7 +263,7 @@ export default function ProcessBuilder() {
         id: 'etapa-' + (prev.nodes.length + 1),
         type: 'approval',
         label: 'Nueva etapa',
-        description: 'Describe qué debe ocurrir en esta etapa.',
+        description: 'Describe quÃ© debe ocurrir en esta etapa.',
         approver_type: 'email',
         approver_email: '',
         form: {
@@ -335,6 +328,25 @@ export default function ProcessBuilder() {
     });
   }
 
+  function moveNodeTo(fromIndex: number, toIndex: number) {
+    setProposal(prev => {
+      if (!prev) return prev;
+      if (fromIndex === toIndex) return prev;
+      if (fromIndex < 0 || toIndex < 0) return prev;
+      if (fromIndex >= prev.nodes.length || toIndex >= prev.nodes.length) return prev;
+
+      const nodes = [...prev.nodes];
+      const [moved] = nodes.splice(fromIndex, 1);
+      nodes.splice(toIndex, 0, moved);
+
+      setSelectedNodeIndex(toIndex);
+
+      return {
+        ...prev,
+        nodes,
+      };
+    });
+  }
   function addField(nodeIndex: number) {
     setProposal(prev => {
       if (!prev) return prev;
@@ -411,15 +423,12 @@ export default function ProcessBuilder() {
     <div style={page}>
       <header style={header}>
         <div>
-          <div style={eyebrow}>Diseño de procesos</div>
           <h1 style={title}>Procesos</h1>
-          <p style={subtitle}>
-            Define etapas, responsables, formularios y evidencias en un solo lugar.
-          </p>
+          <p style={subtitle}>Administra formularios, etapas, responsables y publicaciÃ³n.</p>
         </div>
 
-        <button onClick={resetNewProcess} style={primaryButton}>
-          Crear proceso
+        <button onClick={() => startNew()} style={primaryButton}>
+          Nuevo proceso
         </button>
       </header>
 
@@ -428,59 +437,60 @@ export default function ProcessBuilder() {
 
       <div style={workspace}>
         <aside style={sidebar}>
-          <div style={panelTitle}>Procesos recientes</div>
+          <div style={sideSection}>
+            <div style={panelTitle}>Procesos</div>
 
-          <div style={{ display: 'grid', gap: 8 }}>
-            {blueprints.length === 0 && (
-              <div style={emptyBox}>Todavía no hay procesos guardados.</div>
-            )}
+            <div style={{ display: 'grid', gap: 8, marginTop: 10 }}>
+              {blueprints.length === 0 && (
+                <div style={emptyBox}>TodavÃ­a no hay procesos creados.</div>
+              )}
 
-            {blueprints.map(item => (
-              <button
-                key={item.id}
-                onClick={() => {
-                  setSelected(item);
-                  setMessage('');
-                  setError('');
-                }}
-                style={{
-                  ...processItem,
-                  ...(selected?.id === item.id ? processItemActive : {}),
-                }}
-              >
-                <span style={{ minWidth: 0 }}>
-                  <strong>{item.name}</strong>
-                  <small>{item.description || 'Sin descripción'}</small>
-                </span>
-                <span style={statusStyle(item.status)}>{statusLabel(item.status)}</span>
-              </button>
-            ))}
+              {blueprints.map(item => (
+                <button
+                  key={item.id}
+                  onClick={() => {
+                    setSelected(item);
+                    setShowCreate(false);
+                    setMessage('');
+                    setError('');
+                  }}
+                  style={{
+                    ...processItem,
+                    ...(selected?.id === item.id ? processItemActive : {}),
+                  }}
+                >
+                  <span style={{ minWidth: 0 }}>
+                    <strong>{item.name}</strong>
+                    <small>{item.description || 'Sin descripciÃ³n'}</small>
+                  </span>
+                  <span style={statusStyle(item.status)}>{statusLabel(item.status)}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div style={sideSection}>
+            <div style={panelTitle}>Plantillas</div>
+
+            <div style={{ display: 'grid', gap: 8, marginTop: 10 }}>
+              {TEMPLATES.map(template => (
+                <button key={template.key} onClick={() => startNew(template)} style={templateItem}>
+                  <strong>{template.name}</strong>
+                  <small>{template.description}</small>
+                </button>
+              ))}
+            </div>
           </div>
         </aside>
 
         <main style={main}>
-          {!proposal && (
+          {showCreate && (
             <section style={card}>
               <div style={sectionHeader}>
                 <div>
-                  <h2 style={sectionTitle}>Crear proceso</h2>
-                  <p style={sectionSubtitle}>
-                    Elige una plantilla o describe cómo trabaja tu equipo.
-                  </p>
+                  <h2 style={sectionTitle}>Nuevo proceso</h2>
+                  <p style={sectionSubtitle}>Completa la informaciÃ³n inicial para preparar la estructura.</p>
                 </div>
-              </div>
-
-              <div style={templateGrid}>
-                {TEMPLATES.map(template => (
-                  <button
-                    key={template.key}
-                    onClick={() => useTemplate(template)}
-                    style={templateCard}
-                  >
-                    <strong>{template.name}</strong>
-                    <span>{template.description}</span>
-                  </button>
-                ))}
               </div>
 
               <div style={formGrid}>
@@ -488,7 +498,7 @@ export default function ProcessBuilder() {
                   <input value={name} onChange={e => setName(e.target.value)} style={input} />
                 </Field>
 
-                <Field label="Descripción">
+                <Field label="DescripciÃ³n">
                   <input value={description} onChange={e => setDescription(e.target.value)} style={input} />
                 </Field>
               </div>
@@ -512,7 +522,7 @@ export default function ProcessBuilder() {
                 <div style={infoBox}>Archivo cargado: {fileName}</div>
               )}
 
-              <Field label="Descripción del proceso">
+              <Field label="DescripciÃ³n del proceso">
                 <textarea
                   value={sourceText}
                   onChange={e => setSourceText(e.target.value)}
@@ -521,239 +531,77 @@ export default function ProcessBuilder() {
               </Field>
 
               <div style={footerActions}>
+                <button onClick={() => setShowCreate(false)} style={secondaryButton}>
+                  Cancelar
+                </button>
+
                 <button
-                  onClick={createAndAnalyze}
+                  onClick={createProcess}
                   disabled={working || !sourceText.trim()}
                   style={primaryButton}
                 >
-                  {working ? 'Preparando...' : 'Preparar estructura'}
+                  {working ? 'Preparando...' : 'Preparar proceso'}
                 </button>
               </div>
             </section>
           )}
 
-          {proposal && (
+          {!showCreate && !proposal && (
+            <section style={emptyState}>
+              <div style={emptyStateInner}>
+                <h2>Selecciona o crea un proceso</h2>
+                <p>Usa una plantilla o crea un proceso nuevo para configurar su formulario y recorrido.</p>
+                <button onClick={() => startNew()} style={primaryButton}>Nuevo proceso</button>
+              </div>
+            </section>
+          )}
+
+          {!showCreate && proposal && (
             <section style={card}>
               <div style={sectionHeader}>
                 <div>
                   <h2 style={sectionTitle}>{proposal.process_name}</h2>
-                  <p style={sectionSubtitle}>
-                    Revisa y ajusta el proceso antes de publicarlo.
-                  </p>
+                  <p style={sectionSubtitle}>Edita el formulario, define el recorrido y publica cuando estÃ© listo.</p>
                 </div>
 
                 <div style={topActions}>
-                  <button onClick={saveProposal} disabled={working} style={secondaryButton}>
-                    Guardar
-                  </button>
-                  <button onClick={publishProcess} disabled={working} style={primaryButton}>
-                    Publicar
-                  </button>
+                  <button onClick={saveProposal} disabled={working} style={secondaryButton}>Guardar</button>
+                  <button onClick={publishProcess} disabled={working} style={primaryButton}>Publicar</button>
                 </div>
               </div>
 
               <nav style={tabs}>
-                <TabButton active={activeTab === 'summary'} onClick={() => setActiveTab('summary')}>Resumen</TabButton>
-                <TabButton active={activeTab === 'workflow'} onClick={() => setActiveTab('workflow')}>Recorrido</TabButton>
                 <TabButton active={activeTab === 'form'} onClick={() => setActiveTab('form')}>Formulario</TabButton>
-                <TabButton active={activeTab === 'publish'} onClick={() => setActiveTab('publish')}>Publicación</TabButton>
+                <TabButton active={activeTab === 'workflow'} onClick={() => setActiveTab('workflow')}>Flujo</TabButton>
+                <TabButton active={activeTab === 'settings'} onClick={() => setActiveTab('settings')}>ConfiguraciÃ³n</TabButton>
+                <TabButton active={activeTab === 'publish'} onClick={() => setActiveTab('publish')}>Publicar</TabButton>
               </nav>
 
-              {activeTab === 'summary' && (
-                <div style={summaryGrid}>
-                  <div style={softPanel}>
-                    <div style={panelTitle}>Datos generales</div>
-
-                    <div style={formGrid}>
-                      <Field label="Nombre del proceso">
-                        <input
-                          value={proposal.process_name}
-                          onChange={e => updateProposal({ process_name: e.target.value })}
-                          style={input}
-                        />
-                      </Field>
-
-                      <Field label="Identificador">
-                        <input
-                          value={proposal.process_key}
-                          onChange={e => updateProposal({ process_key: slug(e.target.value) })}
-                          style={input}
-                        />
-                      </Field>
-                    </div>
-
-                    <div style={metricRow}>
-                      <Metric label="Etapas" value={String(proposal.nodes.length)} />
-                      <Metric label="Formularios" value={String(proposal.nodes.filter(n => (n.form?.fields ?? []).length > 0).length)} />
-                      <Metric label="Evidencias" value={String(proposal.nodes.filter(n => n.attachment_rules?.required).length)} />
-                    </div>
-                  </div>
-
-                  <div style={softPanel}>
-                    <div style={panelTitle}>Recorrido</div>
-                    <ProcessPath proposal={proposal} onSelect={index => {
-                      setSelectedNodeIndex(index);
-                      setActiveTab('workflow');
-                    }} />
-                  </div>
-                </div>
-              )}
-
-              {activeTab === 'workflow' && (
-                <div style={workflowLayout}>
-                  <div style={stageList}>
-                    <div style={stageListHeader}>
-                      <div style={panelTitle}>Etapas</div>
+              {activeTab === 'form' && currentNode && (
+                <div style={twoColumn}>
+                  <div style={leftWork}>
+                    <div style={toolbar}>
+                      <div>
+                        <div style={panelTitle}>Etapas</div>
+                        <p style={sectionSubtitle}>Selecciona la etapa para editar su formulario.</p>
+                      </div>
                       <button onClick={addNode} style={smallButton}>Agregar etapa</button>
                     </div>
 
-                    {proposal.nodes.map((node, index) => (
-                      <button
-                        key={index}
-                        onClick={() => setSelectedNodeIndex(index)}
-                        style={{
-                          ...stageItem,
-                          ...(selectedNodeIndex === index ? stageItemActive : {}),
-                        }}
-                      >
-                        <span style={stageNumber}>{index + 1}</span>
-                        <span style={{ flex: 1, minWidth: 0 }}>
-                          <strong>{node.label}</strong>
-                          <small>{ownerLabel(node)}</small>
-                        </span>
-                      </button>
-                    ))}
+                    <StageList
+                      nodes={proposal.nodes}
+                      selectedIndex={selectedNodeIndex}
+                      onSelect={setSelectedNodeIndex}
+                      onMove={moveNodeTo}
+                    />
                   </div>
 
-                  {currentNode && (
-                    <div style={stageEditor}>
-                      <div style={editorHeader}>
-                        <div>
-                          <div style={eyebrow}>Etapa {selectedNodeIndex + 1}</div>
-                          <h3 style={editorTitle}>{currentNode.label}</h3>
-                        </div>
-
-                        <div style={{ display: 'flex', gap: 8 }}>
-                          <button onClick={() => moveNode(selectedNodeIndex, -1)} style={smallButton}>Subir</button>
-                          <button onClick={() => moveNode(selectedNodeIndex, 1)} style={smallButton}>Bajar</button>
-                          <button onClick={() => removeNode(selectedNodeIndex)} style={dangerButton}>Eliminar</button>
-                        </div>
-                      </div>
-
-                      <div style={formGrid}>
-                        <Field label="Nombre de la etapa">
-                          <input
-                            value={currentNode.label}
-                            onChange={e => updateNode(selectedNodeIndex, { label: e.target.value })}
-                            style={input}
-                          />
-                        </Field>
-
-                        <Field label="Tipo">
-                          <select
-                            value={currentNode.type}
-                            onChange={e => updateNode(selectedNodeIndex, { type: e.target.value as ProposalNode['type'] })}
-                            style={input}
-                          >
-                            <option value="approval">Aprobación</option>
-                            <option value="task">Actividad</option>
-                          </select>
-                        </Field>
-                      </div>
-
-                      <Field label="Qué ocurre en esta etapa">
-                        <textarea
-                          value={currentNode.description || ''}
-                          onChange={e => updateNode(selectedNodeIndex, { description: e.target.value })}
-                          style={{ ...input, minHeight: 90, resize: 'vertical' }}
-                        />
-                      </Field>
-
-                      <div style={formGrid}>
-                        <Field label="Responsable">
-                          <select
-                            value={currentNode.approver_type || 'email'}
-                            onChange={e => updateNode(selectedNodeIndex, { approver_type: e.target.value as ProposalNode['approver_type'] })}
-                            style={input}
-                          >
-                            <option value="email">Correo específico</option>
-                            <option value="requester">Solicitante</option>
-                            <option value="role">Rol</option>
-                          </select>
-                        </Field>
-
-                        {currentNode.approver_type !== 'requester' && (
-                          <Field label={currentNode.approver_type === 'role' ? 'Rol' : 'Correo'}>
-                            <input
-                              value={currentNode.approver_type === 'role' ? currentNode.role || '' : currentNode.approver_email || ''}
-                              onChange={e => {
-                                if (currentNode.approver_type === 'role') updateNode(selectedNodeIndex, { role: e.target.value });
-                                else updateNode(selectedNodeIndex, { approver_email: e.target.value });
-                              }}
-                              style={input}
-                              placeholder={currentNode.approver_type === 'role' ? 'compras' : 'correo@metrored.med.ec'}
-                            />
-                          </Field>
-                        )}
-                      </div>
-
-                      <div style={formGrid}>
-                        <Field label="Nombre de la evidencia">
-                          <input
-                            value={currentNode.attachment_rules?.label || ''}
-                            onChange={e => updateNode(selectedNodeIndex, {
-                              attachment_rules: {
-                                ...(currentNode.attachment_rules || {}),
-                                label: e.target.value,
-                              },
-                            })}
-                            style={input}
-                          />
-                        </Field>
-
-                        <Field label="Archivos mínimos">
-                          <input
-                            type="number"
-                            min="0"
-                            value={currentNode.attachment_rules?.min_files ?? 0}
-                            onChange={e => updateNode(selectedNodeIndex, {
-                              attachment_rules: {
-                                ...(currentNode.attachment_rules || {}),
-                                min_files: Number(e.target.value || 0),
-                              },
-                            })}
-                            style={input}
-                          />
-                        </Field>
-                      </div>
-
-                      <label style={checkLabel}>
-                        <input
-                          type="checkbox"
-                          checked={Boolean(currentNode.attachment_rules?.required)}
-                          onChange={e => updateNode(selectedNodeIndex, {
-                            attachment_rules: {
-                              ...(currentNode.attachment_rules || {}),
-                              required: e.target.checked,
-                            },
-                          })}
-                        />
-                        Solicitar evidencia en esta etapa
-                      </label>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {activeTab === 'form' && currentNode && (
-                <div style={formDesigner}>
-                  <div style={softPanel}>
-                    <div style={stageListHeader}>
+                  <div style={rightWork}>
+                    <div style={toolbar}>
                       <div>
-                        <div style={panelTitle}>Formulario</div>
-                        <p style={sectionSubtitle}>Campos que deberá completar el responsable de la etapa seleccionada.</p>
+                        <div style={panelTitle}>Formulario de la etapa</div>
+                        <p style={sectionSubtitle}>{currentNode.label}</p>
                       </div>
-
                       <button onClick={() => addField(selectedNodeIndex)} style={smallButton}>Agregar campo</button>
                     </div>
 
@@ -797,7 +645,7 @@ export default function ProcessBuilder() {
                                 checked={Boolean(field.required)}
                                 onChange={e => updateField(selectedNodeIndex, fieldIndex, { required: e.target.checked })}
                               />
-                              Campo obligatorio
+                              Obligatorio
                             </label>
                           </div>
 
@@ -808,14 +656,188 @@ export default function ProcessBuilder() {
                       ))}
 
                       {(currentNode.form?.fields ?? []).length === 0 && (
-                        <div style={emptyBox}>Esta etapa todavía no tiene campos.</div>
+                        <div style={emptyBox}>Esta etapa todavÃ­a no tiene campos.</div>
                       )}
                     </div>
                   </div>
 
-                  <div style={softPanel}>
+                  <div style={previewPanel}>
                     <div style={panelTitle}>Vista previa</div>
                     <FormPreview node={currentNode} />
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'workflow' && currentNode && (
+                <div style={twoColumnWorkflow}>
+                  <div style={leftWork}>
+                    <div style={toolbar}>
+                      <div>
+                        <div style={panelTitle}>Flujo</div>
+                        <p style={sectionSubtitle}>Orden de atenciÃ³n de la solicitud.</p>
+                      </div>
+                      <button onClick={addNode} style={smallButton}>Agregar etapa</button>
+                    </div>
+
+                    <StageList
+                      nodes={proposal.nodes}
+                      selectedIndex={selectedNodeIndex}
+                      onSelect={setSelectedNodeIndex}
+                      onMove={moveNodeTo}
+                    />
+
+                    <div style={pathBox}>
+                      <ProcessPath proposal={proposal} onSelect={setSelectedNodeIndex}
+                    />
+                    </div>
+                  </div>
+
+                  <div style={rightWork}>
+                    <div style={toolbar}>
+                      <div>
+                        <div style={panelTitle}>Detalle de etapa</div>
+                        <p style={sectionSubtitle}>Define responsable, instrucciones y evidencia.</p>
+                      </div>
+
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <button onClick={() => moveNode(selectedNodeIndex, -1)} style={smallButton}>Subir</button>
+                        <button onClick={() => moveNode(selectedNodeIndex, 1)} style={smallButton}>Bajar</button>
+                        <button onClick={() => removeNode(selectedNodeIndex)} style={dangerButton}>Eliminar</button>
+                      </div>
+                    </div>
+
+                    <div style={formGrid}>
+                      <Field label="Nombre de la etapa">
+                        <input
+                          value={currentNode.label}
+                          onChange={e => updateNode(selectedNodeIndex, { label: e.target.value })}
+                          style={input}
+                        />
+                      </Field>
+
+                      <Field label="Tipo">
+                        <select
+                          value={currentNode.type}
+                          onChange={e => updateNode(selectedNodeIndex, { type: e.target.value as ProposalNode['type'] })}
+                          style={input}
+                        >
+                          <option value="approval">AprobaciÃ³n</option>
+                          <option value="task">Actividad</option>
+                        </select>
+                      </Field>
+                    </div>
+
+                    <Field label="Instrucciones">
+                      <textarea
+                        value={currentNode.description || ''}
+                        onChange={e => updateNode(selectedNodeIndex, { description: e.target.value })}
+                        style={{ ...input, minHeight: 90, resize: 'vertical' }}
+                      />
+                    </Field>
+
+                    <div style={formGrid}>
+                      <Field label="Responsable">
+                        <select
+                          value={currentNode.approver_type || 'email'}
+                          onChange={e => updateNode(selectedNodeIndex, { approver_type: e.target.value as ProposalNode['approver_type'] })}
+                          style={input}
+                        >
+                          <option value="email">Correo especÃ­fico</option>
+                          <option value="requester">Solicitante</option>
+                          <option value="role">Rol</option>
+                        </select>
+                      </Field>
+
+                      {currentNode.approver_type !== 'requester' && (
+                        <Field label={currentNode.approver_type === 'role' ? 'Rol' : 'Correo'}>
+                          <input
+                            value={currentNode.approver_type === 'role' ? currentNode.role || '' : currentNode.approver_email || ''}
+                            onChange={e => {
+                              if (currentNode.approver_type === 'role') updateNode(selectedNodeIndex, { role: e.target.value });
+                              else updateNode(selectedNodeIndex, { approver_email: e.target.value });
+                            }}
+                            style={input}
+                            placeholder={currentNode.approver_type === 'role' ? 'compras' : 'correo@metrored.med.ec'}
+                          />
+                        </Field>
+                      )}
+                    </div>
+
+                    <div style={formGrid}>
+                      <Field label="Nombre de la evidencia">
+                        <input
+                          value={currentNode.attachment_rules?.label || ''}
+                          onChange={e => updateNode(selectedNodeIndex, {
+                            attachment_rules: {
+                              ...(currentNode.attachment_rules || {}),
+                              label: e.target.value,
+                            },
+                          })}
+                          style={input}
+                        />
+                      </Field>
+
+                      <Field label="Archivos mÃ­nimos">
+                        <input
+                          type="number"
+                          min="0"
+                          value={currentNode.attachment_rules?.min_files ?? 0}
+                          onChange={e => updateNode(selectedNodeIndex, {
+                            attachment_rules: {
+                              ...(currentNode.attachment_rules || {}),
+                              min_files: Number(e.target.value || 0),
+                            },
+                          })}
+                          style={input}
+                        />
+                      </Field>
+                    </div>
+
+                    <label style={checkLabel}>
+                      <input
+                        type="checkbox"
+                        checked={Boolean(currentNode.attachment_rules?.required)}
+                        onChange={e => updateNode(selectedNodeIndex, {
+                          attachment_rules: {
+                            ...(currentNode.attachment_rules || {}),
+                            required: e.target.checked,
+                          },
+                        })}
+                      />
+                      Solicitar evidencia en esta etapa
+                    </label>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'settings' && (
+                <div style={settingsGrid}>
+                  <div style={softPanel}>
+                    <div style={panelTitle}>Datos generales</div>
+
+                    <div style={formGrid}>
+                      <Field label="Nombre del proceso">
+                        <input
+                          value={proposal.process_name}
+                          onChange={e => updateProposal({ process_name: e.target.value })}
+                          style={input}
+                        />
+                      </Field>
+
+                      <Field label="Identificador">
+                        <input
+                          value={proposal.process_key}
+                          onChange={e => updateProposal({ process_key: slug(e.target.value) })}
+                          style={input}
+                        />
+                      </Field>
+                    </div>
+
+                    <div style={metricRow}>
+                      <Metric label="Etapas" value={String(proposal.nodes.length)} />
+                      <Metric label="Campos" value={String(proposal.nodes.reduce((acc, n) => acc + (n.form?.fields ?? []).length, 0))} />
+                      <Metric label="Evidencias" value={String(proposal.nodes.filter(n => n.attachment_rules?.required).length)} />
+                    </div>
                   </div>
                 </div>
               )}
@@ -823,13 +845,13 @@ export default function ProcessBuilder() {
               {activeTab === 'publish' && (
                 <div style={publishGrid}>
                   <div style={softPanel}>
-                    <div style={panelTitle}>Revisión antes de publicar</div>
+                    <div style={panelTitle}>RevisiÃ³n</div>
 
                     <div style={{ display: 'grid', gap: 10, marginTop: 12 }}>
                       {checklist.map(item => (
                         <div key={item.label} style={checkItem}>
                           <span style={{ ...checkDot, background: item.ok ? '#12B76A' : '#F79009' }}>
-                            {item.ok ? '✓' : '!'}
+                            {item.ok ? 'âœ“' : '!'}
                           </span>
                           <span>
                             <strong>{item.label}</strong>
@@ -841,7 +863,7 @@ export default function ProcessBuilder() {
                   </div>
 
                   <div style={softPanel}>
-                    <div style={panelTitle}>Recorrido de una solicitud</div>
+                    <div style={panelTitle}>Recorrido</div>
                     <div style={{ marginTop: 12 }}>
                       <ProcessPath proposal={proposal} />
                     </div>
@@ -858,6 +880,55 @@ export default function ProcessBuilder() {
           )}
         </main>
       </div>
+    </div>
+  );
+}
+
+function StageList({
+  nodes,
+  selectedIndex,
+  onSelect,
+  onMove,
+}: {
+  nodes: ProposalNode[];
+  selectedIndex: number;
+  onSelect: (index: number) => void;
+  onMove?: (fromIndex: number, toIndex: number) => void;
+}) {
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+
+  return (
+    <div style={{ display: 'grid', gap: 8 }}>
+      {nodes.map((node, index) => (
+        <button
+          key={node.id + index}
+          draggable
+          onDragStart={() => setDragIndex(index)}
+          onDragOver={event => event.preventDefault()}
+          onDrop={() => {
+            if (dragIndex !== null && onMove) {
+              onMove(dragIndex, index);
+            }
+            setDragIndex(null);
+          }}
+          onDragEnd={() => setDragIndex(null)}
+          onClick={() => onSelect(index)}
+          title="Arrastra para cambiar el orden"
+          style={{
+            ...stageItem,
+            ...(selectedIndex === index ? stageItemActive : {}),
+            ...(dragIndex === index ? stageItemDragging : {}),
+          }}
+        >
+          <span style={stageGrab}>â‹®â‹®</span>
+          <span style={stageNumber}>{index + 1}</span>
+
+          <span style={{ flex: 1, minWidth: 0 }}>
+            <strong>{node.label}</strong>
+            <small>{ownerLabel(node)}</small>
+          </span>
+        </button>
+      ))}
     </div>
   );
 }
@@ -913,7 +984,7 @@ function FormPreview({ node }: { node: ProposalNode }) {
             {field.type === 'textarea' ? (
               <textarea disabled style={{ ...input, minHeight: 76 }} placeholder="Respuesta" />
             ) : field.type === 'checkbox' ? (
-              <div style={checkLabel}><input type="checkbox" disabled /> Marcar opción</div>
+              <div style={checkLabel}><input type="checkbox" disabled /> Marcar opciÃ³n</div>
             ) : field.type === 'select' ? (
               <select disabled style={input}><option>Selecciona...</option></select>
             ) : (
@@ -1028,7 +1099,7 @@ function ownerLabel(node: ProposalNode): string {
 
 function statusLabel(status: string): string {
   if (status === 'deployed') return 'Publicado';
-  if (status === 'analyzed') return 'En edición';
+  if (status === 'analyzed') return 'En ediciÃ³n';
   return 'Borrador';
 }
 
@@ -1054,9 +1125,9 @@ function slug(value: string): string {
 }
 
 const page: CSSProperties = {
-  padding: 28,
+  padding: 26,
   display: 'grid',
-  gap: 18,
+  gap: 16,
   color: '#101828',
 };
 
@@ -1065,66 +1136,73 @@ const header: CSSProperties = {
   justifyContent: 'space-between',
   gap: 18,
   alignItems: 'center',
-  padding: '24px 26px',
-  borderRadius: 28,
-  background: 'linear-gradient(135deg, rgba(255,255,255,.92), rgba(255,255,255,.66))',
-  border: '1px solid rgba(255,255,255,.82)',
-  boxShadow: '0 22px 70px rgba(16,24,40,.08)',
-  backdropFilter: 'blur(18px)',
-};
-
-const eyebrow: CSSProperties = {
-  color: '#185FA5',
-  fontSize: 11,
-  fontWeight: 900,
-  textTransform: 'uppercase',
-  letterSpacing: .7,
 };
 
 const title: CSSProperties = {
-  margin: '4px 0 4px',
-  fontSize: 34,
+  margin: 0,
+  fontSize: 30,
   fontWeight: 900,
-  letterSpacing: -0.8,
+  letterSpacing: -0.6,
 };
 
 const subtitle: CSSProperties = {
   color: '#667085',
-  fontSize: 15,
+  fontSize: 14,
   lineHeight: 1.45,
+  marginTop: 4,
 };
 
 const workspace: CSSProperties = {
   display: 'grid',
-  gridTemplateColumns: '300px 1fr',
-  gap: 18,
+  gridTemplateColumns: '280px minmax(0, 1fr)',
+  gap: 16,
   alignItems: 'start',
 };
 
 const sidebar: CSSProperties = {
-  position: 'sticky',
-  top: 18,
   display: 'grid',
   gap: 14,
-  padding: 16,
-  borderRadius: 24,
-  background: 'rgba(255,255,255,.72)',
-  border: '1px solid rgba(255,255,255,.82)',
-  boxShadow: '0 16px 50px rgba(16,24,40,.07)',
-  backdropFilter: 'blur(18px)',
+  padding: 14,
+  borderRadius: 18,
+  background: '#FFFFFF',
+  border: '1px solid #EAECF0',
+  boxShadow: '0 8px 24px rgba(16,24,40,.05)',
+};
+
+const sideSection: CSSProperties = {
+  display: 'grid',
 };
 
 const main: CSSProperties = {
   minWidth: 0,
+  overflow: 'hidden',
 };
 
 const card: CSSProperties = {
-  padding: 22,
-  borderRadius: 28,
-  background: 'rgba(255,255,255,.82)',
-  border: '1px solid rgba(255,255,255,.86)',
-  boxShadow: '0 22px 70px rgba(16,24,40,.08)',
-  backdropFilter: 'blur(18px)',
+  padding: 20,
+  overflow: 'hidden',
+  borderRadius: 18,
+  background: '#FFFFFF',
+  border: '1px solid #EAECF0',
+  boxShadow: '0 8px 24px rgba(16,24,40,.05)',
+};
+
+const emptyState: CSSProperties = {
+  minHeight: 480,
+  display: 'grid',
+  placeItems: 'center',
+  borderRadius: 18,
+  background: '#FFFFFF',
+  border: '1px solid #EAECF0',
+  boxShadow: '0 8px 24px rgba(16,24,40,.05)',
+};
+
+const emptyStateInner: CSSProperties = {
+  textAlign: 'center',
+  maxWidth: 420,
+  display: 'grid',
+  gap: 12,
+  justifyItems: 'center',
 };
 
 const sectionHeader: CSSProperties = {
@@ -1132,11 +1210,11 @@ const sectionHeader: CSSProperties = {
   justifyContent: 'space-between',
   gap: 16,
   alignItems: 'flex-start',
-  marginBottom: 18,
+  marginBottom: 16,
 };
 
 const sectionTitle: CSSProperties = {
-  fontSize: 23,
+  fontSize: 22,
   fontWeight: 900,
   margin: 0,
   letterSpacing: -0.3,
@@ -1155,38 +1233,18 @@ const panelTitle: CSSProperties = {
   color: '#101828',
 };
 
-const templateGrid: CSSProperties = {
-  display: 'grid',
-  gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-  gap: 12,
-  marginBottom: 18,
-};
-
-const templateCard: CSSProperties = {
-  display: 'grid',
-  gap: 6,
-  textAlign: 'left',
-  padding: 16,
-  minHeight: 108,
-  borderRadius: 18,
-  border: '1px solid #EAECF0',
-  background: '#FFFFFF',
-  color: '#101828',
-  cursor: 'pointer',
-  boxShadow: '0 8px 22px rgba(16,24,40,.04)',
-};
-
 const formGrid: CSSProperties = {
   display: 'grid',
-  gridTemplateColumns: '1fr 1fr',
+  gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
   gap: 14,
   marginBottom: 14,
 };
 
 const input: CSSProperties = {
   width: '100%',
+  boxSizing: 'border-box',
   border: '1px solid #D0D5DD',
-  borderRadius: 12,
+  borderRadius: 10,
   padding: '10px 12px',
   font: 'inherit',
   background: '#FFFFFF',
@@ -1197,9 +1255,9 @@ const uploadBox: CSSProperties = {
   display: 'grid',
   gap: 4,
   textAlign: 'center',
-  padding: 22,
+  padding: 20,
   marginBottom: 14,
-  borderRadius: 18,
+  borderRadius: 14,
   border: '1.5px dashed #B2DDFF',
   background: '#F5FAFF',
   color: '#185FA5',
@@ -1209,7 +1267,7 @@ const uploadBox: CSSProperties = {
 const infoBox: CSSProperties = {
   background: '#F8FAFC',
   border: '1px solid #EAECF0',
-  borderRadius: 12,
+  borderRadius: 10,
   padding: 11,
   marginBottom: 14,
   fontWeight: 700,
@@ -1230,21 +1288,20 @@ const topActions: CSSProperties = {
 };
 
 const primaryButton: CSSProperties = {
-  background: 'linear-gradient(135deg, #0C447C, #185FA5)',
+  background: '#0C447C',
   color: '#FFFFFF',
-  border: '1px solid rgba(255,255,255,.24)',
-  borderRadius: 13,
+  border: '1px solid #0C447C',
+  borderRadius: 10,
   padding: '10px 15px',
   fontWeight: 800,
   cursor: 'pointer',
-  boxShadow: '0 10px 24px rgba(12,68,124,.18)',
 };
 
 const secondaryButton: CSSProperties = {
   background: '#FFFFFF',
   color: '#185FA5',
   border: '1px solid #B5D4F4',
-  borderRadius: 13,
+  borderRadius: 10,
   padding: '10px 15px',
   fontWeight: 800,
   cursor: 'pointer',
@@ -1277,7 +1334,7 @@ const tabs: CSSProperties = {
   gap: 4,
   padding: 4,
   marginBottom: 18,
-  borderRadius: 14,
+  borderRadius: 12,
   background: '#F2F4F7',
   width: 'fit-content',
 };
@@ -1286,7 +1343,7 @@ const tabButton: CSSProperties = {
   border: 'none',
   background: 'transparent',
   color: '#667085',
-  borderRadius: 10,
+  borderRadius: 8,
   padding: '8px 13px',
   fontSize: 13,
   fontWeight: 800,
@@ -1305,8 +1362,8 @@ const processItem: CSSProperties = {
   alignItems: 'flex-start',
   justifyContent: 'space-between',
   width: '100%',
-  padding: 12,
-  borderRadius: 15,
+  padding: 11,
+  borderRadius: 12,
   border: '1px solid #EAECF0',
   background: '#FFFFFF',
   textAlign: 'left',
@@ -1318,86 +1375,77 @@ const processItemActive: CSSProperties = {
   background: '#F5FAFF',
 };
 
+const templateItem: CSSProperties = {
+  display: 'grid',
+  gap: 4,
+  width: '100%',
+  padding: 11,
+  borderRadius: 12,
+  border: '1px solid #EAECF0',
+  background: '#F8FAFC',
+  textAlign: 'left',
+  cursor: 'pointer',
+  color: '#101828',
+};
+
 const emptyBox: CSSProperties = {
   color: '#667085',
   background: '#F8FAFC',
   border: '1px solid #EAECF0',
-  borderRadius: 14,
+  borderRadius: 12,
   padding: 12,
   fontSize: 13,
   fontWeight: 700,
 };
 
-const summaryGrid: CSSProperties = {
+const twoColumn: CSSProperties = {
   display: 'grid',
-  gridTemplateColumns: '1fr 1fr',
-  gap: 16,
-};
-
-const softPanel: CSSProperties = {
-  padding: 16,
-  borderRadius: 20,
-  border: '1px solid #EAECF0',
-  background: 'rgba(255,255,255,.76)',
-};
-
-const metricRow: CSSProperties = {
-  display: 'grid',
-  gridTemplateColumns: 'repeat(3, 1fr)',
-  gap: 10,
-};
-
-const metric: CSSProperties = {
-  display: 'grid',
-  gap: 4,
-  padding: 14,
-  borderRadius: 16,
-  background: '#F8FAFC',
-  border: '1px solid #EAECF0',
-};
-
-const path: CSSProperties = {
-  display: 'grid',
-  gap: 9,
-};
-
-const pathItem: CSSProperties = {
-  display: 'grid',
-  gridTemplateColumns: '32px 1fr',
-  columnGap: 10,
-  rowGap: 2,
-  alignItems: 'center',
-  padding: 11,
-  borderRadius: 15,
-  background: '#F8FAFC',
-  border: '1px solid #EAECF0',
-};
-
-const pathButton: CSSProperties = {
-  ...pathItem,
-  width: '100%',
-  textAlign: 'left',
-  cursor: 'pointer',
-};
-
-const workflowLayout: CSSProperties = {
-  display: 'grid',
-  gridTemplateColumns: '330px 1fr',
-  gap: 16,
+  gridTemplateColumns: '260px minmax(0, 1fr)',
+  gap: 14,
   alignItems: 'start',
 };
 
-const stageList: CSSProperties = {
+const twoColumnWorkflow: CSSProperties = {
   display: 'grid',
-  gap: 9,
+  gridTemplateColumns: '300px minmax(0, 1fr)',
+  gap: 14,
+  alignItems: 'start',
 };
 
-const stageListHeader: CSSProperties = {
+const leftWork: CSSProperties = {
+  display: 'grid',
+  minWidth: 0,
+  gap: 10,
+  padding: 14,
+  borderRadius: 14,
+  border: '1px solid #EAECF0',
+  background: '#F8FAFC',
+};
+
+const rightWork: CSSProperties = {
+  display: 'grid',
+  minWidth: 0,
+  gap: 12,
+  padding: 14,
+  borderRadius: 14,
+  border: '1px solid #EAECF0',
+  background: '#FFFFFF',
+};
+
+const previewPanel: CSSProperties = {
+  gridColumn: '2 / 3',
+  padding: 14,
+  borderRadius: 14,
+  border: '1px solid #EAECF0',
+  background: '#FFFFFF',
+};
+
+const toolbar: CSSProperties = {
   display: 'flex',
   justifyContent: 'space-between',
   gap: 10,
-  alignItems: 'center',
-  marginBottom: 6,
+  alignItems: 'flex-start',
+  marginBottom: 4,
 };
 
 const stageItem: CSSProperties = {
@@ -1405,8 +1453,8 @@ const stageItem: CSSProperties = {
   gap: 10,
   alignItems: 'center',
   width: '100%',
-  padding: 12,
-  borderRadius: 16,
+  padding: 10,
+  borderRadius: 12,
   border: '1px solid #EAECF0',
   background: '#FFFFFF',
   textAlign: 'left',
@@ -1419,8 +1467,8 @@ const stageItemActive: CSSProperties = {
 };
 
 const stageNumber: CSSProperties = {
-  width: 32,
-  height: 32,
+  width: 30,
+  height: 30,
   borderRadius: '50%',
   display: 'grid',
   placeItems: 'center',
@@ -1430,38 +1478,39 @@ const stageNumber: CSSProperties = {
   flexShrink: 0,
 };
 
-const stageEditor: CSSProperties = {
-  padding: 16,
-  borderRadius: 20,
-  border: '1px solid #EAECF0',
-  background: '#FFFFFF',
+const pathBox: CSSProperties = {
+  marginTop: 10,
 };
 
-const editorHeader: CSSProperties = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  gap: 14,
-  alignItems: 'flex-start',
-  marginBottom: 16,
-};
-
-const editorTitle: CSSProperties = {
-  fontSize: 22,
-  fontWeight: 900,
-  margin: '3px 0 0',
-};
-
-const formDesigner: CSSProperties = {
+const path: CSSProperties = {
   display: 'grid',
-  gridTemplateColumns: '1.2fr .8fr',
-  gap: 16,
+  gap: 8,
+};
+
+const pathItem: CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: '30px 1fr',
+  columnGap: 10,
+  rowGap: 2,
+  alignItems: 'center',
+  padding: 10,
+  borderRadius: 12,
+  background: '#FFFFFF',
+  border: '1px solid #EAECF0',
+};
+
+const pathButton: CSSProperties = {
+  ...pathItem,
+  width: '100%',
+  textAlign: 'left',
+  cursor: 'pointer',
 };
 
 const fieldCard: CSSProperties = {
   display: 'grid',
   gap: 10,
-  padding: 13,
-  borderRadius: 16,
+  padding: 12,
+  borderRadius: 12,
   border: '1px solid #EAECF0',
   background: '#FFFFFF',
 };
@@ -1498,7 +1547,7 @@ const previewField: CSSProperties = {
 const evidenceBox: CSSProperties = {
   marginTop: 4,
   padding: 12,
-  borderRadius: 14,
+  borderRadius: 12,
   background: '#FFFAEB',
   border: '1px solid #FEC84B',
   color: '#93370D',
@@ -1506,10 +1555,38 @@ const evidenceBox: CSSProperties = {
   fontWeight: 800,
 };
 
+const settingsGrid: CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: '1fr',
+  gap: 14,
+};
+
 const publishGrid: CSSProperties = {
   display: 'grid',
   gridTemplateColumns: '1fr 1fr',
-  gap: 16,
+  gap: 14,
+};
+
+const softPanel: CSSProperties = {
+  padding: 14,
+  borderRadius: 14,
+  border: '1px solid #EAECF0',
+  background: '#FFFFFF',
+};
+
+const metricRow: CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(3, 1fr)',
+  gap: 10,
+};
+
+const metric: CSSProperties = {
+  display: 'grid',
+  gap: 4,
+  padding: 14,
+  borderRadius: 12,
+  background: '#F8FAFC',
+  border: '1px solid #EAECF0',
 };
 
 const checkItem: CSSProperties = {
@@ -1517,7 +1594,7 @@ const checkItem: CSSProperties = {
   gap: 10,
   alignItems: 'flex-start',
   padding: 11,
-  borderRadius: 15,
+  borderRadius: 12,
   background: '#F8FAFC',
   border: '1px solid #EAECF0',
 };
@@ -1532,4 +1609,19 @@ const checkDot: CSSProperties = {
   fontSize: 12,
   fontWeight: 900,
   flexShrink: 0,
+};
+
+const stageGrab: CSSProperties = {
+  color: '#98A2B3',
+  fontWeight: 900,
+  letterSpacing: -2,
+  cursor: 'grab',
+  paddingRight: 2,
+  userSelect: 'none',
+};
+
+const stageItemDragging: CSSProperties = {
+  opacity: 0.55,
+  transform: 'scale(.99)',
+  border: '1px dashed #185FA5',
 };
