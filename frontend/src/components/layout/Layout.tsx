@@ -1,4 +1,4 @@
-﻿import { ReactNode } from 'react';
+import { ReactNode } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useMsal } from '@azure/msal-react';
 
@@ -7,7 +7,8 @@ const NAV = [
   { to: '/requests',   label: 'Solicitudes',  icon: '[=]' },
   { to: '/mis-tareas', label: 'Mis tareas',   icon: '[OK]' },
   { to: '/inventario', label: 'Inventario',   icon: '[INV]' },
-  { to: '/admin',      label: 'Administrar',  icon: '[*]' },
+  { to: '/admin', label: 'Administrar', icon: '[*]' },
+  { to: '/process-builder', label: 'Constructor', icon: '[BPM]' },
 ];
 
 export default function Layout({ children }: { children: ReactNode }) {

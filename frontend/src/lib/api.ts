@@ -78,7 +78,35 @@ export interface InventoryKardexRow {
   movement_type: string;
 }
 
+
+export interface ProcessBlueprint {
+  id: string;
+  name: string;
+  description: string | null;
+  source_text: string | null;
+  ai_analysis_json: string | null;
+  proposed_process_json: string | null;
+  status: string;
+  created_by_email: string | null;
+  created_at: string;
+}
 export const api = {
+  processBlueprints: () =>
+    request<{ data: ProcessBlueprint[] }>('GET', '/api/process-builder/blueprints'),
+
+  createProcessBlueprint: (body: {
+    name: string;
+    description?: string;
+    source_text: string;
+  }) =>
+    request<{ data: { id: string } }>('POST', '/api/process-builder/blueprints', body),
+
+  analyzeProcessBlueprint: (id: string) =>
+    request<{ data: any }>('POST', '/api/process-builder/blueprints/' + id + '/analyze'),
+
+  deployProcessBlueprint: (id: string) =>
+    request<{ data: { deployed: boolean; process_definition_id: string } }>('POST', '/api/process-builder/blueprints/' + id + '/deploy'),
+
   inventoryStock: () =>
     request<{ data: InventoryStockRow[] }>('GET', '/api/inventory/stock'),
 
