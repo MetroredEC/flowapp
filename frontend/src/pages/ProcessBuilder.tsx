@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 import { api, type ProcessBlueprint } from '../lib/api';
 
 type FieldType = 'text' | 'number' | 'date' | 'textarea' | 'select' | 'checkbox';
@@ -846,9 +846,9 @@ function Alert({ children, kind }: { children: ReactNode; kind: 'ok' | 'error' }
       background: kind === 'ok' ? '#ECFDF3' : '#FFF2EC',
       border: '1px solid ' + (kind === 'ok' ? '#ABEFC6' : '#F0997B'),
       color: kind === 'ok' ? '#027A48' : '#993C1D',
-      borderRadius: 12,
-      padding: 12,
-      fontSize: 14,
+      borderRadius: 10,
+      padding: 9,
+      fontSize: 11,
       fontWeight: 800,
     }}>
       {children}
@@ -916,9 +916,9 @@ function slug(value: string): string {
 }
 
 const page: CSSProperties = {
-  padding: 18,
+  padding: 9,
   display: 'grid',
-  gap: 14,
+  gap: 10,
   color: '#101828',
   boxSizing: 'border-box',
 };
@@ -926,37 +926,37 @@ const page: CSSProperties = {
 const header: CSSProperties = {
   display: 'flex',
   justifyContent: 'space-between',
-  gap: 14,
+  gap: 10,
   alignItems: 'center',
   padding: '2px 4px 0',
 };
 
 const title: CSSProperties = {
   margin: 0,
-  fontSize: 26,
+  fontSize: 22,
   fontWeight: 900,
   letterSpacing: -0.4,
 };
 
 const subtitle: CSSProperties = {
   color: '#667085',
-  fontSize: 14,
+  fontSize: 11,
   lineHeight: 1.45,
   marginTop: 4,
 };
 
 const workspace: CSSProperties = {
   display: 'grid',
-  gridTemplateColumns: '250px minmax(0, 1fr)',
-  gap: 14,
+  gridTemplateColumns: '210px minmax(0, 1fr)',
+  gap: 10,
   alignItems: 'start',
 };
 
 const sidebar: CSSProperties = {
   display: 'grid',
-  gap: 14,
-  padding: 12,
-  borderRadius: 16,
+  gap: 10,
+  padding: 9,
+  borderRadius: 13,
   background: '#FFFFFF',
   border: '1px solid #EAECF0',
   boxShadow: '0 8px 24px rgba(16,24,40,.05)',
@@ -971,9 +971,9 @@ const main: CSSProperties = {
 };
 
 const card: CSSProperties = {
-  padding: 16,
+  padding: 9,
   overflow: 'hidden',
-  borderRadius: 16,
+  borderRadius: 13,
   background: '#FFFFFF',
   border: '1px solid #EAECF0',
   boxShadow: '0 8px 24px rgba(16,24,40,.05)',
@@ -981,10 +981,10 @@ const card: CSSProperties = {
 };
 
 const emptyState: CSSProperties = {
-  minHeight: 340,
+  minHeight: 280,
   display: 'grid',
   placeItems: 'center',
-  borderRadius: 16,
+  borderRadius: 13,
   background: '#FFFFFF',
   border: '1px solid #EAECF0',
   boxShadow: '0 8px 24px rgba(16,24,40,.05)',
@@ -1001,13 +1001,13 @@ const emptyStateInner: CSSProperties = {
 const sectionHeader: CSSProperties = {
   display: 'flex',
   justifyContent: 'space-between',
-  gap: 14,
+  gap: 10,
   alignItems: 'flex-start',
   marginBottom: 14,
 };
 
 const sectionTitle: CSSProperties = {
-  fontSize: 20,
+  fontSize: 17,
   fontWeight: 900,
   margin: 0,
   letterSpacing: -0.2,
@@ -1015,13 +1015,13 @@ const sectionTitle: CSSProperties = {
 
 const sectionSubtitle: CSSProperties = {
   color: '#667085',
-  fontSize: 13,
+  fontSize: 11,
   lineHeight: 1.4,
   margin: '3px 0 0',
 };
 
 const panelTitle: CSSProperties = {
-  fontSize: 14,
+  fontSize: 11,
   fontWeight: 900,
   color: '#101828',
 };
@@ -1059,8 +1059,8 @@ const processItem: CSSProperties = {
   gap: 8,
   alignItems: 'start',
   width: '100%',
-  padding: 10,
-  borderRadius: 12,
+  padding: 8,
+  borderRadius: 10,
   border: '1px solid #EAECF0',
   background: '#FFFFFF',
   textAlign: 'left',
@@ -1078,8 +1078,8 @@ const templateItem: CSSProperties = {
   display: 'grid',
   gap: 3,
   width: '100%',
-  padding: 10,
-  borderRadius: 12,
+  padding: 8,
+  borderRadius: 10,
   border: '1px solid #EAECF0',
   background: '#F8FAFC',
   textAlign: 'left',
@@ -1103,7 +1103,7 @@ const input: CSSProperties = {
   boxSizing: 'border-box',
   border: '1px solid #D0D5DD',
   borderRadius: 10,
-  padding: '10px 12px',
+  padding: '8px 10px',
   font: 'inherit',
   background: '#FFFFFF',
   color: '#101828',
@@ -1112,7 +1112,7 @@ const input: CSSProperties = {
 const fieldLabel: CSSProperties = {
   display: 'grid',
   gap: 7,
-  fontSize: 12,
+  fontSize: 11,
   color: '#344054',
   fontWeight: 800,
 };
@@ -1121,9 +1121,9 @@ const uploadBox: CSSProperties = {
   display: 'grid',
   gap: 4,
   textAlign: 'center',
-  padding: 18,
+  padding: 9,
   marginBottom: 12,
-  borderRadius: 12,
+  borderRadius: 10,
   border: '1.5px dashed #B2DDFF',
   background: '#F5FAFF',
   color: '#185FA5',
@@ -1158,7 +1158,7 @@ const primaryButton: CSSProperties = {
   color: '#FFFFFF',
   border: '1px solid #0C447C',
   borderRadius: 10,
-  padding: '10px 15px',
+  padding: '8px 12px',
   fontWeight: 800,
   cursor: 'pointer',
 };
@@ -1168,7 +1168,7 @@ const secondaryButton: CSSProperties = {
   color: '#185FA5',
   border: '1px solid #B5D4F4',
   borderRadius: 10,
-  padding: '10px 15px',
+  padding: '8px 12px',
   fontWeight: 800,
   cursor: 'pointer',
 };
@@ -1179,7 +1179,7 @@ const smallButton: CSSProperties = {
   border: '1px solid #B5D4F4',
   borderRadius: 999,
   padding: '7px 10px',
-  fontSize: 12,
+  fontSize: 11,
   fontWeight: 800,
   cursor: 'pointer',
 };
@@ -1190,7 +1190,7 @@ const dangerButton: CSSProperties = {
   border: '1px solid #FDA29B',
   borderRadius: 999,
   padding: '7px 10px',
-  fontSize: 12,
+  fontSize: 11,
   fontWeight: 800,
   cursor: 'pointer',
 };
@@ -1200,7 +1200,7 @@ const tabs: CSSProperties = {
   gap: 4,
   padding: 4,
   marginBottom: 14,
-  borderRadius: 12,
+  borderRadius: 10,
   background: '#F2F4F7',
   width: 'fit-content',
 };
@@ -1210,8 +1210,8 @@ const tabButton: CSSProperties = {
   background: 'transparent',
   color: '#667085',
   borderRadius: 8,
-  padding: '8px 13px',
-  fontSize: 13,
+  padding: '7px 11px',
+  fontSize: 11,
   fontWeight: 800,
   cursor: 'pointer',
 };
@@ -1224,23 +1224,25 @@ const tabButtonActive: CSSProperties = {
 
 const formLayout: CSSProperties = {
   display: 'grid',
-  gridTemplateColumns: '230px minmax(0, 1fr)',
+  gridTemplateColumns: '210px minmax(0, 1fr)',
   gap: 12,
   alignItems: 'start',
 };
 
 const workflowLayout: CSSProperties = {
   display: 'grid',
-  gridTemplateColumns: '280px minmax(0, 1fr)',
+  gridTemplateColumns: '245px minmax(0, 1fr)',
   gap: 12,
   alignItems: 'start',
 };
 
 const stagePanel: CSSProperties = {
   display: 'grid',
+  maxHeight: 'calc(100vh - 270px)',
+  overflowY: 'auto',
   gap: 10,
-  padding: 12,
-  borderRadius: 12,
+  padding: 9,
+  borderRadius: 10,
   border: '1px solid #EAECF0',
   background: '#F8FAFC',
   minWidth: 0,
@@ -1249,9 +1251,11 @@ const stagePanel: CSSProperties = {
 
 const workPanel: CSSProperties = {
   display: 'grid',
+  maxHeight: 'calc(100vh - 270px)',
+  overflowY: 'auto',
   gap: 12,
-  padding: 12,
-  borderRadius: 12,
+  padding: 9,
+  borderRadius: 10,
   border: '1px solid #EAECF0',
   background: '#FFFFFF',
   minWidth: 0,
@@ -1260,8 +1264,10 @@ const workPanel: CSSProperties = {
 
 const previewPanel: CSSProperties = {
   gridColumn: '1 / -1',
-  padding: 12,
-  borderRadius: 12,
+  maxHeight: '260px',
+  overflowY: 'auto',
+  padding: 9,
+  borderRadius: 10,
   border: '1px solid #EAECF0',
   background: '#FFFFFF',
   maxWidth: '100%',
@@ -1284,8 +1290,8 @@ const fieldList: CSSProperties = {
 const fieldCard: CSSProperties = {
   display: 'grid',
   gap: 10,
-  padding: 12,
-  borderRadius: 12,
+  padding: 9,
+  borderRadius: 10,
   border: '1px solid #EAECF0',
   background: '#FFFFFF',
   boxSizing: 'border-box',
@@ -1301,19 +1307,19 @@ const checkLabel: CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   gap: 8,
-  fontSize: 13,
+  fontSize: 11,
   fontWeight: 700,
   color: '#344054',
 };
 
 const stageItem: CSSProperties = {
   display: 'grid',
-  gridTemplateColumns: '22px 30px minmax(0, 1fr)',
+  gridTemplateColumns: '18px 26px minmax(0, 1fr)',
   gap: 8,
   alignItems: 'center',
   width: '100%',
   padding: 9,
-  borderRadius: 12,
+  borderRadius: 10,
   border: '1px solid #EAECF0',
   background: '#FFFFFF',
   textAlign: 'left',
@@ -1340,8 +1346,8 @@ const stageGrab: CSSProperties = {
 };
 
 const stageNumber: CSSProperties = {
-  width: 30,
-  height: 30,
+  width: 26,
+  height: 26,
   borderRadius: '50%',
   display: 'grid',
   placeItems: 'center',
@@ -1363,12 +1369,12 @@ const path: CSSProperties = {
 
 const pathItem: CSSProperties = {
   display: 'grid',
-  gridTemplateColumns: '30px minmax(0, 1fr)',
+  gridTemplateColumns: '26px minmax(0, 1fr)',
   columnGap: 10,
   rowGap: 2,
   alignItems: 'center',
-  padding: 10,
-  borderRadius: 12,
+  padding: 8,
+  borderRadius: 10,
   background: '#FFFFFF',
   border: '1px solid #EAECF0',
   boxSizing: 'border-box',
@@ -1382,8 +1388,8 @@ const pathButton: CSSProperties = {
 };
 
 const pathNumber: CSSProperties = {
-  width: 28,
-  height: 28,
+  width: 24,
+  height: 24,
   borderRadius: '50%',
   display: 'grid',
   placeItems: 'center',
@@ -1401,7 +1407,7 @@ const previewBox: CSSProperties = {
 };
 
 const previewTitle: CSSProperties = {
-  fontSize: 18,
+  fontSize: 16,
   fontWeight: 900,
   margin: 0,
 };
@@ -1409,19 +1415,19 @@ const previewTitle: CSSProperties = {
 const previewField: CSSProperties = {
   display: 'grid',
   gap: 6,
-  fontSize: 12,
+  fontSize: 11,
   fontWeight: 800,
   color: '#344054',
 };
 
 const evidenceBox: CSSProperties = {
   marginTop: 4,
-  padding: 12,
-  borderRadius: 12,
+  padding: 9,
+  borderRadius: 10,
   background: '#FFFAEB',
   border: '1px solid #FEC84B',
   color: '#93370D',
-  fontSize: 12,
+  fontSize: 11,
   fontWeight: 800,
 };
 
@@ -1434,8 +1440,8 @@ const metricRow: CSSProperties = {
 const metric: CSSProperties = {
   display: 'grid',
   gap: 4,
-  padding: 12,
-  borderRadius: 12,
+  padding: 9,
+  borderRadius: 10,
   background: '#F8FAFC',
   border: '1px solid #EAECF0',
 };
@@ -1448,18 +1454,18 @@ const publishGrid: CSSProperties = {
 
 const checkItem: CSSProperties = {
   display: 'grid',
-  gridTemplateColumns: '34px minmax(0, 1fr)',
+  gridTemplateColumns: '28px minmax(0, 1fr)',
   gap: 10,
   alignItems: 'flex-start',
   padding: 11,
-  borderRadius: 12,
+  borderRadius: 10,
   background: '#F8FAFC',
   border: '1px solid #EAECF0',
 };
 
 const checkDot: CSSProperties = {
-  width: 28,
-  height: 28,
+  width: 24,
+  height: 24,
   borderRadius: '50%',
   display: 'grid',
   placeItems: 'center',
@@ -1473,8 +1479,8 @@ const emptyBox: CSSProperties = {
   color: '#667085',
   background: '#F8FAFC',
   border: '1px solid #EAECF0',
-  borderRadius: 12,
-  padding: 12,
-  fontSize: 13,
+  borderRadius: 10,
+  padding: 9,
+  fontSize: 11,
   fontWeight: 700,
 };

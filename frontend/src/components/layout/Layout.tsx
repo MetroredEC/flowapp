@@ -1,4 +1,4 @@
-﻿import { ReactNode } from 'react';
+import { ReactNode } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useMsal } from '@azure/msal-react';
 
@@ -122,12 +122,12 @@ const sidebar: React.CSSProperties = {
   position: 'sticky',
   top: 0,
   height: '100vh',
-  width: 252,
+  width: 232,
   flexShrink: 0,
   display: 'flex',
   flexDirection: 'column',
-  gap: 12,
-  padding: 14,
+  gap: 10,
+  padding: 12,
   background: '#0C447C',
   boxSizing: 'border-box',
   overflow: 'hidden',
@@ -136,47 +136,47 @@ const sidebar: React.CSSProperties = {
 const brandBlock: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
-  gap: 12,
+  gap: 10,
   padding: '8px 8px 12px',
 };
 
 const brandMark: React.CSSProperties = {
-  width: 42,
-  height: 42,
+  width: 38,
+  height: 38,
   borderRadius: 14,
   display: 'grid',
   placeItems: 'center',
   background: '#EAF2FA',
   color: '#0C447C',
   fontWeight: 900,
-  fontSize: 20,
+  fontSize: 18,
 };
 
 const brandName: React.CSSProperties = {
   color: '#FFFFFF',
   fontWeight: 900,
-  fontSize: 17,
+  fontSize: 15,
 };
 
 const brandSub: React.CSSProperties = {
   color: '#B5D4F4',
   fontWeight: 800,
-  fontSize: 12,
+  fontSize: 11,
   marginTop: 2,
 };
 
 const primaryAction: React.CSSProperties = {
   width: '100%',
   border: 'none',
-  borderRadius: 16,
-  padding: '12px 14px',
+  borderRadius: 14,
+  padding: '10px 12px',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
   gap: 10,
   background: '#FFFFFF',
   color: '#0C447C',
-  fontSize: 14,
+  fontSize: 11,
   fontWeight: 900,
   cursor: 'pointer',
 };
@@ -203,7 +203,7 @@ const navItem: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   gap: 10,
-  padding: '9px 10px',
+  padding: '8px 9px',
   borderRadius: 14,
   textDecoration: 'none',
   color: '#D9ECFF',
@@ -216,8 +216,8 @@ const navItemActive: React.CSSProperties = {
 };
 
 const navIcon: React.CSSProperties = {
-  width: 32,
-  height: 32,
+  width: 29,
+  height: 29,
   borderRadius: 12,
   display: 'grid',
   placeItems: 'center',
@@ -235,7 +235,7 @@ const navText: React.CSSProperties = {
 };
 
 const navLabel: React.CSSProperties = {
-  fontSize: 14,
+  fontSize: 11,
   fontWeight: 900,
   overflow: 'hidden',
   textOverflow: 'ellipsis',
@@ -253,8 +253,8 @@ const navDescription: React.CSSProperties = {
 
 const helpCard: React.CSSProperties = {
   marginTop: 'auto',
-  padding: 14,
-  borderRadius: 16,
+  padding: 12,
+  borderRadius: 14,
   background: 'rgba(255,255,255,.12)',
   border: '1px solid rgba(255,255,255,.16)',
 };
@@ -269,14 +269,14 @@ const helpEyebrow: React.CSSProperties = {
 
 const helpTitle: React.CSSProperties = {
   color: '#FFFFFF',
-  fontSize: 14,
+  fontSize: 11,
   fontWeight: 900,
   marginTop: 6,
 };
 
 const helpText: React.CSSProperties = {
   color: 'rgba(255,255,255,.78)',
-  fontSize: 12,
+  fontSize: 11,
   lineHeight: 1.4,
   marginTop: 6,
 };
@@ -288,7 +288,7 @@ const helpButton: React.CSSProperties = {
   color: '#0C447C',
   border: 'none',
   borderRadius: 12,
-  padding: '9px 10px',
+  padding: '8px 9px',
   fontWeight: 900,
   cursor: 'pointer',
 };
@@ -298,7 +298,7 @@ const userBlock: React.CSSProperties = {
   alignItems: 'center',
   gap: 10,
   padding: 10,
-  borderRadius: 16,
+  borderRadius: 14,
   background: 'rgba(255,255,255,.12)',
   border: '1px solid rgba(255,255,255,.16)',
 };
@@ -311,14 +311,14 @@ const avatar: React.CSSProperties = {
   placeItems: 'center',
   background: '#FFFFFF',
   color: '#0C447C',
-  fontSize: 12,
+  fontSize: 11,
   fontWeight: 900,
   flexShrink: 0,
 };
 
 const userName: React.CSSProperties = {
   color: '#FFFFFF',
-  fontSize: 12,
+  fontSize: 11,
   fontWeight: 900,
   overflow: 'hidden',
   textOverflow: 'ellipsis',
@@ -351,19 +351,19 @@ const mainArea: React.CSSProperties = {
   minWidth: 0,
   display: 'flex',
   flexDirection: 'column',
-  padding: 18,
+  padding: 14,
   gap: 16,
   boxSizing: 'border-box',
 };
 
 const topbar: React.CSSProperties = {
-  minHeight: 64,
+  minHeight: 56,
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'space-between',
   gap: 16,
-  padding: '12px 16px',
-  borderRadius: 22,
+  padding: '10px 14px',
+  borderRadius: 18,
   background: 'rgba(255,255,255,.72)',
   border: '1px solid rgba(255,255,255,.82)',
   boxShadow: '0 14px 44px rgba(16,24,40,.07)',
@@ -379,7 +379,7 @@ const topbarEyebrow: React.CSSProperties = {
 
 const topbarTitle: React.CSSProperties = {
   color: '#111827',
-  fontSize: 17,
+  fontSize: 15,
   fontWeight: 900,
   marginTop: 2,
 };
@@ -397,8 +397,8 @@ const ghostButton: React.CSSProperties = {
   background: '#FFFFFF',
   color: '#185FA5',
   borderRadius: 999,
-  padding: '9px 13px',
-  fontSize: 13,
+  padding: '8px 12px',
+  fontSize: 11,
   fontWeight: 900,
   cursor: 'pointer',
 };
@@ -408,8 +408,8 @@ const solidButton: React.CSSProperties = {
   background: '#0C447C',
   color: '#FFFFFF',
   borderRadius: 999,
-  padding: '9px 14px',
-  fontSize: 13,
+  padding: '8px 12px',
+  fontSize: 11,
   fontWeight: 900,
   cursor: 'pointer',
 };
@@ -418,7 +418,7 @@ const content: React.CSSProperties = {
   flex: 1,
   minHeight: 0,
   overflow: 'auto',
-  borderRadius: 22,
+  borderRadius: 18,
   background: 'rgba(255,255,255,.46)',
   border: '1px solid rgba(255,255,255,.62)',
 };
