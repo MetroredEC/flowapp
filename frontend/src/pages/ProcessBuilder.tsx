@@ -94,22 +94,22 @@ const TOUR_STEPS = [
   },
   {
     title: 'Plantillas',
-    text: 'Las plantillas te dan una base lista para ajustar. Son utiles para compras, suministros, marketing o mantenimiento.',
+    text: 'Las plantillas te dan una base lista para ajustar.',
     hint: 'Elige la plantilla mas parecida a tu caso.',
   },
   {
     title: 'Formulario',
-    text: 'En esta pestaÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¾ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±a defines que informacion debe completar cada responsable.',
+    text: 'Define que informacion debe completar cada responsable.',
     hint: 'Usa Campos sugeridos para avanzar mas rapido.',
   },
   {
     title: 'Flujo',
-    text: 'En Flujo ordenas las etapas, asignas responsables y defines evidencias.',
+    text: 'Ordena las etapas, asigna responsables y define evidencias.',
     hint: 'Puedes arrastrar etapas para cambiar el orden.',
   },
   {
     title: 'Publicar',
-    text: 'Antes de publicar, FlowApp revisa que el proceso tenga etapas, responsables y formularios completos.',
+    text: 'Revisa que el proceso tenga etapas, responsables y formularios completos.',
     hint: 'Publica solo cuando la revision este completa.',
   },
 ];
@@ -122,7 +122,7 @@ export default function ProcessBuilder() {
   const [activeTab, setActiveTab] = useState<Tab>('form');
   const [selectedNodeIndex, setSelectedNodeIndex] = useState(0);
   const [showCreate, setShowCreate] = useState(false);
-  const [showGuide, setShowGuide] = useState(true);
+  const [showGuide, setShowGuide] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [showStageEditor, setShowStageEditor] = useState(false);
   const [showPublishConfirm, setShowPublishConfirm] = useState(false);
@@ -147,6 +147,17 @@ export default function ProcessBuilder() {
   useEffect(() => {
     void load();
   }, []);
+  useEffect(() => {
+    const seen = window.localStorage.getItem('flowapp.processDesignerTourSeen');
+
+    if (!seen) {
+      setShowTour(true);
+      setTourStep(0);
+      setShowGuide(false);
+      window.localStorage.setItem('flowapp.processDesignerTourSeen', '1');
+    }
+  }, []);
+
 
   const parsedSelectedProposal = useMemo(() => {
     if (!selected?.proposed_process_json) return null;
@@ -464,6 +475,20 @@ export default function ProcessBuilder() {
             <GuideStep number="3" title="Flujo" text="Ordena las etapas y asigna responsables." />
             <GuideStep number="4" title="Publicar" text="Revisa pendientes y deja el proceso disponible." />
           </div>
+
+          <div style={guideActions}>
+            <button
+              onClick={() => {
+                window.localStorage.removeItem('flowapp.processDesignerTourSeen');
+                setShowTour(true);
+                setTourStep(0);
+                setShowGuide(false);
+              }}
+              style={secondarySmallButton}
+            >
+              Reiniciar guia
+            </button>
+          </div>
         </section>
       )}
 
@@ -474,10 +499,14 @@ export default function ProcessBuilder() {
           title={TOUR_STEPS[tourStep].title}
           text={TOUR_STEPS[tourStep].text}
           hint={TOUR_STEPS[tourStep].hint}
-          onClose={() => setShowTour(false)}
+          onClose={() => {
+            window.localStorage.setItem('flowapp.processDesignerTourSeen', '1');
+            setShowTour(false);
+          }}
           onBack={() => setTourStep(value => Math.max(0, value - 1))}
           onNext={() => {
             if (tourStep >= TOUR_STEPS.length - 1) {
+              window.localStorage.setItem('flowapp.processDesignerTourSeen', '1');
               setShowTour(false);
             } else {
               setTourStep(value => value + 1);
@@ -668,7 +697,7 @@ export default function ProcessBuilder() {
                             <span style={itemText}>
                               <strong style={ellipsis}>{field.label}</strong>
                               <small style={smallEllipsis}>
-                                {field.key}{field.required ? ' Ã‚Â· Obligatorio' : ' Ã‚Â· Opcional'}
+                                {field.key}{field.required ? ' Æ’Ã¢â‚¬Å¡â€š· Obligatorio' : ' Æ’Ã¢â‚¬Å¡â€š· Opcional'}
                               </small>
                             </span>
 
@@ -1360,7 +1389,7 @@ function TourOverlay({
       <div style={tourCard} className="flow-tour-card">
         <div style={tourHeader}>
           <div>
-            <div style={guideEyebrow}>Guia del diseÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¾ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±ador</div>
+            <div style={guideEyebrow}>Guia del diseÆ’Ã†â€™â€ Ã¢â‚¬â„¢Æ’Ã¢â‚¬ ¢Ã¢â€š¬Ã¢â€ž¢Æ’Ã†â€™¢Ã¢â€š¬ Æ’¢¢Ã¢â‚¬Å¡¬¢Ã¢â‚¬Å¾¢Æ’Ã†â€™â€ Ã¢â‚¬â„¢Æ’¢¢Ã¢â‚¬Å¡¬â€š Æ’Ã†â€™â€š¢Æ’¢¢Ã¢â€š¬Ã…¡â€š¬Æ’¢¢Ã¢â€š¬Ã…¾â€š¢Æ’Ã†â€™â€ Ã¢â‚¬â„¢Æ’Ã¢â‚¬ ¢Ã¢â€š¬Ã¢â€ž¢Æ’Ã†â€™â€š¢Æ’¢¢Ã¢â€š¬Ã…¡â€š¬Æ’Ã¢â‚¬Å¡â€š Æ’Ã†â€™â€ Ã¢â‚¬â„¢Æ’Ã¢â‚¬Å¡â€š¢Æ’Ã†â€™â€š¢Æ’¢¢Ã¢â‚¬Å¡¬â€¦¡Æ’Ã¢â‚¬Å¡â€š¬Æ’Ã†â€™â€š¢Æ’¢¢Ã¢â‚¬Å¡¬â€¦¾Æ’Ã¢â‚¬Å¡â€š¢Æ’Ã†â€™â€ Ã¢â‚¬â„¢Æ’Ã¢â‚¬ ¢Ã¢â€š¬Ã¢â€ž¢Æ’Ã†â€™¢Ã¢â€š¬ Æ’¢¢Ã¢â‚¬Å¡¬¢Ã¢â‚¬Å¾¢Æ’Ã†â€™â€ Ã¢â‚¬â„¢Æ’Ã¢â‚¬Å¡â€š¢Æ’Ã†â€™â€š¢Æ’¢¢Ã¢â‚¬Å¡¬â€¦¡Æ’Ã¢â‚¬Å¡â€š¬Æ’Ã†â€™¢Ã¢â€š¬Ã…¡Æ’Ã¢â‚¬Å¡â€š Æ’Ã†â€™â€ Ã¢â‚¬â„¢Æ’Ã¢â‚¬ ¢Ã¢â€š¬Ã¢â€ž¢Æ’Ã†â€™¢Ã¢â€š¬Ã…¡Æ’Ã¢â‚¬Å¡â€š¢Æ’Ã†â€™â€ Ã¢â‚¬â„¢Æ’Ã¢â‚¬Å¡â€š¢Æ’Ã†â€™â€š¢Æ’¢¢Ã¢â€š¬Ã…¡â€š¬Æ’Ã¢â‚¬¦â€š¡Æ’Ã†â€™¢Ã¢â€š¬Ã…¡Æ’Ã¢â‚¬Å¡â€š¬Æ’Ã†â€™â€ Ã¢â‚¬â„¢Æ’Ã¢â‚¬Å¡â€š¢Æ’Ã†â€™â€š¢Æ’¢¢Ã¢â€š¬Ã…¡â€š¬Æ’Ã¢â‚¬¦â€š¾Æ’Ã†â€™¢Ã¢â€š¬Ã…¡Æ’Ã¢â‚¬Å¡â€š¢Æ’Ã†â€™â€ Ã¢â‚¬â„¢Æ’Ã¢â‚¬ ¢Ã¢â€š¬Ã¢â€ž¢Æ’Ã†â€™¢Ã¢â€š¬ Æ’¢¢Ã¢â‚¬Å¡¬¢Ã¢â‚¬Å¾¢Æ’Ã†â€™â€ Ã¢â‚¬â„¢Æ’¢¢Ã¢â‚¬Å¡¬â€š Æ’Ã†â€™â€š¢Æ’¢¢Ã¢â€š¬Ã…¡â€š¬Æ’¢¢Ã¢â€š¬Ã…¾â€š¢Æ’Ã†â€™â€ Ã¢â‚¬â„¢Æ’Ã¢â‚¬ ¢Ã¢â€š¬Ã¢â€ž¢Æ’Ã†â€™¢Ã¢â€š¬Ã…¡Æ’Ã¢â‚¬Å¡â€š¢Æ’Ã†â€™â€ Ã¢â‚¬â„¢Æ’Ã¢â‚¬Å¡â€š¢Æ’Ã†â€™â€š¢Æ’¢¢Ã¢â€š¬Ã…¡â€š¬Æ’Ã¢â‚¬¦â€š¡Æ’Ã†â€™¢Ã¢â€š¬Ã…¡Æ’Ã¢â‚¬Å¡â€š¬Æ’Ã†â€™â€ Ã¢â‚¬â„¢Æ’¢¢Ã¢â‚¬Å¡¬â€¦¡Æ’Ã†â€™¢Ã¢â€š¬Ã…¡Æ’Ã¢â‚¬Å¡â€š Æ’Ã†â€™â€ Ã¢â‚¬â„¢Æ’Ã¢â‚¬ ¢Ã¢â€š¬Ã¢â€ž¢Æ’Ã†â€™¢Ã¢â€š¬ Æ’¢¢Ã¢â‚¬Å¡¬¢Ã¢â‚¬Å¾¢Æ’Ã†â€™â€ Ã¢â‚¬â„¢Æ’¢¢Ã¢â‚¬Å¡¬â€¦¡Æ’Ã†â€™¢Ã¢â€š¬Ã…¡Æ’Ã¢â‚¬Å¡â€š¢Æ’Ã†â€™â€ Ã¢â‚¬â„¢Æ’Ã¢â‚¬ ¢Ã¢â€š¬Ã¢â€ž¢Æ’Ã†â€™¢Ã¢â€š¬Ã…¡Æ’Ã¢â‚¬Å¡â€š¢Æ’Ã†â€™â€ Ã¢â‚¬â„¢Æ’Ã¢â‚¬Å¡â€š¢Æ’Ã†â€™â€š¢Æ’¢¢Ã¢â‚¬Å¡¬â€¦¡Æ’Ã¢â‚¬Å¡â€š¬Æ’Ã†â€™¢Ã¢â€š¬¦Æ’Ã¢â‚¬Å¡â€š¡Æ’Ã†â€™â€ Ã¢â‚¬â„¢Æ’¢¢Ã¢â‚¬Å¡¬â€¦¡Æ’Ã†â€™¢Ã¢â€š¬Ã…¡Æ’Ã¢â‚¬Å¡â€š¬Æ’Ã†â€™â€ Ã¢â‚¬â„¢Æ’Ã¢â‚¬ ¢Ã¢â€š¬Ã¢â€ž¢Æ’Ã†â€™¢Ã¢â€š¬Ã…¡Æ’Ã¢â‚¬Å¡â€š¢Æ’Ã†â€™â€ Ã¢â‚¬â„¢Æ’Ã¢â‚¬Å¡â€š¢Æ’Ã†â€™â€š¢Æ’¢¢Ã¢â‚¬Å¡¬â€¦¡Æ’Ã¢â‚¬Å¡â€š¬Æ’Ã†â€™¢Ã¢â€š¬¦Æ’Ã¢â‚¬Å¡â€š¾Æ’Ã†â€™â€ Ã¢â‚¬â„¢Æ’¢¢Ã¢â‚¬Å¡¬â€¦¡Æ’Ã†â€™¢Ã¢â€š¬Ã…¡Æ’Ã¢â‚¬Å¡â€š¢Æ’Ã†â€™â€ Ã¢â‚¬â„¢Æ’Ã¢â‚¬ ¢Ã¢â€š¬Ã¢â€ž¢Æ’Ã†â€™¢Ã¢â€š¬ Æ’¢¢Ã¢â‚¬Å¡¬¢Ã¢â‚¬Å¾¢Æ’Ã†â€™â€ Ã¢â‚¬â„¢Æ’¢¢Ã¢â‚¬Å¡¬â€š Æ’Ã†â€™â€š¢Æ’¢¢Ã¢â€š¬Ã…¡â€š¬Æ’¢¢Ã¢â€š¬Ã…¾â€š¢Æ’Ã†â€™â€ Ã¢â‚¬â„¢Æ’Ã¢â‚¬ ¢Ã¢â€š¬Ã¢â€ž¢Æ’Ã†â€™â€š¢Æ’¢¢Ã¢â€š¬Ã…¡â€š¬Æ’Ã¢â‚¬Å¡â€š Æ’Ã†â€™â€ Ã¢â‚¬â„¢Æ’Ã¢â‚¬Å¡â€š¢Æ’Ã†â€™â€š¢Æ’¢¢Ã¢â‚¬Å¡¬â€¦¡Æ’Ã¢â‚¬Å¡â€š¬Æ’Ã†â€™â€š¢Æ’¢¢Ã¢â‚¬Å¡¬â€¦¾Æ’Ã¢â‚¬Å¡â€š¢Æ’Ã†â€™â€ Ã¢â‚¬â„¢Æ’Ã¢â‚¬ ¢Ã¢â€š¬Ã¢â€ž¢Æ’Ã†â€™¢Ã¢â€š¬ Æ’¢¢Ã¢â‚¬Å¡¬¢Ã¢â‚¬Å¾¢Æ’Ã†â€™â€ Ã¢â‚¬â„¢Æ’¢¢Ã¢â‚¬Å¡¬â€¦¡Æ’Ã†â€™¢Ã¢â€š¬Ã…¡Æ’Ã¢â‚¬Å¡â€š¢Æ’Ã†â€™â€ Ã¢â‚¬â„¢Æ’Ã¢â‚¬ ¢Ã¢â€š¬Ã¢â€ž¢Æ’Ã†â€™¢Ã¢â€š¬Ã…¡Æ’Ã¢â‚¬Å¡â€š¢Æ’Ã†â€™â€ Ã¢â‚¬â„¢Æ’Ã¢â‚¬Å¡â€š¢Æ’Ã†â€™â€š¢Æ’¢¢Ã¢â‚¬Å¡¬â€¦¡Æ’Ã¢â‚¬Å¡â€š¬Æ’Ã†â€™¢Ã¢â€š¬¦Æ’Ã¢â‚¬Å¡â€š¡Æ’Ã†â€™â€ Ã¢â‚¬â„¢Æ’¢¢Ã¢â‚¬Å¡¬â€¦¡Æ’Ã†â€™¢Ã¢â€š¬Ã…¡Æ’Ã¢â‚¬Å¡â€š¬Æ’Ã†â€™â€ Ã¢â‚¬â„¢Æ’Ã¢â‚¬ ¢Ã¢â€š¬Ã¢â€ž¢Æ’Ã†â€™â€š¢Æ’¢¢Ã¢â€š¬Ã…¡â€š¬Æ’Ã¢â‚¬Å¡â€š¦Æ’Ã†â€™â€ Ã¢â‚¬â„¢Æ’¢¢Ã¢â‚¬Å¡¬â€¦¡Æ’Ã†â€™¢Ã¢â€š¬Ã…¡Æ’Ã¢â‚¬Å¡â€š¡Æ’Ã†â€™â€ Ã¢â‚¬â„¢Æ’Ã¢â‚¬ ¢Ã¢â€š¬Ã¢â€ž¢Æ’Ã†â€™¢Ã¢â€š¬ Æ’¢¢Ã¢â‚¬Å¡¬¢Ã¢â‚¬Å¾¢Æ’Ã†â€™â€ Ã¢â‚¬â„¢Æ’¢¢Ã¢â‚¬Å¡¬â€š Æ’Ã†â€™â€š¢Æ’¢¢Ã¢â€š¬Ã…¡â€š¬Æ’¢¢Ã¢â€š¬Ã…¾â€š¢Æ’Ã†â€™â€ Ã¢â‚¬â„¢Æ’Ã¢â‚¬ ¢Ã¢â€š¬Ã¢â€ž¢Æ’Ã†â€™¢Ã¢â€š¬Ã…¡Æ’Ã¢â‚¬Å¡â€š¢Æ’Ã†â€™â€ Ã¢â‚¬â„¢Æ’Ã¢â‚¬Å¡â€š¢Æ’Ã†â€™â€š¢Æ’¢¢Ã¢â€š¬Ã…¡â€š¬Æ’Ã¢â‚¬¦â€š¡Æ’Ã†â€™¢Ã¢â€š¬Ã…¡Æ’Ã¢â‚¬Å¡â€š¬Æ’Ã†â€™â€ Ã¢â‚¬â„¢Æ’¢¢Ã¢â‚¬Å¡¬â€š¦Æ’Ã†â€™¢Ã¢â€š¬Ã…¡Æ’Ã¢â‚¬Å¡â€š¡Æ’Ã†â€™â€ Ã¢â‚¬â„¢Æ’Ã¢â‚¬ ¢Ã¢â€š¬Ã¢â€ž¢Æ’Ã†â€™¢Ã¢â€š¬ Æ’¢¢Ã¢â‚¬Å¡¬¢Ã¢â‚¬Å¾¢Æ’Ã†â€™â€ Ã¢â‚¬â„¢Æ’Ã¢â‚¬Å¡â€š¢Æ’Ã†â€™â€š¢Æ’¢¢Ã¢â‚¬Å¡¬â€¦¡Æ’Ã¢â‚¬Å¡â€š¬Æ’Ã†â€™¢Ã¢â€š¬¦Æ’Ã¢â‚¬Å¡â€š¡Æ’Ã†â€™â€ Ã¢â‚¬â„¢Æ’Ã¢â‚¬ ¢Ã¢â€š¬Ã¢â€ž¢Æ’Ã†â€™â€š¢Æ’¢¢Ã¢â€š¬Ã…¡â€š¬Æ’Ã¢â‚¬¦â€š¡Æ’Ã†â€™â€ Ã¢â‚¬â„¢Æ’¢¢Ã¢â‚¬Å¡¬â€¦¡Æ’Ã†â€™¢Ã¢â€š¬Ã…¡Æ’Ã¢â‚¬Å¡â€š±ador</div>
             <h2 style={tourTitle}>{title}</h2>
           </div>
 
@@ -2161,23 +2190,24 @@ const presetButton: CSSProperties = {
 const tourBackdrop: CSSProperties = {
   position: 'fixed',
   inset: 0,
-  display: 'grid',
-  placeItems: 'center',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
   padding: 24,
-  background: 'rgba(16, 24, 40, .28)',
-  backdropFilter: 'blur(6px)',
+  background: 'rgba(16, 24, 40, .20)',
+  backdropFilter: 'blur(4px)',
   zIndex: 80,
 };
 
 const tourCard: CSSProperties = {
-  width: 'min(520px, 100%)',
+  width: 'min(460px, 92vw)',
   display: 'grid',
-  gap: 14,
+  gap: 12,
   padding: 18,
   borderRadius: 18,
   background: '#FFFFFF',
   border: '1px solid #EAECF0',
-  boxShadow: '0 28px 80px rgba(16, 24, 40, .22)',
+  boxShadow: '0 28px 80px rgba(16, 24, 40, .20)',
 };
 
 const tourHeader: CSSProperties = {
@@ -2443,4 +2473,9 @@ const countBadge: CSSProperties = {
   color: '#0C447C',
   fontSize: 11,
   fontWeight: 900,
+};
+const guideActions: CSSProperties = {
+  display: 'flex',
+  justifyContent: 'flex-end',
+  gap: 8,
 };
