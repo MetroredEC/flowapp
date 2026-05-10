@@ -93,6 +93,7 @@ export default function ProcessBuilder() {
   const [activeTab, setActiveTab] = useState<Tab>('form');
   const [selectedNodeIndex, setSelectedNodeIndex] = useState(0);
   const [showCreate, setShowCreate] = useState(false);
+  const [showGuide, setShowGuide] = useState(true);
 
   const [name, setName] = useState('Proceso de suministros');
   const [description, setDescription] = useState('Solicitud, revision, despacho y recepcion');
@@ -360,11 +361,32 @@ export default function ProcessBuilder() {
           <h1 style={title}>Procesos</h1>
           <p style={subtitle}>Configura formularios, etapas y responsables.</p>
         </div>
-        <button onClick={() => startNew()} style={primaryButton}>Crear proceso</button>
+        <div style={topActions}>
+          <button onClick={() => setShowGuide(value => !value)} style={secondaryButton}>
+            {showGuide ? 'Ocultar guia' : 'Ver guia'}
+          </button>
+          <button onClick={() => startNew()} style={primaryButton}>Crear proceso</button>
+        </div>
       </header>
 
       {message && <Alert kind="ok">{message}</Alert>}
       {error && <Alert kind="error">{error}</Alert>}
+
+      {showGuide && (
+        <section style={guideCard}>
+          <div>
+            <div style={guideEyebrow}>Guia rapida</div>
+            <h2 style={guideTitle}>Construye procesos en cuatro pasos</h2>
+          </div>
+
+          <div style={guideSteps}>
+            <GuideStep number="1" title="Crear" text="Selecciona una plantilla o describe el proceso." />
+            <GuideStep number="2" title="Formulario" text="Define los campos que cada etapa debe completar." />
+            <GuideStep number="3" title="Flujo" text="Ordena las etapas y asigna responsables." />
+            <GuideStep number="4" title="Publicar" text="Revisa pendientes y deja el proceso disponible." />
+          </div>
+        </section>
+      )}
 
       <div style={workspace}>
         <aside style={sidebar}>
@@ -467,7 +489,12 @@ export default function ProcessBuilder() {
               <div style={emptyStateInner}>
                 <h2>Selecciona un proceso</h2>
                 <p>Elige un proceso existente o crea uno nuevo.</p>
-                <button onClick={() => startNew()} style={primaryButton}>Crear proceso</button>
+                <div style={topActions}>
+          <button onClick={() => setShowGuide(value => !value)} style={secondaryButton}>
+            {showGuide ? 'Ocultar guia' : 'Ver guia'}
+          </button>
+          <button onClick={() => startNew()} style={primaryButton}>Crear proceso</button>
+        </div>
               </div>
             </section>
           )}
@@ -820,6 +847,18 @@ function FormPreview({ node }: { node: ProposalNode }) {
 
 function TabButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: ReactNode }) {
   return <button onClick={onClick} style={{ ...tabButton, ...(active ? tabButtonActive : {}) }}>{children}</button>;
+}
+
+function GuideStep({ number, title, text }: { number: string; title: string; text: string }) {
+  return (
+    <div style={guideStep}>
+      <span style={guideNumber}>{number}</span>
+      <span style={itemText}>
+        <strong style={ellipsis}>{title}</strong>
+        <small style={smallEllipsis}>{text}</small>
+      </span>
+    </div>
+  );
 }
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
@@ -1483,4 +1522,61 @@ const emptyBox: CSSProperties = {
   padding: 9,
   fontSize: 11,
   fontWeight: 700,
+};
+
+const guideCard: CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: '230px minmax(0, 1fr)',
+  gap: 14,
+  alignItems: 'center',
+  padding: 12,
+  borderRadius: 14,
+  background: '#FFFFFF',
+  border: '1px solid #EAECF0',
+  boxShadow: '0 8px 24px rgba(16,24,40,.05)',
+};
+
+const guideEyebrow: CSSProperties = {
+  color: '#185FA5',
+  fontSize: 11,
+  fontWeight: 900,
+  textTransform: 'uppercase',
+  letterSpacing: .6,
+};
+
+const guideTitle: CSSProperties = {
+  margin: '3px 0 0',
+  fontSize: 16,
+  fontWeight: 900,
+  color: '#101828',
+};
+
+const guideSteps: CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+  gap: 8,
+};
+
+const guideStep: CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: '28px minmax(0, 1fr)',
+  gap: 8,
+  alignItems: 'center',
+  padding: 10,
+  borderRadius: 12,
+  background: '#F8FAFC',
+  border: '1px solid #EAECF0',
+  minWidth: 0,
+};
+
+const guideNumber: CSSProperties = {
+  width: 26,
+  height: 26,
+  borderRadius: '50%',
+  display: 'grid',
+  placeItems: 'center',
+  background: '#EAF2FA',
+  color: '#0C447C',
+  fontSize: 12,
+  fontWeight: 900,
 };
