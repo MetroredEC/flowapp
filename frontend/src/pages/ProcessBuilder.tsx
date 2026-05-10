@@ -86,6 +86,33 @@ const FIELD_TYPES: Array<{ value: FieldType; label: string }> = [
   { value: 'select', label: 'Lista' },
 ];
 
+const TOUR_STEPS = [
+  {
+    title: 'Procesos',
+    text: 'Aqui ves los procesos creados. Selecciona uno para editarlo o crea uno nuevo.',
+    hint: 'Empieza por Crear proceso si es la primera vez.',
+  },
+  {
+    title: 'Plantillas',
+    text: 'Las plantillas te dan una base lista para ajustar. Son utiles para compras, suministros, marketing o mantenimiento.',
+    hint: 'Elige la plantilla mas parecida a tu caso.',
+  },
+  {
+    title: 'Formulario',
+    text: 'En esta pestaÃ±a defines que informacion debe completar cada responsable.',
+    hint: 'Usa Campos sugeridos para avanzar mas rapido.',
+  },
+  {
+    title: 'Flujo',
+    text: 'En Flujo ordenas las etapas, asignas responsables y defines evidencias.',
+    hint: 'Puedes arrastrar etapas para cambiar el orden.',
+  },
+  {
+    title: 'Publicar',
+    text: 'Antes de publicar, FlowApp revisa que el proceso tenga etapas, responsables y formularios completos.',
+    hint: 'Publica solo cuando la revision este completa.',
+  },
+];
 export default function ProcessBuilder() {
   const [blueprints, setBlueprints] = useState<BuilderBlueprint[]>([]);
   const [selected, setSelected] = useState<BuilderBlueprint | null>(null);
@@ -95,6 +122,8 @@ export default function ProcessBuilder() {
   const [showCreate, setShowCreate] = useState(false);
   const [showGuide, setShowGuide] = useState(true);
   const [showPreview, setShowPreview] = useState(false);
+  const [showTour, setShowTour] = useState(false);
+  const [tourStep, setTourStep] = useState(0);
 
   const [name, setName] = useState('Proceso de suministros');
   const [description, setDescription] = useState('Solicitud, revision, despacho y recepcion');
@@ -385,8 +414,15 @@ export default function ProcessBuilder() {
           <p style={subtitle}>Configura formularios, etapas y responsables.</p>
         </div>
         <div style={topActions}>
-          <button onClick={() => setShowGuide(value => !value)} style={secondaryButton}>
-            {showGuide ? 'Ocultar guia' : 'Ver guia'}
+          <button
+            onClick={() => {
+              setShowTour(true);
+              setTourStep(0);
+              setShowGuide(false);
+            }}
+            style={secondaryButton}
+          >
+            Ver guia
           </button>
           <button onClick={() => startNew()} style={primaryButton}>Crear proceso</button>
         </div>
@@ -411,8 +447,27 @@ export default function ProcessBuilder() {
         </section>
       )}
 
+      {showTour && (
+        <TourOverlay
+          step={tourStep}
+          total={TOUR_STEPS.length}
+          title={TOUR_STEPS[tourStep].title}
+          text={TOUR_STEPS[tourStep].text}
+          hint={TOUR_STEPS[tourStep].hint}
+          onClose={() => setShowTour(false)}
+          onBack={() => setTourStep(value => Math.max(0, value - 1))}
+          onNext={() => {
+            if (tourStep >= TOUR_STEPS.length - 1) {
+              setShowTour(false);
+            } else {
+              setTourStep(value => value + 1);
+            }
+          }}
+        />
+      )}
+
       <div style={workspace}>
-        <aside style={sidebar}>
+        <aside style={sidebar} data-tour="process-list">
           <div>
             <div style={panelTitle}>Procesos</div>
             <div style={list}>
@@ -442,7 +497,7 @@ export default function ProcessBuilder() {
           </div>
 
           <div>
-            <div style={panelTitle}>Plantillas</div>
+            <div style={panelTitle} data-tour="templates">Plantillas</div>
             <div style={list}>
               {TEMPLATES.map(template => (
                 <button key={template.key} onClick={() => startNew(template)} style={templateItem}>
@@ -513,8 +568,15 @@ export default function ProcessBuilder() {
                 <h2>Selecciona un proceso</h2>
                 <p>Elige un proceso existente o crea uno nuevo.</p>
                 <div style={topActions}>
-          <button onClick={() => setShowGuide(value => !value)} style={secondaryButton}>
-            {showGuide ? 'Ocultar guia' : 'Ver guia'}
+          <button
+            onClick={() => {
+              setShowTour(true);
+              setTourStep(0);
+              setShowGuide(false);
+            }}
+            style={secondaryButton}
+          >
+            Ver guia
           </button>
           <button onClick={() => startNew()} style={primaryButton}>Crear proceso</button>
         </div>
@@ -531,11 +593,11 @@ export default function ProcessBuilder() {
                 </div>
                 <div style={topActions}>
                   <button onClick={saveProposal} disabled={working} style={secondaryButton}>Guardar</button>
-                  <button onClick={publishProcess} disabled={working} style={primaryButton}>Publicar</button>
+                  <button data-tour="publish" onClick={publishProcess} disabled={working} style={primaryButton}>Publicar</button>
                 </div>
               </div>
 
-              <nav style={tabs}>
+              <nav style={tabs} data-tour="tabs">
                 <TabButton active={activeTab === 'form'} onClick={() => setActiveTab('form')}>Formulario</TabButton>
                 <TabButton active={activeTab === 'workflow'} onClick={() => setActiveTab('workflow')}>Flujo</TabButton>
                 <TabButton active={activeTab === 'settings'} onClick={() => setActiveTab('settings')}>Configuracion</TabButton>
@@ -552,7 +614,9 @@ export default function ProcessBuilder() {
                       </div>
                       <button onClick={addNode} style={smallButton}>Agregar</button>
                     </div>
+                    <div data-tour="stages">
                     <StageList nodes={proposal.nodes} selectedIndex={selectedNodeIndex} onSelect={setSelectedNodeIndex} onMove={moveNodeTo} />
+                    </div>
                   </div>
 
                   <div style={workPanel}>
@@ -637,7 +701,9 @@ export default function ProcessBuilder() {
                       </div>
                       <button onClick={addNode} style={smallButton}>Agregar</button>
                     </div>
+                    <div data-tour="stages">
                     <StageList nodes={proposal.nodes} selectedIndex={selectedNodeIndex} onSelect={setSelectedNodeIndex} onMove={moveNodeTo} />
+                    </div>
                     <div style={pathBox}><ProcessPath proposal={proposal} onSelect={setSelectedNodeIndex} /></div>
                   </div>
 
@@ -895,6 +961,68 @@ function TabButton({ active, onClick, children }: { active: boolean; onClick: ()
   return <button onClick={onClick} style={{ ...tabButton, ...(active ? tabButtonActive : {}) }}>{children}</button>;
 }
 
+function TourOverlay({
+  step,
+  total,
+  title,
+  text,
+  hint,
+  onClose,
+  onBack,
+  onNext,
+}: {
+  step: number;
+  total: number;
+  title: string;
+  text: string;
+  hint: string;
+  onClose: () => void;
+  onBack: () => void;
+  onNext: () => void;
+}) {
+  return (
+    <div style={tourBackdrop}>
+      <div style={tourCard} className="flow-tour-card">
+        <div style={tourHeader}>
+          <div>
+            <div style={guideEyebrow}>Guia del diseÃ±ador</div>
+            <h2 style={tourTitle}>{title}</h2>
+          </div>
+
+          <button onClick={onClose} style={tourClose}>Cerrar</button>
+        </div>
+
+        <p style={tourText}>{text}</p>
+
+        <div style={tourHint}>
+          {hint}
+        </div>
+
+        <div style={tourProgress}>
+          {Array.from({ length: total }).map((_, index) => (
+            <span
+              key={index}
+              style={{
+                ...tourDot,
+                ...(index === step ? tourDotActive : {}),
+              }}
+            />
+          ))}
+        </div>
+
+        <div style={tourActions}>
+          <button onClick={onBack} disabled={step === 0} style={secondarySmallButton}>
+            Atras
+          </button>
+
+          <button onClick={onNext} style={primaryButton}>
+            {step === total - 1 ? 'Finalizar' : 'Siguiente'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 function GuideStep({ number, title, text }: { number: string; title: string; text: string }) {
   return (
     <div style={guideStep}>
@@ -1661,6 +1789,95 @@ const presetButton: CSSProperties = {
   background: '#FFFFFF',
   color: '#185FA5',
   border: '1px solid #B5D4F4',
+  borderRadius: 999,
+  padding: '7px 10px',
+  fontSize: 12,
+  fontWeight: 800,
+  cursor: 'pointer',
+};
+const tourBackdrop: CSSProperties = {
+  position: 'fixed',
+  inset: 0,
+  display: 'grid',
+  placeItems: 'center',
+  padding: 24,
+  background: 'rgba(16, 24, 40, .28)',
+  backdropFilter: 'blur(6px)',
+  zIndex: 80,
+};
+
+const tourCard: CSSProperties = {
+  width: 'min(520px, 100%)',
+  display: 'grid',
+  gap: 14,
+  padding: 18,
+  borderRadius: 18,
+  background: '#FFFFFF',
+  border: '1px solid #EAECF0',
+  boxShadow: '0 28px 80px rgba(16, 24, 40, .22)',
+};
+
+const tourHeader: CSSProperties = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  gap: 14,
+  alignItems: 'flex-start',
+};
+
+const tourTitle: CSSProperties = {
+  margin: '3px 0 0',
+  fontSize: 22,
+  fontWeight: 900,
+  color: '#101828',
+  letterSpacing: -0.3,
+};
+
+const tourText: CSSProperties = {
+  margin: 0,
+  color: '#475467',
+  fontSize: 14,
+  lineHeight: 1.55,
+};
+
+const tourHint: CSSProperties = {
+  padding: 12,
+  borderRadius: 12,
+  background: '#F5FAFF',
+  border: '1px solid #B2DDFF',
+  color: '#185FA5',
+  fontSize: 13,
+  fontWeight: 800,
+};
+
+const tourProgress: CSSProperties = {
+  display: 'flex',
+  gap: 6,
+  alignItems: 'center',
+};
+
+const tourDot: CSSProperties = {
+  width: 8,
+  height: 8,
+  borderRadius: 999,
+  background: '#D0D5DD',
+};
+
+const tourDotActive: CSSProperties = {
+  width: 24,
+  background: '#0C447C',
+};
+
+const tourActions: CSSProperties = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  gap: 10,
+  alignItems: 'center',
+};
+
+const tourClose: CSSProperties = {
+  background: '#F8FAFC',
+  color: '#344054',
+  border: '1px solid #D0D5DD',
   borderRadius: 999,
   padding: '7px 10px',
   fontSize: 12,
