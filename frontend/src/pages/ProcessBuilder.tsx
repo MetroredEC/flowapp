@@ -99,7 +99,7 @@ const TOUR_STEPS = [
   },
   {
     title: 'Formulario',
-    text: 'En esta pestaÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±a defines que informacion debe completar cada responsable.',
+    text: 'En esta pestaÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±a defines que informacion debe completar cada responsable.',
     hint: 'Usa Campos sugeridos para avanzar mas rapido.',
   },
   {
@@ -124,6 +124,7 @@ export default function ProcessBuilder() {
   const [showPreview, setShowPreview] = useState(false);
   const [showStageEditor, setShowStageEditor] = useState(false);
   const [showPublishConfirm, setShowPublishConfirm] = useState(false);
+  const [selectedFieldIndex, setSelectedFieldIndex] = useState<number | null>(null);
   const [showTour, setShowTour] = useState(false);
   const [tourStep, setTourStep] = useState(0);
 
@@ -615,29 +616,24 @@ export default function ProcessBuilder() {
                     <div style={fieldList}>
                       {(currentNode.form?.fields ?? []).map((field, fieldIndex) => (
                         <div key={fieldIndex} style={fieldCard}>
-                          <div style={formGrid}>
-                            <Field label="Etiqueta">
-                              <input value={field.label} onChange={e => updateField(selectedNodeIndex, fieldIndex, { label: e.target.value })} style={input} />
-                            </Field>
-                            <Field label="Tipo">
-                              <select value={field.type} onChange={e => updateField(selectedNodeIndex, fieldIndex, { type: e.target.value as FieldType })} style={input}>
-                                {FIELD_TYPES.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}
-                              </select>
-                            </Field>
-                          </div>
+                          <div style={fieldSummaryRow}>
+                            <span style={fieldTypeBadge}>{fieldTypeLabel(field.type)}</span>
 
-                          <div style={formGrid}>
-                            <Field label="Identificador">
-                              <input value={field.key} onChange={e => updateField(selectedNodeIndex, fieldIndex, { key: slug(e.target.value).replace(/-/g, '_') })} style={input} />
-                            </Field>
-                            <label style={checkLabel}>
-                              <input type="checkbox" checked={Boolean(field.required)} onChange={e => updateField(selectedNodeIndex, fieldIndex, { required: e.target.checked })} />
-                              Obligatorio
-                            </label>
-                          </div>
+                            <span style={itemText}>
+                              <strong style={ellipsis}>{field.label}</strong>
+                              <small style={smallEllipsis}>
+                                {field.key}{field.required ? ' Â· Obligatorio' : ' Â· Opcional'}
+                              </small>
+                            </span>
 
-                          <div style={rightActions}>
-                            <button onClick={() => removeField(selectedNodeIndex, fieldIndex)} style={dangerButton}>Eliminar campo</button>
+                            <div style={fieldActions}>
+                              <button onClick={() => setSelectedFieldIndex(fieldIndex)} style={secondarySmallButton}>
+                                Editar
+                              </button>
+                              <button onClick={() => removeField(selectedNodeIndex, fieldIndex)} style={dangerButton}>
+                                Eliminar
+                              </button>
+                            </div>
                           </div>
                         </div>
                       ))}
@@ -727,6 +723,17 @@ export default function ProcessBuilder() {
                 </div>
               )}
 
+              {selectedFieldIndex !== null && currentNode && currentNode.form?.fields?.[selectedFieldIndex] && (
+                <FieldEditorModal
+                  field={currentNode.form.fields[selectedFieldIndex]}
+                  onClose={() => setSelectedFieldIndex(null)}
+                  onUpdate={patch => updateField(selectedNodeIndex, selectedFieldIndex, patch)}
+                  onRemove={() => {
+                    removeField(selectedNodeIndex, selectedFieldIndex);
+                    setSelectedFieldIndex(null);
+                  }}
+                />
+              )}
               {showPublishConfirm && proposal && (
                 <PublishConfirmModal
                   checklist={checklist}
@@ -900,6 +907,91 @@ function TabButton({ active, onClick, children }: { active: boolean; onClick: ()
   return <button onClick={onClick} style={{ ...tabButton, ...(active ? tabButtonActive : {}) }}>{children}</button>;
 }
 
+function FieldEditorModal({
+  field,
+  onClose,
+  onUpdate,
+  onRemove,
+}: {
+  field: ProposalField;
+  onClose: () => void;
+  onUpdate: (patch: Partial<ProposalField>) => void;
+  onRemove: () => void;
+}) {
+  return (
+    <div style={modalBackdrop}>
+      <div style={fieldModalCard} className="flow-tour-card">
+        <div style={modalHeader}>
+          <div>
+            <div style={guideEyebrow}>Campo del formulario</div>
+            <h2 style={modalTitle}>{field.label}</h2>
+            <p style={sectionSubtitle}>Configura como se vera este campo para el usuario.</p>
+          </div>
+
+          <button onClick={onClose} style={tourClose}>Cerrar</button>
+        </div>
+
+        <div style={formGrid}>
+          <Field label="Etiqueta">
+            <input
+              value={field.label}
+              onChange={e => onUpdate({ label: e.target.value })}
+              style={input}
+            />
+          </Field>
+
+          <Field label="Tipo de campo">
+            <select
+              value={field.type}
+              onChange={e => onUpdate({ type: e.target.value as FieldType })}
+              style={input}
+            >
+              {FIELD_TYPES.map(item => (
+                <option key={item.value} value={item.value}>{item.label}</option>
+              ))}
+            </select>
+          </Field>
+        </div>
+
+        <div style={formGrid}>
+          <Field label="Identificador">
+            <input
+              value={field.key}
+              onChange={e => onUpdate({ key: slug(e.target.value).replace(/-/g, '_') })}
+              style={input}
+            />
+          </Field>
+
+          <label style={checkLabel}>
+            <input
+              type="checkbox"
+              checked={Boolean(field.required)}
+              onChange={e => onUpdate({ required: e.target.checked })}
+            />
+            Campo obligatorio
+          </label>
+        </div>
+
+        <div style={fieldPreviewBox}>
+          <div style={panelTitle}>Vista previa</div>
+          <FormPreview node={{
+            id: 'preview',
+            type: 'task',
+            label: 'Formulario',
+            description: 'Vista previa del campo.',
+            form: { fields: [field] },
+            attachment_rules: { required: false, min_files: 0, label: 'Adjunto' },
+          }} />
+        </div>
+
+        <div style={footerActions}>
+          <button onClick={onRemove} style={dangerButton}>Eliminar campo</button>
+          <button onClick={onClose} style={primaryButton}>Listo</button>
+        </div>
+      </div>
+    </div>
+  );
+}
 function PublishConfirmModal({
   checklist,
   checklistOk,
@@ -1222,7 +1314,7 @@ function TourOverlay({
       <div style={tourCard} className="flow-tour-card">
         <div style={tourHeader}>
           <div>
-            <div style={guideEyebrow}>Guia del diseÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±ador</div>
+            <div style={guideEyebrow}>Guia del diseÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±ador</div>
             <h2 style={tourTitle}>{title}</h2>
           </div>
 
@@ -1332,6 +1424,10 @@ function getChecklist(proposal: Proposal | null): Array<{ label: string; ok: boo
   ];
 }
 
+function fieldTypeLabel(type: FieldType): string {
+  const found = FIELD_TYPES.find(item => item.value === type);
+  return found?.label || type;
+}
 function ownerLabel(node: ProposalNode): string {
   if (node.approver_type === 'requester') return 'Solicitante';
   if (node.approver_type === 'role') return node.role || 'Rol pendiente';
@@ -1736,10 +1832,6 @@ const fieldCard: CSSProperties = {
   minWidth: 0,
 };
 
-const rightActions: CSSProperties = {
-  display: 'flex',
-  justifyContent: 'flex-end',
-};
 
 const checkLabel: CSSProperties = {
   display: 'flex',
@@ -2222,4 +2314,55 @@ const successBox: CSSProperties = {
   color: '#027A48',
   fontSize: 13,
   fontWeight: 800,
+};
+const fieldSummaryRow: CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: '86px minmax(0, 1fr) auto',
+  gap: 10,
+  alignItems: 'center',
+  minWidth: 0,
+};
+
+const fieldTypeBadge: CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  minHeight: 28,
+  padding: '5px 9px',
+  borderRadius: 999,
+  background: '#F5FAFF',
+  border: '1px solid #B2DDFF',
+  color: '#185FA5',
+  fontSize: 11,
+  fontWeight: 900,
+  whiteSpace: 'nowrap',
+};
+
+const fieldActions: CSSProperties = {
+  display: 'flex',
+  gap: 8,
+  alignItems: 'center',
+  justifyContent: 'flex-end',
+};
+
+const fieldModalCard: CSSProperties = {
+  width: 'min(680px, 100%)',
+  maxHeight: 'calc(100vh - 64px)',
+  overflowY: 'auto',
+  display: 'grid',
+  gap: 14,
+  padding: 18,
+  borderRadius: 18,
+  background: '#FFFFFF',
+  border: '1px solid #EAECF0',
+  boxShadow: '0 28px 90px rgba(16, 24, 40, .24)',
+};
+
+const fieldPreviewBox: CSSProperties = {
+  display: 'grid',
+  gap: 10,
+  padding: 12,
+  borderRadius: 12,
+  background: '#F8FAFC',
+  border: '1px solid #EAECF0',
 };
