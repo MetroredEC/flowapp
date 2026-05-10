@@ -99,7 +99,7 @@ const TOUR_STEPS = [
   },
   {
     title: 'Formulario',
-    text: 'En esta pestaÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â±a defines que informacion debe completar cada responsable.',
+    text: 'En esta pestaÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±a defines que informacion debe completar cada responsable.',
     hint: 'Usa Campos sugeridos para avanzar mas rapido.',
   },
   {
@@ -122,6 +122,7 @@ export default function ProcessBuilder() {
   const [showCreate, setShowCreate] = useState(false);
   const [showGuide, setShowGuide] = useState(true);
   const [showPreview, setShowPreview] = useState(false);
+  const [showStageEditor, setShowStageEditor] = useState(false);
   const [showTour, setShowTour] = useState(false);
   const [tourStep, setTourStep] = useState(0);
 
@@ -671,85 +672,37 @@ export default function ProcessBuilder() {
                   <div style={workPanel}>
                     <div style={panelHeader}>
                       <div>
-                        <div style={panelTitle}>Detalle de etapa</div>
-                        <p style={sectionSubtitle}>Responsable, instrucciones y evidencia.</p>
+                        <div style={panelTitle}>Etapa seleccionada</div>
+                        <p style={sectionSubtitle}>Haz clic en editar para cambiar responsable, instrucciones y evidencia.</p>
                       </div>
-                      <button onClick={() => removeNode(selectedNodeIndex)} style={dangerButton}>Eliminar</button>
+                      <button onClick={() => setShowStageEditor(true)} style={primaryButton}>Editar etapa</button>
                     </div>
 
-                    <div style={formGrid}>
-                      <Field label="Nombre de la etapa">
-                        <input value={currentNode.label} onChange={e => updateNode(selectedNodeIndex, { label: e.target.value })} style={input} />
-                      </Field>
-                      <Field label="Tipo">
-                        <select value={currentNode.type} onChange={e => updateNode(selectedNodeIndex, { type: e.target.value as ProposalNode['type'] })} style={input}>
-                          <option value="approval">Aprobacion</option>
-                          <option value="task">Actividad</option>
-                        </select>
-                      </Field>
+                    <div style={stageSummary}>
+                      <div>
+                        <span style={summaryLabel}>Nombre</span>
+                        <strong style={ellipsis}>{currentNode.label}</strong>
+                      </div>
+
+                      <div>
+                        <span style={summaryLabel}>Responsable</span>
+                        <strong style={ellipsis}>{ownerLabel(currentNode)}</strong>
+                      </div>
+
+                      <div>
+                        <span style={summaryLabel}>Tipo</span>
+                        <strong>{currentNode.type === 'approval' ? 'Aprobacion' : 'Actividad'}</strong>
+                      </div>
+
+                      <div>
+                        <span style={summaryLabel}>Evidencia</span>
+                        <strong>{currentNode.attachment_rules?.required ? 'Requerida' : 'Opcional'}</strong>
+                      </div>
                     </div>
 
-                    <Field label="Instrucciones">
-                      <textarea value={currentNode.description || ''} onChange={e => updateNode(selectedNodeIndex, { description: e.target.value })} style={{ ...input, minHeight: 82, resize: 'vertical' }} />
-                    </Field>
-
-                    <div style={formGrid}>
-                      <Field label="Responsable">
-                        <select value={currentNode.approver_type || 'email'} onChange={e => updateNode(selectedNodeIndex, { approver_type: e.target.value as ProposalNode['approver_type'] })} style={input}>
-                          <option value="email">Correo especifico</option>
-                          <option value="requester">Solicitante</option>
-                          <option value="role">Rol</option>
-                        </select>
-                      </Field>
-
-                      {currentNode.approver_type !== 'requester' && (
-                        <Field label={currentNode.approver_type === 'role' ? 'Rol' : 'Correo'}>
-                          <input
-                            value={currentNode.approver_type === 'role' ? currentNode.role || '' : currentNode.approver_email || ''}
-                            onChange={e => {
-                              if (currentNode.approver_type === 'role') updateNode(selectedNodeIndex, { role: e.target.value });
-                              else updateNode(selectedNodeIndex, { approver_email: e.target.value });
-                            }}
-                            style={input}
-                            placeholder={currentNode.approver_type === 'role' ? 'compras' : 'correo@metrored.med.ec'}
-                          />
-                        </Field>
-                      )}
+                    <div style={footerActions}>
+                      <button onClick={() => removeNode(selectedNodeIndex)} style={dangerButton}>Eliminar etapa</button>
                     </div>
-
-                    <div style={formGrid}>
-                      <Field label="Nombre de evidencia">
-                        <input
-                          value={currentNode.attachment_rules?.label || ''}
-                          onChange={e => updateNode(selectedNodeIndex, {
-                            attachment_rules: { ...(currentNode.attachment_rules || {}), label: e.target.value },
-                          })}
-                          style={input}
-                        />
-                      </Field>
-                      <Field label="Archivos minimos">
-                        <input
-                          type="number"
-                          min="0"
-                          value={currentNode.attachment_rules?.min_files ?? 0}
-                          onChange={e => updateNode(selectedNodeIndex, {
-                            attachment_rules: { ...(currentNode.attachment_rules || {}), min_files: Number(e.target.value || 0) },
-                          })}
-                          style={input}
-                        />
-                      </Field>
-                    </div>
-
-                    <label style={checkLabel}>
-                      <input
-                        type="checkbox"
-                        checked={Boolean(currentNode.attachment_rules?.required)}
-                        onChange={e => updateNode(selectedNodeIndex, {
-                          attachment_rules: { ...(currentNode.attachment_rules || {}), required: e.target.checked },
-                        })}
-                      />
-                      Solicitar evidencia en esta etapa
-                    </label>
                   </div>
                 </div>
               )}
@@ -773,6 +726,18 @@ export default function ProcessBuilder() {
                 </div>
               )}
 
+              {showStageEditor && currentNode && (
+                <StageEditorModal
+                  node={currentNode}
+                  index={selectedNodeIndex}
+                  onClose={() => setShowStageEditor(false)}
+                  onRemove={() => {
+                    removeNode(selectedNodeIndex);
+                    setShowStageEditor(false);
+                  }}
+                  onUpdate={patch => updateNode(selectedNodeIndex, patch)}
+                />
+              )}
               {activeTab === 'publish' && (
                 <div style={publishGrid}>
                   <div style={workPanel}>
@@ -922,6 +887,132 @@ function TabButton({ active, onClick, children }: { active: boolean; onClick: ()
   return <button onClick={onClick} style={{ ...tabButton, ...(active ? tabButtonActive : {}) }}>{children}</button>;
 }
 
+function StageEditorModal({
+  node,
+  index,
+  onClose,
+  onRemove,
+  onUpdate,
+}: {
+  node: ProposalNode;
+  index: number;
+  onClose: () => void;
+  onRemove: () => void;
+  onUpdate: (patch: Partial<ProposalNode>) => void;
+}) {
+  return (
+    <div style={modalBackdrop}>
+      <div style={stageModalCard} className="flow-tour-card">
+        <div style={modalHeader}>
+          <div>
+            <div style={guideEyebrow}>Etapa {index + 1}</div>
+            <h2 style={modalTitle}>{node.label}</h2>
+            <p style={sectionSubtitle}>Define responsable, instrucciones y evidencia.</p>
+          </div>
+
+          <button onClick={onClose} style={tourClose}>Cerrar</button>
+        </div>
+
+        <div style={formGrid}>
+          <Field label="Nombre de la etapa">
+            <input
+              value={node.label}
+              onChange={e => onUpdate({ label: e.target.value })}
+              style={input}
+            />
+          </Field>
+
+          <Field label="Tipo">
+            <select
+              value={node.type}
+              onChange={e => onUpdate({ type: e.target.value as ProposalNode['type'] })}
+              style={input}
+            >
+              <option value="approval">Aprobacion</option>
+              <option value="task">Actividad</option>
+            </select>
+          </Field>
+        </div>
+
+        <Field label="Instrucciones">
+          <textarea
+            value={node.description || ''}
+            onChange={e => onUpdate({ description: e.target.value })}
+            style={{ ...input, minHeight: 96, resize: 'vertical' }}
+          />
+        </Field>
+
+        <div style={formGrid}>
+          <Field label="Responsable">
+            <select
+              value={node.approver_type || 'email'}
+              onChange={e => onUpdate({ approver_type: e.target.value as ProposalNode['approver_type'] })}
+              style={input}
+            >
+              <option value="email">Correo especifico</option>
+              <option value="requester">Solicitante</option>
+              <option value="role">Rol</option>
+            </select>
+          </Field>
+
+          {node.approver_type !== 'requester' && (
+            <Field label={node.approver_type === 'role' ? 'Rol' : 'Correo'}>
+              <input
+                value={node.approver_type === 'role' ? node.role || '' : node.approver_email || ''}
+                onChange={e => {
+                  if (node.approver_type === 'role') onUpdate({ role: e.target.value });
+                  else onUpdate({ approver_email: e.target.value });
+                }}
+                style={input}
+                placeholder={node.approver_type === 'role' ? 'compras' : 'correo@metrored.med.ec'}
+              />
+            </Field>
+          )}
+        </div>
+
+        <div style={formGrid}>
+          <Field label="Nombre de evidencia">
+            <input
+              value={node.attachment_rules?.label || ''}
+              onChange={e => onUpdate({
+                attachment_rules: { ...(node.attachment_rules || {}), label: e.target.value },
+              })}
+              style={input}
+            />
+          </Field>
+
+          <Field label="Archivos minimos">
+            <input
+              type="number"
+              min="0"
+              value={node.attachment_rules?.min_files ?? 0}
+              onChange={e => onUpdate({
+                attachment_rules: { ...(node.attachment_rules || {}), min_files: Number(e.target.value || 0) },
+              })}
+              style={input}
+            />
+          </Field>
+        </div>
+
+        <label style={checkLabel}>
+          <input
+            type="checkbox"
+            checked={Boolean(node.attachment_rules?.required)}
+            onChange={e => onUpdate({
+              attachment_rules: { ...(node.attachment_rules || {}), required: e.target.checked },
+            })}
+          />
+          Solicitar evidencia en esta etapa
+        </label>
+
+        <div style={footerActions}>
+          <button onClick={onRemove} style={dangerButton}>Eliminar etapa</button>
+          <button onClick={onClose} style={primaryButton}>Listo</button>
+        </div>
+      </div>
+    </div>
+  );
+}
 function PreviewModal({
   node,
   onClose,
@@ -1054,7 +1145,7 @@ function TourOverlay({
       <div style={tourCard} className="flow-tour-card">
         <div style={tourHeader}>
           <div>
-            <div style={guideEyebrow}>Guia del diseÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â±ador</div>
+            <div style={guideEyebrow}>Guia del diseÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±ador</div>
             <h2 style={tourTitle}>{title}</h2>
           </div>
 
@@ -1981,6 +2072,38 @@ const modalTitle: CSSProperties = {
 };
 const previewModalCard: CSSProperties = {
   width: 'min(640px, 100%)',
+  maxHeight: 'calc(100vh - 64px)',
+  overflowY: 'auto',
+  display: 'grid',
+  gap: 14,
+  padding: 18,
+  borderRadius: 18,
+  background: '#FFFFFF',
+  border: '1px solid #EAECF0',
+  boxShadow: '0 28px 90px rgba(16, 24, 40, .24)',
+};
+const stageSummary: CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+  gap: 10,
+  padding: 12,
+  borderRadius: 12,
+  background: '#F8FAFC',
+  border: '1px solid #EAECF0',
+};
+
+const summaryLabel: CSSProperties = {
+  display: 'block',
+  color: '#667085',
+  fontSize: 11,
+  fontWeight: 800,
+  marginBottom: 4,
+  textTransform: 'uppercase',
+  letterSpacing: .4,
+};
+
+const stageModalCard: CSSProperties = {
+  width: 'min(760px, 100%)',
   maxHeight: 'calc(100vh - 64px)',
   overflowY: 'auto',
   display: 'grid',
