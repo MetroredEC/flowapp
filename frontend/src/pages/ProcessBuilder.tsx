@@ -703,7 +703,7 @@ export default function ProcessBuilder() {
                             <span style={itemText}>
                               <strong style={ellipsis}>{field.label}</strong>
                               <small style={smallEllipsis}>
-                                {field.key}{field.required ? ' ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· Obligatorio' : ' ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· Opcional'}
+                                {field.key}{field.required ? ' ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· Obligatorio' : ' ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· Opcional'}
                               </small>
                             </span>
 
@@ -1410,8 +1410,7 @@ function TourOverlay({
       });
 
       window.setTimeout(() => {
-        const nextRect = element.getBoundingClientRect();
-        setRect(nextRect);
+        setRect(element.getBoundingClientRect());
       }, 260);
     };
 
@@ -1427,6 +1426,7 @@ function TourOverlay({
   }, [target, step]);
 
   const cardStyle = getTourCardPosition(rect);
+  const progress = Math.round(((step + 1) / total) * 100);
 
   return (
     <div style={tourBackdrop}>
@@ -1435,55 +1435,71 @@ function TourOverlay({
           <div
             style={{
               ...tourSpotlight,
-              top: Math.max(8, rect.top - 8),
-              left: Math.max(8, rect.left - 8),
-              width: rect.width + 16,
-              height: rect.height + 16,
+              top: Math.max(8, rect.top - 10),
+              left: Math.max(8, rect.left - 10),
+              width: rect.width + 20,
+              height: rect.height + 20,
             }}
           />
 
           <div
             style={{
               ...tourPulse,
-              top: Math.max(8, rect.top - 13),
-              left: Math.max(8, rect.left - 13),
-              width: rect.width + 26,
-              height: rect.height + 26,
+              top: Math.max(8, rect.top - 17),
+              left: Math.max(8, rect.left - 17),
+              width: rect.width + 34,
+              height: rect.height + 34,
+            }}
+          />
+
+          <div
+            style={{
+              ...tourPointer,
+              top: Math.max(16, rect.top + Math.min(60, rect.height / 2)),
+              left: Math.min(window.innerWidth - 42, rect.right + 10),
             }}
           />
         </>
       )}
 
       <div style={{ ...tourCard, ...cardStyle }} className="flow-tour-card">
-        <div style={tourHeader}>
-          <div>
-            <div style={tourEyebrow}>Tutorial</div>
-            <h2 style={tourTitle}>{title}</h2>
-          </div>
-
+        <div style={tourTopLine}>
+          <span style={tourStepBadge}>Paso {step + 1} de {total}</span>
           <button onClick={onClose} style={tourClose}>Cerrar</button>
+        </div>
+
+        <div>
+          <div style={tourEyebrow}>Tutorial guiado</div>
+          <h2 style={tourTitle}>{title}</h2>
         </div>
 
         <p style={tourText}>{text}</p>
 
-        <div style={tourHint}>{hint}</div>
+        <div style={tourHint}>
+          <span style={tourHintIcon}>i</span>
+          <span>{hint}</span>
+        </div>
 
-        <div style={tourProgress}>
-          {Array.from({ length: total }).map((_, index) => (
-            <span
-              key={index}
-              style={{
-                ...tourDot,
-                ...(index === step ? tourDotActive : {}),
-              }}
-            />
-          ))}
+        <div style={tourProgressTrack}>
+          <div style={{ ...tourProgressFill, width: progress + '%' }} />
         </div>
 
         <div style={tourActions}>
           <button onClick={onBack} disabled={step === 0} style={secondarySmallButton}>
             Atras
           </button>
+
+          <div style={tourDots}>
+            {Array.from({ length: total }).map((_, index) => (
+              <span
+                key={index}
+                style={{
+                  ...tourDot,
+                  ...(index === step ? tourDotActive : {}),
+                }}
+              />
+            ))}
+          </div>
 
           <button onClick={onNext} style={primaryButton}>
             {step === total - 1 ? 'Finalizar' : 'Siguiente'}
@@ -1493,19 +1509,20 @@ function TourOverlay({
     </div>
   );
 }
-
 function getTourCardPosition(rect: DOMRect | null): CSSProperties {
+  const width = 440;
+  const margin = 22;
+
   if (!rect) {
     return {
       position: 'fixed',
+      width,
       top: '50%',
       left: '50%',
       transform: 'translate(-50%, -50%)',
     };
   }
 
-  const width = 420;
-  const margin = 20;
   const viewportWidth = window.innerWidth;
   const viewportHeight = window.innerHeight;
 
@@ -1522,10 +1539,8 @@ function getTourCardPosition(rect: DOMRect | null): CSSProperties {
     left = Math.max(margin, Math.min(viewportWidth - width - margin, rect.left));
   }
 
-  const top = Math.max(
-    margin,
-    Math.min(viewportHeight - 260, rect.top)
-  );
+  const preferredTop = rect.top + rect.height / 2 - 170;
+  const top = Math.max(margin, Math.min(viewportHeight - 360, preferredTop));
 
   return {
     position: 'fixed',
@@ -1535,7 +1550,6 @@ function getTourCardPosition(rect: DOMRect | null): CSSProperties {
     transform: 'none',
   };
 }
-
 function GuideStep({ number, title, text }: { number: string; title: string; text: string }) {
   return (
     <div style={guideStep}>
@@ -2301,27 +2315,20 @@ const tourBackdrop: CSSProperties = {
   inset: 0,
   zIndex: 80,
   pointerEvents: 'auto',
-  background: 'rgba(16, 24, 40, .34)',
-  backdropFilter: 'blur(4px)',
+  background: 'rgba(16, 24, 40, .42)',
 };
 
 const tourCard: CSSProperties = {
   display: 'grid',
-  gap: 12,
-  padding: 18,
-  borderRadius: 18,
+  gap: 14,
+  padding: 20,
+  borderRadius: 22,
   background: '#FFFFFF',
-  border: '1px solid #EAECF0',
-  boxShadow: '0 28px 80px rgba(16, 24, 40, .24)',
+  border: '1px solid rgba(255,255,255,.92)',
+  boxShadow: '0 32px 90px rgba(16, 24, 40, .28)',
   zIndex: 83,
 };
 
-const tourHeader: CSSProperties = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  gap: 14,
-  alignItems: 'flex-start',
-};
 
 const tourTitle: CSSProperties = {
   margin: '3px 0 0',
@@ -2348,11 +2355,6 @@ const tourHint: CSSProperties = {
   fontWeight: 800,
 };
 
-const tourProgress: CSSProperties = {
-  display: 'flex',
-  gap: 6,
-  alignItems: 'center',
-};
 
 const tourDot: CSSProperties = {
   width: 8,
@@ -2594,19 +2596,82 @@ const tourEyebrow: CSSProperties = {
 };
 const tourSpotlight: CSSProperties = {
   position: 'fixed',
-  borderRadius: 16,
-  background: 'rgba(255,255,255,.08)',
+  borderRadius: 18,
+  background: 'rgba(255,255,255,.10)',
   border: '2px solid #84CAFF',
-  boxShadow: '0 0 0 9999px rgba(16, 24, 40, .18), 0 18px 44px rgba(12, 68, 124, .24)',
+  boxShadow: '0 0 0 9999px rgba(16, 24, 40, .18), 0 20px 60px rgba(12, 68, 124, .34)',
   pointerEvents: 'none',
   zIndex: 81,
 };
 
 const tourPulse: CSSProperties = {
   position: 'fixed',
-  borderRadius: 20,
-  border: '2px solid rgba(24, 95, 165, .52)',
+  borderRadius: 22,
+  border: '2px solid rgba(132, 202, 255, .70)',
   pointerEvents: 'none',
   zIndex: 82,
   animation: 'tourPulse 1400ms ease-in-out infinite',
+};
+const tourTopLine: CSSProperties = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  gap: 12,
+  alignItems: 'center',
+};
+
+const tourStepBadge: CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  width: 'fit-content',
+  borderRadius: 999,
+  padding: '6px 10px',
+  background: '#F5FAFF',
+  border: '1px solid #B2DDFF',
+  color: '#185FA5',
+  fontSize: 12,
+  fontWeight: 900,
+};
+
+const tourHintIcon: CSSProperties = {
+  width: 22,
+  height: 22,
+  borderRadius: '50%',
+  display: 'grid',
+  placeItems: 'center',
+  background: '#0C447C',
+  color: '#FFFFFF',
+  fontSize: 12,
+  fontWeight: 900,
+  flexShrink: 0,
+};
+
+const tourProgressTrack: CSSProperties = {
+  height: 8,
+  borderRadius: 999,
+  background: '#EAECF0',
+  overflow: 'hidden',
+};
+
+const tourProgressFill: CSSProperties = {
+  height: '100%',
+  borderRadius: 999,
+  background: 'linear-gradient(90deg, #0C447C, #2E90FA)',
+  transition: 'width 220ms ease',
+};
+
+const tourDots: CSSProperties = {
+  display: 'flex',
+  gap: 6,
+  alignItems: 'center',
+};
+
+const tourPointer: CSSProperties = {
+  position: 'fixed',
+  width: 34,
+  height: 34,
+  borderRadius: '50%',
+  background: '#0C447C',
+  boxShadow: '0 14px 34px rgba(12, 68, 124, .34)',
+  zIndex: 82,
+  pointerEvents: 'none',
 };
