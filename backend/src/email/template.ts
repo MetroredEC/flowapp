@@ -1,38 +1,38 @@
-﻿export interface ApprovalEmailData {
-  approverName: string;
-  requesterName: string;
-  requestTitle: string;
-  requestType: string;
-  description: string;
-  level: number;
-  totalLevels: number;
-  requestId: string;
-  attachments: { filename: string; url: string }[];
-  approveUrl: string;
-  rejectUrl: string;
-  platformUrl: string;
-  campaignData?: string | null;
+export interface ApprovalEmailData {
+ approverName: string;
+ requesterName: string;
+ requestTitle: string;
+ requestType: string;
+ description: string;
+ level: number;
+ totalLevels: number;
+ requestId: string;
+ attachments: { filename: string; url: string }[];
+ approveUrl: string;
+ rejectUrl: string;
+ platformUrl: string;
+ campaignData?: string | null;
 }
 
 export function buildApprovalEmail(d: ApprovalEmailData): { subject: string; html: string; text: string } {
-  const hasAttachments = d.attachments.length > 0;
+ const hasAttachments = d.attachments.length > 0;
 
-  const attachmentHtml = hasAttachments
-    ? `<tr><td style="padding:10px 0;color:#333;font-size:13px;border-top:1px solid #ECECEA;">
-        Esta solicitud incluye <strong>${d.attachments.length}</strong> archivo(s) adjunto(s). Revisa los archivos en la plataforma.
-      </td></tr>`
-    : `<tr><td style="padding:10px 0;color:#888;font-size:13px;border-top:1px solid #ECECEA;">
-        Esta solicitud no tiene archivos adjuntos.
-      </td></tr>`;
+ const attachmentHtml = hasAttachments
+  ? `<tr><td style="padding:10px 0;color:#333;font-size:13px;border-top:1px solid #ECECEA;">
+    Esta solicitud incluye <strong>${d.attachments.length}</strong> archivo(s) adjunto(s). Revisa los archivos en la plataforma.
+   </td></tr>`
+ : `<tr><td style="padding:10px 0;color:#888;font-size:13px;border-top:1px solid #ECECEA;">
+    Esta solicitud no tiene archivos adjuntos.
+   </td></tr>`;
 
-  const attachmentText = hasAttachments
-    ? `${d.attachments.length} archivo(s) adjunto(s). Revisar en la plataforma.`
-    : 'Esta solicitud no tiene archivos adjuntos.';
+ const attachmentText = hasAttachments
+  ? `${d.attachments.length} archivo(s) adjunto(s). Revisar en la plataforma.`
+ : 'Esta solicitud no tiene archivos adjuntos.';
 
-  const viewUrl = d.platformUrl;
-  const subject = `[FlowApp] Aprobacion requerida - ${d.requestTitle}`;
+ const viewUrl = d.platformUrl;
+ const subject = `[FlowApp] Aprobacion requerida - ${d.requestTitle}`;
 
-  const html = `<!doctype html>
+ const html = `<!doctype html>
 <html lang="es">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="margin:0;padding:0;background:#F2F2F0;font-family:Segoe UI,Arial,sans-serif;">
@@ -79,25 +79,25 @@ Para aprobar o rechazar, ingresa a la plataforma. Los adjuntos no se incluyen en
 </body>
 </html>`;
 
-  const text = `Aprobacion requerida
+ const text = `Aprobacion requerida
 Solicitud: ${d.requestTitle}
 Tipo: ${d.requestType}
 Solicitante: ${d.requesterName}
 ${attachmentText}
 Ver solicitud y decidir: ${viewUrl}`;
 
-  return { subject, html, text };
+ return { subject, html, text };
 }
 
 function esc(value: unknown): string {
-  return String(value ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
+ return String(value ?? '')
+ .replace(/&/g, '&amp;')
+ .replace(/</g, '&lt;')
+ .replace(/>/g, '&gt;')
+ .replace(/"/g, '&quot;')
+ .replace(/'/g, '&#39;');
 }
 
 function attr(value: unknown): string {
-  return esc(value);
+ return esc(value);
 }

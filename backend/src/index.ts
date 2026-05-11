@@ -17,19 +17,19 @@ import inventory from './routes/inventory';
 const app = new Hono<AppEnv>();
 
 app.use('*', cors({
-  origin: (origin) => origin,
-  allowHeaders: ['Content-Type', 'Authorization'],
-  allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  exposeHeaders: ['Content-Length'],
-  maxAge: 600,
-  credentials: true,
+ origin: (origin) => origin,
+ allowHeaders: ['Content-Type', 'Authorization'],
+ allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+ exposeHeaders: ['Content-Length'],
+ maxAge: 600,
+ credentials: true,
 }));
 
 app.get('/', (c) => {
-  return c.json({
-    ok: true,
-    service: 'flowapp-api'
-  });
+ return c.json({
+  ok: true,
+  service: 'flowapp-api'
+ });
 });
 
 app.use('/api/*', authMiddleware);
@@ -44,19 +44,19 @@ app.route('/api/email-actions', emailActions);
 app.route('/api/inventory', inventory);
 
 app.notFound((c) => {
-  return c.json({
-    error: 'not_found',
-    path: c.req.path
-  }, 404);
+ return c.json({
+  error: 'not_found',
+  path: c.req.path
+ }, 404);
 });
 
 app.onError((err, c) => {
-  console.error(err);
+ console.error(err);
 
-  return c.json({
-    error: 'internal_error',
-    message: err.message
-  }, 500);
+ return c.json({
+  error: 'internal_error',
+  message: err.message
+ }, 500);
 });
 
 export default app;

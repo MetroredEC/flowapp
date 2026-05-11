@@ -20,48 +20,48 @@ Los aprobadores pueden **aprobar o rechazar directamente desde el correo**, sin 
 ```
 flowapp/
  backend/
-    src/
-       index.ts                 Entry point Hono
-       types.ts                 Tipos globales
-       middleware/
-          auth.ts              JWT Entra ID
-          cors.ts
-       auth/
-          tokens.ts            Magic links HMAC-SHA256
-       db/
-          schema.sql           Schema D1 completo
-       email/
-          template.ts          HTML del correo
-       utils/
-          graph.ts             MS Graph (users + mail)
-          approvals.ts         Motor de flujo de aprobaci³n
-       routes/
-           requests.ts          CRUD solicitudes
-           admin.ts             Panel admin + buscador
-           email-actions.ts     /approve y /reject magic links
-    wrangler.toml
-    package.json
+   src/
+     index.ts          Entry point Hono
+     types.ts          Tipos globales
+     middleware/
+       auth.ts        JWT Entra ID
+       cors.ts
+     auth/
+       tokens.ts       Magic links HMAC-SHA256
+     db/
+       schema.sql       Schema D1 completo
+     email/
+       template.ts      HTML del correo
+     utils/
+       graph.ts        MS Graph (users + mail)
+       approvals.ts      Motor de flujo de aprobaci³n
+     routes/
+       requests.ts      CRUD solicitudes
+       admin.ts        Panel admin + buscador
+       email-actions.ts    /approve y /reject magic links
+   wrangler.toml
+   package.json
 
  frontend/
-    src/
-       main.tsx
-       App.tsx                  Router + login gate
-       auth/msal.ts             Configuraci³n MSAL
-       lib/api.ts               API client tipado
-       components/
-          layout/Layout.tsx    Sidebar + nav
-          ui/index.tsx         Componentes reutilizables
-       pages/
-           Dashboard.tsx
-           RequestList.tsx
-           RequestDetail.tsx
-           NewRequest.tsx
-           AdminPanel.tsx       Tipos + flujos + buscador Entra ID
-    vite.config.ts
-    package.json
+   src/
+     main.tsx
+     App.tsx          Router + login gate
+     auth/msal.ts        Configuraci³n MSAL
+     lib/api.ts         API client tipado
+     components/
+       layout/Layout.tsx   Sidebar + nav
+       ui/index.tsx      Componentes reutilizables
+     pages/
+       Dashboard.tsx
+       RequestList.tsx
+       RequestDetail.tsx
+       NewRequest.tsx
+       AdminPanel.tsx     Tipos + flujos + buscador Entra ID
+   vite.config.ts
+   package.json
 
- scripts/setup.sh                 Setup automtico de recursos CF
- .github/workflows/deploy.yml     CI/CD completo
+ scripts/setup.sh          Setup automtico de recursos CF
+.github/workflows/deploy.yml    CI/CD completo
 ```
 
 ## Setup desde cero (primera vez)
@@ -138,15 +138,15 @@ Habilita GitHub Pages en Settings   Pages   Source: **GitHub Actions**.
 
 ```
 Solicitante   crea solicitud con adjuntos
-     
+   
 Worker   genera token HMAC (UUID + firma, 72h, un solo uso)
-     
+   
 MS Graph   env­a correo HTML al aprobador nivel 1
-     
+   
 Aprobador   clic en "Aprobar" o "Rechazar" desde su correo
-     
+   
 Worker   valida token   consume (invalida)   registra decisi³n
-     
+   
 Si aprueba y hay ms niveles   notifica al siguiente aprobador
 Si aprueba en nivel 4 (ºltimo)   solicitud aprobada   notifica solicitante
 Si rechaza   solicitud rechazada   notifica solicitante con comentario
