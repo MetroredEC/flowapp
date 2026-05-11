@@ -242,7 +242,7 @@ function LevelEditor({ index, level, onUpdate, onRemove }: {
         }}>{index + 1}</span>
         {onRemove && (
           <button onClick={onRemove} style={{ background: 'none', border: 'none',
-            color: '#D85A30', cursor: 'pointer', fontSize: 13 }}>• Eliminar</button>
+            color: '#D85A30', cursor: 'pointer', fontSize: 13 }}> Eliminar</button>
         )}
       </div>
 
@@ -310,7 +310,7 @@ function LevelEditor({ index, level, onUpdate, onRemove }: {
           {level.approver_value && (
             <div style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '8px 12px',
               background: '#E1F5EE', borderRadius: 8, fontSize: 13 }}>
-              <span style={{ fontSize: 16 }}>“</span>
+              <span style={{ fontSize: 16 }}></span>
               <div>
                 <span style={{ fontWeight: 700, color: '#085041' }}>{level.approver_name}</span>
                 <span style={{ color: '#0F6E56', marginLeft: 8 }}>{level.approver_email}</span>
@@ -320,7 +320,7 @@ function LevelEditor({ index, level, onUpdate, onRemove }: {
         </div>
       ) : (
         <Field label="Cargo (job title en Entra ID)"
-          hint="El sistema resolver¡ el aprobador con este cargo al crear la solicitud">
+          hint="El sistema resolver el aprobador con este cargo al crear la solicitud">
           <Input value={level.approver_value}
             onChange={e => onUpdate({ approver_value: e.target.value })}
             placeholder="Ej: Gerente de Marketing" />

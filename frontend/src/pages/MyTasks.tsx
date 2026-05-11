@@ -176,7 +176,7 @@ export default function MyTasks() {
                     {task.request_title || 'Solicitud sin t­tulo'}
                   </div>
                   <div style={{ fontSize: 12, color: '#888', marginTop: 6 }}>
-                    {task.request_type_name || 'Proceso'} ‚· {task.requester_name || 'Solicitante'}
+                    {task.request_type_name || 'Proceso'} · {task.requester_name || 'Solicitante'}
                   </div>
                 </button>
               ))}

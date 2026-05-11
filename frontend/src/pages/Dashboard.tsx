@@ -33,7 +33,7 @@ export default function Dashboard() {
   return (
     <div style={{ padding: 32, maxWidth: 1100, margin: '0 auto' }}>
       <PageHeader
-        title={`Hola, ${name} ð‘‹`}
+        title={`Hola, ${name} °˜¹`}
         subtitle="Resumen de solicitudes activas"
         action={
           <button onClick={() => navigate('/requests/new')} style={{

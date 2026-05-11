@@ -1,6 +1,6 @@
 import { ReactNode, CSSProperties } from 'react';
 
-// ””” Card ”””””””””””””””””””””””””””””””””””””””””””””””””””””””””””””””””””””
+//  Card 
 export function Card({ children, style }: { children: ReactNode; style?: CSSProperties }) {
   return (
     <div style={{
@@ -12,7 +12,7 @@ export function Card({ children, style }: { children: ReactNode; style?: CSSProp
   );
 }
 
-// ””” Page header ””””””””””””””””””””””””””””””””””””””””””””””””””””””””””””””
+//  Page header 
 export function PageHeader({ title, subtitle, action }: {
   title: string; subtitle?: string; action?: ReactNode;
 }) {
@@ -28,7 +28,7 @@ export function PageHeader({ title, subtitle, action }: {
   );
 }
 
-// ””” Status badge ”””””””””””””””””””””””””””””””””””””””””””””””””””””””””””””
+//  Status badge 
 const STATUS_MAP: Record<string, { label: string; bg: string; color: string }> = {
   pending:     { label: 'Pendiente',   bg: '#FAEEDA', color: '#633806' },
   in_progress: { label: 'En proceso',  bg: '#E6F1FB', color: '#0C447C' },
@@ -47,7 +47,7 @@ export function StatusBadge({ status }: { status: string }) {
   );
 }
 
-// ””” Step badge ”””””””””””””””””””””””””””””””””””””””””””””””””””””””””””””””
+//  Step badge 
 const STEP_MAP: Record<string, { bg: string; color: string }> = {
   pending:  { bg: '#F1EFE8', color: '#5F5E5A' },
   approved: { bg: '#E1F5EE', color: '#085041' },
@@ -67,7 +67,7 @@ export function StepBadge({ status }: { status: string }) {
   );
 }
 
-// ””” Button ”””””””””””””””””””””””””””””””””””””””””””””””””””””””””””””””””””
+//  Button 
 type BtnVariant = 'primary' | 'secondary' | 'danger' | 'ghost';
 const BTN: Record<BtnVariant, CSSProperties> = {
   primary:   { background: '#0C447C', color: '#fff', border: 'none' },
@@ -93,7 +93,7 @@ export function Btn({
   );
 }
 
-// ””” Input ””””””””””””””””””””””””””””””””””””””””””””””””””””””””””””””””””””
+//  Input 
 export function Field({
   label, children, hint,
 }: { label: string; children: ReactNode; hint?: string }) {
@@ -143,7 +143,7 @@ export function Select(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
   );
 }
 
-// ””” Spinner ””””””””””””””””””””””””””””””””””””””””””””””””””””””””””””””””””
+//  Spinner 
 export function Spinner({ size = 24 }: { size?: number }) {
   return (
     <div style={{
@@ -156,17 +156,17 @@ export function Spinner({ size = 24 }: { size?: number }) {
   );
 }
 
-// ””” Empty state ””””””””””””””””””””””””””””””””””””””””””””””””””””””””””””””
+//  Empty state 
 export function Empty({ message }: { message: string }) {
   return (
     <div style={{ textAlign: 'center', padding: '48px 24px', color: '#aaa' }}>
-      <div style={{ fontSize: 36, marginBottom: 12 }}>—‹</div>
+      <div style={{ fontSize: 36, marginBottom: 12 }}>¹</div>
       <p style={{ fontSize: 14 }}>{message}</p>
     </div>
   );
 }
 
-// ””” Nivel stepper visual ”””””””””””””””””””””””””””””””””””””””””””””””””””””
+//  Nivel stepper visual 
 export function LevelStepper({ current, total, steps }: {
   current: number; total: number;
   steps?: { level: number; approver_name: string; status: string }[];
@@ -187,7 +187,7 @@ export function LevelStepper({ current, total, steps }: {
               width: 32, height: 32, borderRadius: '50%', background: bg, color,
               fontSize: 13, fontWeight: 700, display: 'flex', alignItems: 'center',
               justifyContent: 'center', cursor: 'default',
-            }}>{isRejected ? '•' : isDone ? '“' : n}</div>
+            }}>{isRejected ? '' : isDone ? '' : n}</div>
             {n < total && <div style={{ width: 24, height: 2, background: isDone ? '#1D9E75' : '#E8E8E4' }} />}
           </div>
         );

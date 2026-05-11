@@ -119,13 +119,13 @@ export default function NewRequest() {
         </Field>
 
         {/* Adjuntos */}
-        <Field label="Archivos de respaldo" hint="PDFs, im¡genes, cotizaciones. M¡x 20 MB por archivo.">
+        <Field label="Archivos de respaldo" hint="PDFs, imgenes, cotizaciones. Mx 20 MB por archivo.">
           <label style={{
             display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px',
             border: '1.5px dashed #ccc', borderRadius: 8, cursor: 'pointer',
             color: '#888', fontSize: 13, background: '#FAFAFA',
           }}>
-            <span style={{ fontSize: 18 }}>°Å½</span>
+            <span style={{ fontSize: 18 }}>°…½</span>
             Adjuntar archivos
             <input type="file" multiple style={{ display: 'none' }} onChange={addFiles}
               accept=".pdf,.png,.jpg,.jpeg,.xlsx,.docx,.csv" />
@@ -160,9 +160,9 @@ export default function NewRequest() {
             padding: '12px 16px', background: '#E6F1FB', borderRadius: 8,
             marginBottom: 20, fontSize: 13, color: '#0C447C',
           }}>
-            La solicitud de tipo <strong>{selectedType.name}</strong> seguir¡ el flujo de aprobaci³n
+            La solicitud de tipo <strong>{selectedType.name}</strong> seguir el flujo de aprobaci³n
             configurado de hasta 4 niveles.
-            {isMarketing && ' Al finalizar la aprobaci³n podr¡s registrar el costo de campaa con desglose por proveedor.'}
+            {isMarketing && ' Al finalizar la aprobaci³n podrs registrar el costo de campaa con desglose por proveedor.'}
           </div>
         )}
 

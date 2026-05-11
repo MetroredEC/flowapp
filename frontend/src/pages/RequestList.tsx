@@ -87,7 +87,7 @@ export default function RequestList() {
                       day: 'numeric', month: 'short', year: 'numeric'
                     })}
                     {r.attachment_count > 0 && (
-                      <span style={{ marginLeft: 8 }}>°Å½ {r.attachment_count}</span>
+                      <span style={{ marginLeft: 8 }}>°…½ {r.attachment_count}</span>
                     )}
                   </div>
                 </div>
