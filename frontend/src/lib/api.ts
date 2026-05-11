@@ -1,3 +1,11 @@
+export type DirectoryUser = {
+  id: string;
+  displayName?: string;
+  mail?: string;
+  userPrincipalName?: string;
+  jobTitle?: string;
+  department?: string;
+};
 import { msalInstance, loginRequest } from '../auth/msal';
 
 const BASE = String(import.meta.env.VITE_API_URL || 'https://flowapp.dbermeo.workers.dev').replace(/\/+$/, '');
@@ -91,6 +99,8 @@ export interface ProcessBlueprint {
  created_at: string;
 }
 export const api = {
+  searchDirectoryUsers: (query: string) =>
+    request<{ data: DirectoryUser[] }>('GET', '/api/directory/users?query=' + encodeURIComponent(query)),
  processBlueprints: () =>
   request<{ data: ProcessBlueprint[] }>('GET', '/api/process-builder/blueprints'),
 

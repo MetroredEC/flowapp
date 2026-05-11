@@ -13,6 +13,7 @@ import bpmTasks from './routes/bpm-tasks';
 import processBuilderRoutes from './routes/process-builder';
 import emailActions from './routes/email-actions';
 import inventory from './routes/inventory';
+import directory from './routes/directory';
 
 const app = new Hono<AppEnv>();
 
@@ -42,6 +43,7 @@ app.route('/api/bpm-tasks', bpmTasks);
 app.route('/api/process-builder', processBuilderRoutes);
 app.route('/api/email-actions', emailActions);
 app.route('/api/inventory', inventory);
+app.route('/api/directory', directory);
 
 app.notFound((c) => {
  return c.json({
