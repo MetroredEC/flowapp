@@ -154,7 +154,7 @@ router.post('/blueprints/:id/analyze', async (c) => {
    label: 'Compras cotiza y revisa',
    description: 'Compras valida proveedores, cotizaciones y disponibilidad.',
    approver_type: 'email',
-   approver_email: 'compras@metrored.med.ec',
+   approver_email: '',
    form: {
     fields: [
      {
@@ -193,7 +193,7 @@ router.post('/blueprints/:id/analyze', async (c) => {
    label: 'Contabilidad valida presupuesto',
    description: 'Contabilidad confirma disponibilidad presupuestaria.',
    approver_type: 'email',
-   approver_email: 'contabilidad@metrored.med.ec',
+   approver_email: '',
    form: {
     fields: [
      {
@@ -232,7 +232,7 @@ router.post('/blueprints/:id/analyze', async (c) => {
    label: 'Compras despacha',
    description: 'Compras registra despacho, cantidades y fecha estimada.',
    approver_type: 'email',
-   approver_email: 'compras@metrored.med.ec',
+   approver_email: '',
    form: {
     fields: [
      {
