@@ -26,7 +26,7 @@ export default function RequestList() {
     <div style={{ padding: 32, maxWidth: 1000, margin: '0 auto' }}>
       <PageHeader
         title="Solicitudes"
-        subtitle="Todas tus solicitudes y su estado de aprobación"
+        subtitle="Todas tus solicitudes y su estado de aprobaci³n"
         action={
           <button onClick={() => navigate('/requests/new')} style={{
             background: '#0C447C', color: '#fff', border: 'none', borderRadius: 8,
@@ -37,7 +37,7 @@ export default function RequestList() {
 
       <div style={{ display: 'flex', gap: 12, marginBottom: 20 }}>
         <Input
-          placeholder="Buscar por título..."
+          placeholder="Buscar por t­tulo..."
           value={q}
           onChange={e => setQ(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && load()}
@@ -87,7 +87,7 @@ export default function RequestList() {
                       day: 'numeric', month: 'short', year: 'numeric'
                     })}
                     {r.attachment_count > 0 && (
-                      <span style={{ marginLeft: 8 }}>📎 {r.attachment_count}</span>
+                      <span style={{ marginLeft: 8 }}>°Å½ {r.attachment_count}</span>
                     )}
                   </div>
                 </div>

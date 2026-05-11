@@ -173,10 +173,10 @@ export default function MyTasks() {
                 >
                   <div style={{ fontWeight: 800, color: '#111', marginBottom: 5 }}>{task.title}</div>
                   <div style={{ fontSize: 13, color: '#555', lineHeight: 1.45 }}>
-                    {task.request_title || 'Solicitud sin tÃ­tulo'}
+                    {task.request_title || 'Solicitud sin t­tulo'}
                   </div>
                   <div style={{ fontSize: 12, color: '#888', marginTop: 6 }}>
-                    {task.request_type_name || 'Proceso'} Â· {task.requester_name || 'Solicitante'}
+                    {task.request_type_name || 'Proceso'} ‚· {task.requester_name || 'Solicitante'}
                   </div>
                 </button>
               ))}
@@ -216,7 +216,7 @@ export default function MyTasks() {
               </h2>
 
               <p style={{ color: '#666', fontSize: 14, lineHeight: 1.6, marginBottom: 18 }}>
-                {String(detail?.task?.request_description ?? 'Sin descripciÃ³n.')}
+                {String(detail?.task?.request_description ?? 'Sin descripci³n.')}
               </p>
 
               <div style={{
@@ -272,7 +272,7 @@ export default function MyTasks() {
                 value={comment}
                 onChange={e => setComment(e.target.value)}
                 maxLength={1200}
-                placeholder="Escribe un comentario para la decisiÃ³n..."
+                placeholder="Escribe un comentario para la decisi³n..."
                 style={{
                   width: '100%',
                   minHeight: 110,

@@ -28,8 +28,8 @@ export default function NewRequest() {
   const validate = () => {
     const e: Record<string, string> = {};
     if (!form.request_type_id) e.request_type_id = 'Selecciona un tipo';
-    if (!form.title.trim())    e.title = 'El título es requerido';
-    if (!form.description.trim()) e.description = 'La descripción es requerida';
+    if (!form.title.trim())    e.title = 'El t­tulo es requerido';
+    if (!form.description.trim()) e.description = 'La descripci³n es requerida';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -47,7 +47,7 @@ export default function NewRequest() {
       for (const file of files) {
         await api.uploadFile(data.id, file);
       }
-      // Confirmar y enviar (activa el flujo y envía correo con adjuntos)
+      // Confirmar y enviar (activa el flujo y env­a correo con adjuntos)
       await api.submitRequest(data.id);
       navigate(`/requests/${data.id}`);
     } catch (err) {
@@ -75,7 +75,7 @@ export default function NewRequest() {
 
   return (
     <div style={{ padding: 32, maxWidth: 720, margin: '0 auto' }}>
-      <PageHeader title="Nueva solicitud" subtitle="Completa la información y adjunta los respaldos" />
+      <PageHeader title="Nueva solicitud" subtitle="Completa la informaci³n y adjunta los respaldos" />
 
       <Card>
         <Field label="Tipo de solicitud" hint={errors.request_type_id}>
@@ -84,7 +84,7 @@ export default function NewRequest() {
             onChange={e => set('request_type_id', e.target.value)}
             style={{ borderColor: errors.request_type_id ? '#D85A30' : undefined }}
           >
-            <option value="">Selecciona un tipo…</option>
+            <option value="">Selecciona un tipo¦</option>
             {types.map(t => (
               <option key={t.id} value={t.id}>{t.name}</option>
             ))}
@@ -94,11 +94,11 @@ export default function NewRequest() {
           )}
         </Field>
 
-        <Field label="Título de la solicitud">
+        <Field label="T­tulo de la solicitud">
           <Input
             value={form.title}
             onChange={e => set('title', e.target.value)}
-            placeholder="Ej: Campaña BTL Q1 2026 — Quito"
+            placeholder="Ej: Campaa BTL Q1 2026  Quito"
             style={{ borderColor: errors.title ? '#D85A30' : undefined }}
           />
           {errors.title && (
@@ -106,11 +106,11 @@ export default function NewRequest() {
           )}
         </Field>
 
-        <Field label="Descripción y justificación">
+        <Field label="Descripci³n y justificaci³n">
           <Textarea
             value={form.description}
             onChange={e => set('description', e.target.value)}
-            placeholder="Explica el objetivo, justificación y alcance de la solicitud…"
+            placeholder="Explica el objetivo, justificaci³n y alcance de la solicitud¦"
             style={{ minHeight: 120, borderColor: errors.description ? '#D85A30' : undefined }}
           />
           {errors.description && (
@@ -119,13 +119,13 @@ export default function NewRequest() {
         </Field>
 
         {/* Adjuntos */}
-        <Field label="Archivos de respaldo" hint="PDFs, imágenes, cotizaciones. Máx 20 MB por archivo.">
+        <Field label="Archivos de respaldo" hint="PDFs, im¡genes, cotizaciones. M¡x 20 MB por archivo.">
           <label style={{
             display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px',
             border: '1.5px dashed #ccc', borderRadius: 8, cursor: 'pointer',
             color: '#888', fontSize: 13, background: '#FAFAFA',
           }}>
-            <span style={{ fontSize: 18 }}>📎</span>
+            <span style={{ fontSize: 18 }}>°Å½</span>
             Adjuntar archivos
             <input type="file" multiple style={{ display: 'none' }} onChange={addFiles}
               accept=".pdf,.png,.jpg,.jpeg,.xlsx,.docx,.csv" />
@@ -137,7 +137,7 @@ export default function NewRequest() {
                   display: 'flex', alignItems: 'center', gap: 10,
                   padding: '8px 12px', background: '#F8F8F6', borderRadius: 7,
                 }}>
-                  <span style={{ fontSize: 16 }}>📄</span>
+                  <span style={{ fontSize: 16 }}>°</span>
                   <span style={{ flex: 1, fontSize: 13, color: '#333',
                     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {f.name}
@@ -147,7 +147,7 @@ export default function NewRequest() {
                   </span>
                   <button onClick={() => removeFile(i)}
                     style={{ background: 'none', border: 'none', color: '#D85A30',
-                      cursor: 'pointer', fontSize: 14, padding: 2 }}>✕</button>
+                      cursor: 'pointer', fontSize: 14, padding: 2 }}></button>
                 </div>
               ))}
             </div>
@@ -160,16 +160,16 @@ export default function NewRequest() {
             padding: '12px 16px', background: '#E6F1FB', borderRadius: 8,
             marginBottom: 20, fontSize: 13, color: '#0C447C',
           }}>
-            La solicitud de tipo <strong>{selectedType.name}</strong> seguirá el flujo de aprobación
+            La solicitud de tipo <strong>{selectedType.name}</strong> seguir¡ el flujo de aprobaci³n
             configurado de hasta 4 niveles.
-            {isMarketing && ' Al finalizar la aprobación podrás registrar el costo de campaña con desglose por proveedor.'}
+            {isMarketing && ' Al finalizar la aprobaci³n podr¡s registrar el costo de campaa con desglose por proveedor.'}
           </div>
         )}
 
         <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
           <Btn variant="secondary" onClick={() => navigate(-1)}>Cancelar</Btn>
           <Btn onClick={submit} disabled={saving}>
-            {saving ? 'Enviando…' : 'Enviar solicitud →'}
+            {saving ? 'Enviando¦' : 'Enviar solicitud  '}
           </Btn>
         </div>
       </Card>

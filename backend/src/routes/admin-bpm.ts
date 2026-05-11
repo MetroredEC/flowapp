@@ -43,7 +43,7 @@ router.post('/node', async (c) => {
 });
 
 // =========================
-// Crear conexión
+// Crear conexi³n
 // =========================
 router.post('/edge', async (c) => {
   const body = await c.req.json();

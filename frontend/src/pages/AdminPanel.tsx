@@ -9,7 +9,7 @@ export default function AdminPanel() {
 
   return (
     <div style={{ padding: 32, maxWidth: 1000, margin: '0 auto' }}>
-      <PageHeader title="Administración" subtitle="Tipos de solicitud, flujos de aprobación y configuración" />
+      <PageHeader title="Administraci³n" subtitle="Tipos de solicitud, flujos de aprobaci³n y configuraci³n" />
 
       <div style={{ display: 'flex', gap: 4, marginBottom: 24, background: '#fff',
         padding: 4, borderRadius: 10, border: '1px solid #E8E8E4', width: 'fit-content' }}>
@@ -19,7 +19,7 @@ export default function AdminPanel() {
             cursor: 'pointer', background: tab === t ? '#0C447C' : 'transparent',
             color: tab === t ? '#fff' : '#888', transition: 'all .15s',
           }}>
-            {t === 'types' ? 'Tipos de solicitud' : 'Flujos de aprobación'}
+            {t === 'types' ? 'Tipos de solicitud' : 'Flujos de aprobaci³n'}
           </button>
         ))}
       </div>
@@ -85,9 +85,9 @@ function TypesPanel() {
             <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
               placeholder="Ej: Compras internacionales" />
           </Field>
-          <Field label="Descripción (opcional)">
+          <Field label="Descripci³n (opcional)">
             <Input value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-              placeholder="Descripción breve" />
+              placeholder="Descripci³n breve" />
           </Field>
           <div style={{ display: 'flex', gap: 10 }}>
             <Btn onClick={save}>Guardar</Btn>
@@ -166,7 +166,7 @@ function FlowsPanel() {
       <Card style={{ marginBottom: 20 }}>
         <Field label="Tipo de solicitud">
           <Select value={selType} onChange={e => setSelType(e.target.value)}>
-            <option value="">Selecciona un tipo…</option>
+            <option value="">Selecciona un tipo¦</option>
             {types.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
           </Select>
         </Field>
@@ -191,7 +191,7 @@ function FlowsPanel() {
               }}>+ Agregar nivel ({levels.length}/4)</button>
             )}
             <Btn onClick={save} disabled={saving}>
-              {saving ? 'Guardando…' : 'Guardar flujo'}
+              {saving ? 'Guardando¦' : 'Guardar flujo'}
             </Btn>
           </div>
         </div>
@@ -242,7 +242,7 @@ function LevelEditor({ index, level, onUpdate, onRemove }: {
         }}>{index + 1}</span>
         {onRemove && (
           <button onClick={onRemove} style={{ background: 'none', border: 'none',
-            color: '#D85A30', cursor: 'pointer', fontSize: 13 }}>✕ Eliminar</button>
+            color: '#D85A30', cursor: 'pointer', fontSize: 13 }}>• Eliminar</button>
         )}
       </div>
 
@@ -254,7 +254,7 @@ function LevelEditor({ index, level, onUpdate, onRemove }: {
         <Field label="Tipo de aprobador">
           <Select value={level.approver_type}
             onChange={e => onUpdate({ approver_type: e.target.value as 'fixed_user' | 'job_title' })}>
-            <option value="fixed_user">Usuario específico</option>
+            <option value="fixed_user">Usuario espec­fico</option>
             <option value="job_title">Por cargo</option>
           </Select>
         </Field>
@@ -270,7 +270,7 @@ function LevelEditor({ index, level, onUpdate, onRemove }: {
                   setQuery(e.target.value);
                   if (!e.target.value) onUpdate({ approver_value: '', approver_name: '', approver_email: '' });
                 }}
-                placeholder="Escribe nombre o cargo…"
+                placeholder="Escribe nombre o cargo¦"
               />
               {searching && (
                 <div style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)' }}>
@@ -310,7 +310,7 @@ function LevelEditor({ index, level, onUpdate, onRemove }: {
           {level.approver_value && (
             <div style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '8px 12px',
               background: '#E1F5EE', borderRadius: 8, fontSize: 13 }}>
-              <span style={{ fontSize: 16 }}>✓</span>
+              <span style={{ fontSize: 16 }}>“</span>
               <div>
                 <span style={{ fontWeight: 700, color: '#085041' }}>{level.approver_name}</span>
                 <span style={{ color: '#0F6E56', marginLeft: 8 }}>{level.approver_email}</span>
@@ -320,7 +320,7 @@ function LevelEditor({ index, level, onUpdate, onRemove }: {
         </div>
       ) : (
         <Field label="Cargo (job title en Entra ID)"
-          hint="El sistema resolverá el aprobador con este cargo al crear la solicitud">
+          hint="El sistema resolver¡ el aprobador con este cargo al crear la solicitud">
           <Input value={level.approver_value}
             onChange={e => onUpdate({ approver_value: e.target.value })}
             placeholder="Ej: Gerente de Marketing" />

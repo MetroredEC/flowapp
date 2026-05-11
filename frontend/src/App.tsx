@@ -49,7 +49,7 @@ function LoginGate() {
 
       if (msg.includes('interaction_in_progress')) {
         clearMsalInteractionLock();
-        setMessage('Se limpió una sesión de inicio anterior. Intenta nuevamente.');
+        setMessage('Se limpi³ una sesi³n de inicio anterior. Intenta nuevamente.');
       } else {
         setMessage(msg);
       }
@@ -146,7 +146,7 @@ function LoginGate() {
             boxShadow: '0 12px 32px rgba(12,68,124,.22)',
           }}
         >
-          {busy || inProgress !== 'none' ? 'Iniciando...' : 'Iniciar sesión con Microsoft'}
+          {busy || inProgress !== 'none' ? 'Iniciando...' : 'Iniciar sesi³n con Microsoft'}
         </button>
 
         <button
@@ -165,7 +165,7 @@ function LoginGate() {
             cursor: 'pointer',
           }}
         >
-          Reiniciar inicio de sesión
+          Reiniciar inicio de sesi³n
         </button>
       </div>
     </div>

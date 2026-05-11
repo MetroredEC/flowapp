@@ -4,7 +4,7 @@ import { getAppToken, searchUsers } from '../utils/graph';
 
 const router = new Hono<AppEnv>();
 
-// ─── Tipos de solicitud ───────────────────────────────────────────────────────
+// ””” Tipos de solicitud ”””””””””””””””””””””””””””””””””””””””””””””””””””””””
 router.get('/request-types', async (c) => {
   const rows = await c.env.DB.prepare('SELECT * FROM request_types ORDER BY name').all();
   return c.json({ data: rows.results });
@@ -33,7 +33,7 @@ router.patch('/request-types/:id', async (c) => {
   return c.json({ data: { updated: true } });
 });
 
-// ─── Configuración de flujos ──────────────────────────────────────────────────
+// ””” Configuraci³n de flujos ””””””””””””””””””””””””””””””””””””””””””””””””””
 router.get('/flows/:typeId', async (c) => {
   const rows = await c.env.DB.prepare(
     'SELECT * FROM flow_configs WHERE request_type_id = ? ORDER BY level'
@@ -53,7 +53,7 @@ router.put('/flows/:typeId', async (c) => {
     return c.json({ error: 'Se requieren entre 1 y 4 niveles' }, 400);
   }
 
-  // Borrar configuración actual y reemplazar (transacción)
+  // Borrar configuraci³n actual y reemplazar (transacci³n)
   const stmts = [
     c.env.DB.prepare('DELETE FROM flow_configs WHERE request_type_id = ?').bind(typeId),
     ...levels.map(l =>
@@ -72,7 +72,7 @@ router.put('/flows/:typeId', async (c) => {
   return c.json({ data: { saved: levels.length } });
 });
 
-// ─── Buscador de usuarios Entra ID ───────────────────────────────────────────
+// ””” Buscador de usuarios Entra ID ”””””””””””””””””””””””””””””””””””””””””””
 router.get('/users/search', async (c) => {
   const q = c.req.query('q') ?? '';
   if (q.length < 2) return c.json({ data: [] });
@@ -92,7 +92,7 @@ router.get('/users/search', async (c) => {
   });
 });
 
-// ─── Dashboard stats ──────────────────────────────────────────────────────────
+// ””” Dashboard stats ””””””””””””””””””””””””””””””””””””””””””””””””””””””””””
 router.get('/stats', async (c) => {
   const [totals, byStatus, byType] = await Promise.all([
     c.env.DB.prepare('SELECT COUNT(*) as total FROM requests').first<{ total: number }>(),
@@ -102,7 +102,7 @@ router.get('/stats', async (c) => {
   return c.json({ data: { totals, byStatus: byStatus.results, byType: byType.results } });
 });
 
-// ─── Lista de todas las solicitudes (admin) ───────────────────────────────────
+// ””” Lista de todas las solicitudes (admin) ”””””””””””””””””””””””””””””””””””
 router.get('/requests', async (c) => {
   const { status, type, q, page = '1' } = c.req.query();
   const limit = 50;
@@ -119,7 +119,7 @@ router.get('/requests', async (c) => {
   return c.json({ data: rows.results });
 });
 
-// ─── Costos de campaña (Marketing) ────────────────────────────────────────────
+// ””” Costos de campaa (Marketing) ””””””””””””””””””””””””””””””””””””””””””””
 router.post('/campaign-costs', async (c) => {
   const body = await c.req.json<{
     request_id: string; campaign_code: string; total_amount: number;

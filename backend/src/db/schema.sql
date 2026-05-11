@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS request_types (
   created_at  TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
--- Configuración de niveles de aprobación por tipo
+-- Configuraci³n de niveles de aprobaci³n por tipo
 CREATE TABLE IF NOT EXISTS flow_configs (
   id               TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(8)))),
   request_type_id  TEXT NOT NULL REFERENCES request_types(id) ON DELETE CASCADE,
@@ -56,7 +56,7 @@ CREATE TABLE IF NOT EXISTS attachments (
   created_at    TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
--- Pasos de aprobación
+-- Pasos de aprobaci³n
 CREATE TABLE IF NOT EXISTS approval_steps (
   id              TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(12)))),
   request_id      TEXT NOT NULL REFERENCES requests(id) ON DELETE CASCADE,
@@ -86,7 +86,7 @@ CREATE TABLE IF NOT EXISTS approval_tokens (
   created_at  TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
--- Costo de campaña (Marketing)
+-- Costo de campaa (Marketing)
 CREATE TABLE IF NOT EXISTS campaign_costs (
   id             TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(12)))),
   request_id     TEXT NOT NULL UNIQUE REFERENCES requests(id),
@@ -100,7 +100,7 @@ CREATE TABLE IF NOT EXISTS campaign_costs (
   updated_at     TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
--- Proveedores por campaña
+-- Proveedores por campaa
 CREATE TABLE IF NOT EXISTS campaign_vendors (
   id               TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(12)))),
   campaign_cost_id TEXT NOT NULL REFERENCES campaign_costs(id) ON DELETE CASCADE,
@@ -123,7 +123,7 @@ CREATE TABLE IF NOT EXISTS audit_log (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
--- Índices
+-- ndices
 CREATE INDEX IF NOT EXISTS idx_requests_requester  ON requests(requester_id);
 CREATE INDEX IF NOT EXISTS idx_requests_status     ON requests(status);
 CREATE INDEX IF NOT EXISTS idx_requests_type       ON requests(request_type_id);
@@ -135,6 +135,6 @@ CREATE INDEX IF NOT EXISTS idx_audit_entity        ON audit_log(entity, entity_i
 
 -- Datos iniciales
 INSERT OR IGNORE INTO request_types (id, name, description) VALUES
-  ('type-mkt', 'Marketing',              'Solicitudes de campañas y activaciones'),
-  ('type-cmp', 'Compras',                'Solicitudes de adquisición de bienes y servicios'),
-  ('type-adm', 'Administrativo',         'Mantenimiento de tarifarios, códigos, planes y convenios');
+  ('type-mkt', 'Marketing',              'Solicitudes de campaas y activaciones'),
+  ('type-cmp', 'Compras',                'Solicitudes de adquisici³n de bienes y servicios'),
+  ('type-adm', 'Administrativo',         'Mantenimiento de tarifarios, c³digos, planes y convenios');
