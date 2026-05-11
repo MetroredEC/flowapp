@@ -9,7 +9,7 @@ export default function AdminPanel() {
 
  return (
   <div style={{ padding: 32, maxWidth: 1000, margin: '0 auto' }}>
-   <PageHeader title="Administraci³n" subtitle="Tipos de solicitud, flujos de aprobaci³n y configuraci³n" />
+   <PageHeader title="Administracion" subtitle="Tipos de solicitud, flujos de aprobacion y configuracion" />
 
    <div style={{ display: 'flex', gap: 4, marginBottom: 24, background: '#fff',
     padding: 4, borderRadius: 10, border: '1px solid #E8E8E4', width: 'fit-content' }}>
@@ -19,7 +19,7 @@ export default function AdminPanel() {
       cursor: 'pointer', background: tab === t ? '#0C447C': 'transparent',
       color: tab === t ? '#fff': '#888', transition: 'all.15s',
      }}>
-      {t === 'types' ? 'Tipos de solicitud': 'Flujos de aprobaci³n'}
+      {t === 'types' ? 'Tipos de solicitud': 'Flujos de aprobacion'}
      </button>
     ))}
    </div>
@@ -85,9 +85,9 @@ function TypesPanel() {
       <Input value={form.name} onChange={e => setForm(f => ({...f, name: e.target.value }))}
        placeholder="Ej: Compras internacionales" />
      </Field>
-     <Field label="Descripci³n (opcional)">
+     <Field label="Descripcion (opcional)">
       <Input value={form.description} onChange={e => setForm(f => ({...f, description: e.target.value }))}
-       placeholder="Descripci³n breve" />
+       placeholder="Descripcion breve" />
      </Field>
      <div style={{ display: 'flex', gap: 10 }}>
       <Btn onClick={save}>Guardar</Btn>
@@ -254,7 +254,7 @@ function LevelEditor({ index, level, onUpdate, onRemove }: {
     <Field label="Tipo de aprobador">
      <Select value={level.approver_type}
       onChange={e => onUpdate({ approver_type: e.target.value as 'fixed_user' | 'job_title' })}>
-      <option value="fixed_user">Usuario espec­fico</option>
+      <option value="fixed_user">Usuario especifico</option>
       <option value="job_title">Por cargo</option>
      </Select>
     </Field>
@@ -298,7 +298,7 @@ function LevelEditor({ index, level, onUpdate, onRemove }: {
            <div>
             <div style={{ fontSize: 13, fontWeight: 600, color: '#111' }}>{u.name}</div>
             <div style={{ fontSize: 11, color: '#888' }}>
-             {u.jobTitle && <span>{u.jobTitle} · </span>}{u.email}
+             {u.jobTitle && <span>{u.jobTitle} - </span>}{u.email}
             </div>
            </div>
           </div>

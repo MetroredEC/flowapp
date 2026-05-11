@@ -33,7 +33,7 @@ export default function Dashboard() {
  return (
   <div style={{ padding: 32, maxWidth: 1100, margin: '0 auto' }}>
    <PageHeader
-    title={`Hola, ${name} °Ë¹`}
+    title={`Hola, ${name}`}
     subtitle="Resumen de solicitudes activas"
     action={
      <button onClick={() => navigate('/requests/new')} style={{
@@ -54,7 +54,7 @@ export default function Dashboard() {
     ))}
     {!stats?.byStatus.length && (
      <Card style={{ gridColumn: '1/-1', textAlign: 'center', color: '#aaa', padding: 32 }}>
-      Sin solicitudes aºn
+      Sin solicitudes aun
      </Card>
     )}
    </div>
@@ -88,14 +88,14 @@ export default function Dashboard() {
           {r.title}
          </div>
          <div style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>
-          {r.request_type_name} · {new Date(r.created_at).toLocaleDateString('es-EC')}
+          {r.request_type_name} - {new Date(r.created_at).toLocaleDateString('es-EC')}
          </div>
         </div>
         <StatusBadge status={r.status} />
        </div>
       ))}
-      {!recent.length && <p style={{ fontSize: 13, color: '#aaa' }}>Sin solicitudes</p>}
-     </Card>
+      {!recent.length && <p style={{ fontSize: 13, color: '#aaa' }}>Sin solicitudes aun</p>}
+</Card>
     </div>
    )}
   </div>

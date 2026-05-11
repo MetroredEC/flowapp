@@ -48,7 +48,7 @@ export default function RequestDetail() {
   <div style={{ padding: 32, maxWidth: 860, margin: '0 auto' }}>
    <PageHeader
     title={data.title}
-    subtitle={`${data.request_type_name} · ${data.requester_name}`}
+    subtitle={`${data.request_type_name} - ${data.requester_name}`}
     action={
      <div style={{ display: 'flex', gap: 10 }}>
       {canCancel && (

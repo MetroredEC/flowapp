@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { formatStatusLabel } from '../lib/format';
 import { api, BpmTask, BpmTaskDetail } from '../lib/api';
 
 const API_BASE = String(import.meta.env.VITE_API_URL || '').replace(/\/+$/, '');
@@ -173,10 +174,10 @@ export default function MyTasks() {
         >
          <div style={{ fontWeight: 800, color: '#111', marginBottom: 5 }}>{task.title}</div>
          <div style={{ fontSize: 13, color: '#555', lineHeight: 1.45 }}>
-          {task.request_title || 'Solicitud sin t­tulo'}
+          {task.request_title || 'Solicitud sin titulo'}
          </div>
          <div style={{ fontSize: 12, color: '#888', marginTop: 6 }}>
-          {task.request_type_name || 'Proceso'} · {task.requester_name || 'Solicitante'}
+          {task.request_type_name || 'Proceso'} - {task.requester_name || 'Solicitante'}
          </div>
         </button>
        ))}
@@ -208,7 +209,7 @@ export default function MyTasks() {
         borderRadius: 999,
         marginBottom: 12,
        }}>
-        {selectedTask.status}
+        {formatStatusLabel(selectedTask.status)}
        </div>
 
        <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 8 }}>
@@ -216,7 +217,7 @@ export default function MyTasks() {
        </h2>
 
        <p style={{ color: '#666', fontSize: 14, lineHeight: 1.6, marginBottom: 18 }}>
-        {String(detail?.task?.request_description ?? 'Sin descripci³n.')}
+        {String(detail?.task?.request_description ?? 'Sin descripcion.')}
        </p>
 
        <div style={{
@@ -272,7 +273,7 @@ export default function MyTasks() {
         value={comment}
         onChange={e => setComment(e.target.value)}
         maxLength={1200}
-        placeholder="Escribe un comentario para la decisi³n..."
+        placeholder="Escribe un comentario para la decision..."
         style={{
          width: '100%',
          minHeight: 110,

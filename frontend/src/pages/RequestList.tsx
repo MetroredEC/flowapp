@@ -26,7 +26,7 @@ export default function RequestList() {
   <div style={{ padding: 32, maxWidth: 1000, margin: '0 auto' }}>
    <PageHeader
     title="Solicitudes"
-    subtitle="Todas tus solicitudes y su estado de aprobaci³n"
+    subtitle="Todas tus solicitudes y su estado de aprobacion"
     action={
      <button onClick={() => navigate('/requests/new')} style={{
       background: '#0C447C', color: '#fff', border: 'none', borderRadius: 8,
@@ -37,7 +37,7 @@ export default function RequestList() {
 
    <div style={{ display: 'flex', gap: 12, marginBottom: 20 }}>
     <Input
-     placeholder="Buscar por t­tulo..."
+     placeholder="Buscar por titulo..."
      value={q}
      onChange={e => setQ(e.target.value)}
      onKeyDown={e => e.key === 'Enter' && load()}
@@ -82,12 +82,12 @@ export default function RequestList() {
           <StatusBadge status={r.status} />
          </div>
          <div style={{ fontSize: 12, color: '#888' }}>
-          {r.request_type_name} · {r.requester_name} ·{' '}
+          {r.request_type_name} - {r.requester_name} {' '}
           {new Date(r.created_at).toLocaleDateString('es-EC', {
            day: 'numeric', month: 'short', year: 'numeric'
           })}
           {r.attachment_count > 0 && (
-           <span style={{ marginLeft: 8 }}>°½ {r.attachment_count}</span>
+           <span style={{ marginLeft: 8 }}>Adjuntos: {r.attachment_count}</span>
           )}
          </div>
         </div>
