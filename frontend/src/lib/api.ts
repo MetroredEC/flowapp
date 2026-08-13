@@ -475,7 +475,7 @@ export interface DetectedPersona {
 }
 export interface PersonaSignals {
   pendingApprovals: number; approverInProcesses: number; openTasks: number;
-  ledSpaces: number; openRequests: number; totalRequests: number;
+  memberSpaces: number; ledSpaces: number; openRequests: number; totalRequests: number;
 }
 export interface PersonaProfile {
   email: string; name: string;

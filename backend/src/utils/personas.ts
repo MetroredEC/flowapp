@@ -55,6 +55,8 @@ export interface PersonaSignals {
   pendingApprovals: number;
   approverInProcesses: number;
   openTasks: number;
+  /** Espacios donde la persona ejecuta, lidere o no. */
+  memberSpaces: number;
   ledSpaces: number;
   openRequests: number;
   totalRequests: number;
@@ -83,7 +85,7 @@ export interface PersonaProfile {
 
 const EMPTY_SIGNALS: PersonaSignals = {
   pendingApprovals: 0, approverInProcesses: 0, openTasks: 0,
-  ledSpaces: 0, openRequests: 0, totalRequests: 0,
+  memberSpaces: 0, ledSpaces: 0, openRequests: 0, totalRequests: 0,
 };
 
 export function isPersonaKey(value: unknown): value is PersonaKey {
@@ -125,9 +127,11 @@ export async function readPersonaSignals(
     `).bind(lower).first<{ n: number }>(),
 
     db.prepare(`
-      SELECT COUNT(*) AS n FROM ws_space_members
-      WHERE lower(user_email) = ? AND role = 'lead'
-    `).bind(lower).first<{ n: number }>(),
+      SELECT COUNT(*) AS n,
+             SUM(CASE WHEN role = 'lead' THEN 1 ELSE 0 END) AS leads
+      FROM ws_space_members
+      WHERE lower(user_email) = ?
+    `).bind(lower).first<{ n: number; leads: number }>(),
 
     db.prepare(`
       SELECT COUNT(*) AS total,
@@ -141,7 +145,8 @@ export async function readPersonaSignals(
     pendingApprovals: approvals?.n ?? 0,
     approverInProcesses: processes?.n ?? 0,
     openTasks: tasks?.n ?? 0,
-    ledSpaces: spaces?.n ?? 0,
+    memberSpaces: spaces?.n ?? 0,
+    ledSpaces: spaces?.leads ?? 0,
     openRequests: requests?.open ?? 0,
     totalRequests: requests?.total ?? 0,
   };
@@ -178,8 +183,14 @@ export function detectPersonas(signals: PersonaSignals, roles: string[]): Detect
   } else if (signals.approverInProcesses > 0) {
     add('aprobador', `Eres aprobador en ${signals.approverInProcesses} ${signals.approverInProcesses === 1 ? 'proceso' : 'procesos'}`);
   }
+  // Se es ejecutor por pertenecer a un equipo, no por tener trabajo pendiente
+  // hoy: quien termina todas sus tareas no deja de ejecutar.
   if (signals.openTasks > 0) {
     add('ejecutor', `${signals.openTasks} ${signals.openTasks === 1 ? 'tarea abierta' : 'tareas abiertas'} a tu nombre`);
+  } else if (signals.memberSpaces > 0) {
+    add('ejecutor', signals.memberSpaces === 1
+      ? 'Formas parte de un espacio de trabajo'
+      : `Formas parte de ${signals.memberSpaces} espacios de trabajo`);
   }
 
   // Todos pueden solicitar: es la puerta de entrada del producto.
