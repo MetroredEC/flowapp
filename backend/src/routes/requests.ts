@@ -1,4 +1,4 @@
-import { Hono } from 'hono';
+import { Context, Hono } from 'hono';
 import { AppEnv } from '../types';
 import { notifyApprover, createRequestWithSteps } from '../utils/approvals';
 import { startProcessByKey } from '../utils/bpm-engine';
@@ -233,11 +233,22 @@ router.patch('/:id/cancel', async (c) => {
   if (!['draft', 'pending', 'in_progress'].includes(req.status)) {
     return c.json({ error: 'Solo se puede cancelar solicitudes activas' }, 400);
   }
-  await c.env.DB.prepare("UPDATE requests SET status='cancelled', cancelled_at=datetime('now'), updated_at=datetime('now') WHERE id=?").bind(id).run();
-  await writeAudit(c.env.DB, 'requests', id, 'request_cancelled', userId, c.get('userName'));
+
+  // Un borrador es privado: cancelarlo no le cuesta tiempo a nadie. En cambio,
+  // cancelar algo que ya movió a un aprobador exige explicar por qué.
+  const body = await c.req.json<{ reason?: string }>().catch(() => ({ reason: undefined }));
+  const reason = (body.reason ?? '').trim();
+  if (req.status !== 'draft' && reason.length < 10) {
+    return c.json({ error: 'reason_required', message: 'Explica en al menos 10 caracteres por qué cancelas la solicitud' }, 400);
+  }
+
+  await c.env.DB.prepare("UPDATE requests SET status='cancelled', cancel_reason=?, cancelled_at=datetime('now'), updated_at=datetime('now') WHERE id=?")
+    .bind(reason || null, id).run();
+  await writeAudit(c.env.DB, 'requests', id, 'request_cancelled', userId, c.get('userName'), { reason });
   await recordWorkEvent(c.env.DB, {
     requestId: id, eventType: 'request_cancelled', title: 'Solicitud cancelada',
     actorId: userId, actorName: c.get('userName'), actorEmail: c.get('userEmail'),
+    detail: reason ? { reason } : null,
   });
   return c.json({ data: { cancelled: true } });
 });
@@ -317,6 +328,304 @@ router.post('/:id/close', async (c) => {
 
   return c.json({ data: { closed: true } });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  AUTOGESTIÓN DEL SOLICITANTE
+//
+//  El solicitante debe poder resolver solo lo que hoy resuelve escribiendo por
+//  chat: corregir, cancelar, duplicar, confirmar, devolver, reabrir y calificar.
+//  Todo queda en la línea de tiempo: autogestión no significa perder trazabilidad.
+// ═══════════════════════════════════════════════════════════════════════════
+
+/** Solo el dueño de la solicitud puede autogestionarla. */
+async function ownedRequest(c: RequestContext, id: string) {
+  const row = await c.env.DB.prepare('SELECT * FROM requests WHERE id = ?').bind(id).first<RequestRow>();
+  if (!row) return { error: c.json({ error: 'not_found' }, 404) } as const;
+  if (row.requester_id !== c.get('userId')) {
+    return { error: c.json({ error: 'forbidden', message: 'Solo el solicitante puede hacer esto' }, 403) } as const;
+  }
+  return { row } as const;
+}
+
+// PATCH /requests/:id — corregir mientras no haya sido aprobada
+router.patch('/:id', async (c) => {
+  const id = c.req.param('id');
+  const found = await ownedRequest(c, id);
+  if (found.error) return found.error;
+  const req = found.row;
+
+  // Una vez aprobada, el contenido es la base del trabajo en curso: cambiarlo
+  // en silencio dejaría al equipo ejecutando algo que ya nadie pidió.
+  if (!['draft', 'pending', 'in_progress'].includes(req.status)) {
+    return c.json({ error: 'invalid_status', message: 'Ya no puedes editar una solicitud aprobada, rechazada o cancelada' }, 400);
+  }
+
+  const body = await c.req.json<{ title?: string; description?: string; campaign_data?: unknown }>();
+  const sets: string[] = ["updated_at = datetime('now')"];
+  const vals: unknown[] = [];
+  const changed: string[] = [];
+
+  if (body.title !== undefined) {
+    const title = String(body.title).trim();
+    if (!title) return c.json({ error: 'invalid_title', message: 'El título no puede quedar vacío' }, 400);
+    sets.push('title = ?'); vals.push(title); changed.push('título');
+  }
+  if (body.description !== undefined) {
+    sets.push('description = ?'); vals.push(String(body.description)); changed.push('descripción');
+  }
+  if (body.campaign_data !== undefined) {
+    sets.push('campaign_data = ?');
+    vals.push(typeof body.campaign_data === 'string' ? body.campaign_data : JSON.stringify(body.campaign_data));
+    changed.push('formulario');
+  }
+  if (!changed.length) return c.json({ error: 'nothing_to_update', message: 'No hay cambios que guardar' }, 400);
+
+  vals.push(id);
+  await c.env.DB.prepare(`UPDATE requests SET ${sets.join(', ')} WHERE id = ?`).bind(...vals).run();
+
+  await writeAudit(c.env.DB, 'requests', id, 'request_edited', c.get('userId'), c.get('userName'), { changed });
+  await recordWorkEvent(c.env.DB, {
+    requestId: id, eventType: 'request_edited', title: `Solicitud corregida por el solicitante`,
+    actorId: c.get('userId'), actorName: c.get('userName'), actorEmail: c.get('userEmail'),
+    detail: { changed },
+  });
+
+  const updated = await c.env.DB.prepare('SELECT * FROM requests WHERE id = ?').bind(id).first();
+  return c.json({ data: updated });
+});
+
+// POST /requests/:id/duplicate — volver a pedir lo mismo sin llenar todo otra vez
+router.post('/:id/duplicate', async (c) => {
+  const id = c.req.param('id');
+  const userId = c.get('userId');
+  const roles = c.get('userRoles');
+
+  const req = await c.env.DB.prepare('SELECT * FROM requests WHERE id = ?').bind(id).first<RequestRow>();
+  if (!req) return c.json({ error: 'not_found' }, 404);
+  if (!isPrivileged(roles) && req.requester_id !== userId) {
+    return c.json({ error: 'forbidden', message: 'Solo puedes duplicar tus propias solicitudes' }, 403);
+  }
+
+  // La copia nace como borrador y toma la versión vigente del proceso: duplicar
+  // no debe revivir una configuración que ya fue reemplazada.
+  const version = await c.env.DB.prepare(
+    'SELECT id, version FROM process_versions WHERE process_id = ? ORDER BY version DESC LIMIT 1'
+  ).bind(req.request_type_id).first<{ id: string; version: number }>();
+
+  const newId = crypto.randomUUID().replace(/-/g, '');
+  await c.env.DB.prepare(`
+    INSERT INTO requests (
+      id, request_type_id, request_type_name, title, description,
+      requester_id, requester_name, requester_email, status, current_level,
+      total_levels, campaign_data, process_version_id, process_version
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'draft', 1, ?, ?, ?, ?)
+  `).bind(
+    newId, req.request_type_id, req.request_type_name,
+    `${req.title} (copia)`, req.description,
+    userId, c.get('userName'), c.get('userEmail'),
+    req.total_levels, req.campaign_data,
+    version?.id ?? req.process_version_id, version?.version ?? req.process_version,
+  ).run();
+
+  await writeAudit(c.env.DB, 'requests', newId, 'request_duplicated', userId, c.get('userName'), { from: id });
+  await recordWorkEvent(c.env.DB, {
+    requestId: newId, eventType: 'request_created', title: 'Solicitud duplicada de una anterior',
+    actorId: userId, actorName: c.get('userName'), actorEmail: c.get('userEmail'),
+    detail: { duplicated_from: id },
+  });
+
+  const created = await c.env.DB.prepare('SELECT * FROM requests WHERE id = ?').bind(newId).first();
+  return c.json({ data: created });
+});
+
+// POST /requests/:id/confirm — el solicitante acepta la entrega y cierra el ciclo
+router.post('/:id/confirm', async (c) => {
+  const id = c.req.param('id');
+  const found = await ownedRequest(c, id);
+  if (found.error) return found.error;
+  const req = found.row;
+
+  if (!req.delivered_at) {
+    return c.json({ error: 'not_delivered', message: 'Todavía no hay una entrega que confirmar' }, 400);
+  }
+  if (req.confirmed_at) {
+    return c.json({ error: 'already_confirmed', message: 'Ya confirmaste esta entrega' }, 400);
+  }
+
+  await c.env.DB.prepare(`
+    UPDATE requests SET confirmed_at = datetime('now'),
+      closed_at = COALESCE(closed_at, datetime('now')), updated_at = datetime('now')
+    WHERE id = ?
+  `).bind(id).run();
+
+  await writeAudit(c.env.DB, 'requests', id, 'delivery_confirmed', c.get('userId'), c.get('userName'));
+  await recordWorkEvent(c.env.DB, {
+    requestId: id, eventType: 'delivery_confirmed', title: 'El solicitante confirmó la recepción',
+    actorId: c.get('userId'), actorName: c.get('userName'), actorEmail: c.get('userEmail'),
+  });
+
+  return c.json({ data: { confirmed: true } });
+});
+
+// POST /requests/:id/return — devolver la entrega con motivo y reabrir el trabajo
+router.post('/:id/return', async (c) => {
+  const id = c.req.param('id');
+  const found = await ownedRequest(c, id);
+  if (found.error) return found.error;
+  const req = found.row;
+
+  if (!req.delivered_at || req.confirmed_at) {
+    return c.json({ error: 'not_returnable', message: 'Solo puedes devolver una entrega pendiente de confirmación' }, 400);
+  }
+
+  const body = await c.req.json<{ reason?: string }>();
+  const reason = (body.reason ?? '').trim();
+  if (reason.length < 10) {
+    return c.json({ error: 'reason_required', message: 'Explica en al menos 10 caracteres qué falta o qué está mal' }, 400);
+  }
+
+  await c.env.DB.prepare(
+    'INSERT INTO request_returns (request_id, reason, returned_by_id, returned_by_name, returned_by_email) VALUES (?, ?, ?, ?, ?)'
+  ).bind(id, reason, c.get('userId'), c.get('userName'), c.get('userEmail')).run();
+
+  await c.env.DB.prepare(`
+    UPDATE requests SET delivered_at = NULL, reopen_due_at = NULL,
+      closed_at = NULL, updated_at = datetime('now')
+    WHERE id = ?
+  `).bind(id).run();
+
+  await reopenTaskForRequest(c.env.DB, id, `Devuelta por el solicitante: ${reason}`);
+
+  await writeAudit(c.env.DB, 'requests', id, 'delivery_returned', c.get('userId'), c.get('userName'), { reason });
+  await recordWorkEvent(c.env.DB, {
+    requestId: id, eventType: 'delivery_returned', title: 'El solicitante devolvió la entrega',
+    actorId: c.get('userId'), actorName: c.get('userName'), actorEmail: c.get('userEmail'),
+    detail: { reason },
+  });
+
+  return c.json({ data: { returned: true } });
+});
+
+/** Días que el solicitante tiene para reabrir después de confirmar. */
+const REOPEN_WINDOW_DAYS = 7;
+
+// POST /requests/:id/reopen — reabrir dentro del plazo acordado
+router.post('/:id/reopen', async (c) => {
+  const id = c.req.param('id');
+  const found = await ownedRequest(c, id);
+  if (found.error) return found.error;
+  const req = found.row;
+
+  if (!req.confirmed_at) {
+    return c.json({ error: 'not_confirmed', message: 'Solo se reabre una solicitud que ya fue confirmada' }, 400);
+  }
+  if (req.reopen_due_at && req.reopen_due_at < new Date().toISOString()) {
+    return c.json({
+      error: 'reopen_window_closed',
+      message: `El plazo de ${REOPEN_WINDOW_DAYS} días para reabrir ya venció. Crea una solicitud nueva.`,
+    }, 400);
+  }
+
+  const body = await c.req.json<{ reason?: string }>();
+  const reason = (body.reason ?? '').trim();
+  if (reason.length < 10) {
+    return c.json({ error: 'reason_required', message: 'Explica en al menos 10 caracteres por qué debe reabrirse' }, 400);
+  }
+
+  await c.env.DB.prepare(`
+    UPDATE requests SET confirmed_at = NULL, delivered_at = NULL, closed_at = NULL,
+      reopen_due_at = NULL, reopen_count = reopen_count + 1, updated_at = datetime('now')
+    WHERE id = ?
+  `).bind(id).run();
+
+  await reopenTaskForRequest(c.env.DB, id, `Reabierta por el solicitante: ${reason}`);
+
+  await writeAudit(c.env.DB, 'requests', id, 'request_reopened', c.get('userId'), c.get('userName'), { reason });
+  await recordWorkEvent(c.env.DB, {
+    requestId: id, eventType: 'request_reopened', title: 'El solicitante reabrió la solicitud',
+    actorId: c.get('userId'), actorName: c.get('userName'), actorEmail: c.get('userEmail'),
+    detail: { reason, reopen_count: Number(req.reopen_count ?? 0) + 1 },
+  });
+
+  return c.json({ data: { reopened: true } });
+});
+
+// POST /requests/:id/feedback — calificar el servicio recibido
+router.post('/:id/feedback', async (c) => {
+  const id = c.req.param('id');
+  const found = await ownedRequest(c, id);
+  if (found.error) return found.error;
+  const req = found.row;
+
+  if (!req.confirmed_at) {
+    return c.json({ error: 'not_confirmed', message: 'Puedes calificar después de confirmar la entrega' }, 400);
+  }
+
+  const body = await c.req.json<{ rating?: number; comment?: string }>();
+  const rating = Number(body.rating);
+  if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
+    return c.json({ error: 'invalid_rating', message: 'La calificación va de 1 a 5' }, 400);
+  }
+
+  await c.env.DB.prepare(`
+    INSERT INTO request_feedback (request_id, rating, comment, rated_by_id, rated_by_name, rated_by_email)
+    VALUES (?, ?, ?, ?, ?, ?)
+    ON CONFLICT(request_id) DO UPDATE SET
+      rating = excluded.rating, comment = excluded.comment, created_at = datetime('now')
+  `).bind(id, rating, (body.comment ?? '').trim() || null,
+    c.get('userId'), c.get('userName'), c.get('userEmail')).run();
+
+  await recordWorkEvent(c.env.DB, {
+    requestId: id, eventType: 'request_rated', title: 'El solicitante calificó el servicio',
+    actorId: c.get('userId'), actorName: c.get('userName'), actorEmail: c.get('userEmail'),
+    detail: { rating },
+  });
+
+  return c.json({ data: { rating } });
+});
+
+/** Devuelve la tarea del área a un estado abierto y avisa a quien la ejecuta. */
+async function reopenTaskForRequest(db: D1Database, requestId: string, note: string): Promise<void> {
+  const task = await db.prepare(
+    "SELECT id, title, space_id, assignee_email FROM ws_tasks WHERE source_type = 'request' AND source_id = ?"
+  ).bind(requestId).first<{ id: string; title: string; space_id: string; assignee_email: string | null }>();
+  if (!task) return;
+
+  const openStatus = await db.prepare(
+    'SELECT key FROM ws_space_statuses WHERE space_id = ? AND is_done = 0 ORDER BY sort_order LIMIT 1'
+  ).bind(task.space_id).first<{ key: string }>();
+  if (!openStatus) return;
+
+  await db.prepare(
+    "UPDATE ws_tasks SET status = ?, completed_at = NULL, updated_at = datetime('now') WHERE id = ?"
+  ).bind(openStatus.key, task.id).run();
+
+  await db.prepare(`
+    INSERT INTO ws_task_activity (task_id, actor_name, action, meta_json)
+    VALUES (?, 'FlowApp', 'status', ?)
+  `).bind(task.id, JSON.stringify({ to: openStatus.key, source: note })).run();
+
+  if (task.assignee_email) {
+    await db.prepare(`
+      INSERT INTO ws_notifications (user_email, type, task_id, task_title, space_id, actor_name, body)
+      VALUES (?, 'status', ?, ?, ?, 'FlowApp', ?)
+    `).bind(task.assignee_email, task.id, task.title, task.space_id, note).run();
+  }
+}
+
+interface RequestRow {
+  id: string; request_type_id: string; request_type_name: string;
+  title: string; description: string;
+  requester_id: string; requester_name: string; requester_email: string;
+  status: string; current_level: number; total_levels: number;
+  campaign_data: string | null;
+  process_version_id: string | null; process_version: number | null;
+  delivered_at: string | null; confirmed_at: string | null;
+  reopen_due_at: string | null; reopen_count: number | null;
+  closed_at: string | null;
+}
+
+type RequestContext = Context<AppEnv>;
 
 function isPrivileged(roles: string[]): boolean {
   return roles.includes('flowapp-admin') || roles.includes('flowapp-approver');

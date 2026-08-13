@@ -230,8 +230,23 @@ export const api = {
     request<{ data: { id: string } }>('POST', '/api/requests', body),
   submitRequest: (id: string) =>
     request<{ data: { submitted: boolean } }>('PATCH', `/api/requests/${id}/submit`),
-  cancelRequest: (id: string) =>
-    request<{ data: unknown }>('PATCH', `/api/requests/${id}/cancel`),
+  cancelRequest: (id: string, reason?: string) =>
+    request<{ data: unknown }>('PATCH', `/api/requests/${id}/cancel`, { reason }),
+
+  // ─── Autogestión del solicitante ──────────────────────────────────────────
+  updateRequest: (id: string, body: { title?: string; description?: string; campaign_data?: unknown }) =>
+    request<{ data: Request }>('PATCH', `/api/requests/${id}`, body),
+  duplicateRequest: (id: string) =>
+    request<{ data: { id: string } }>('POST', `/api/requests/${id}/duplicate`),
+  confirmDelivery: (id: string) =>
+    request<{ data: { confirmed: boolean } }>('POST', `/api/requests/${id}/confirm`),
+  returnDelivery: (id: string, reason: string) =>
+    request<{ data: { returned: boolean } }>('POST', `/api/requests/${id}/return`, { reason }),
+  reopenRequest: (id: string, reason: string) =>
+    request<{ data: { reopened: boolean } }>('POST', `/api/requests/${id}/reopen`, { reason }),
+  rateRequest: (id: string, rating: number, comment?: string) =>
+    request<{ data: { rating: number } }>('POST', `/api/requests/${id}/feedback`, { rating, comment }),
+
   uploadFile: (requestId: string, file: File) => {
     const fd = new FormData(); fd.append('file', file);
     return request<{ data: { id: string; filename: string; size_bytes: number } }>(
@@ -472,7 +487,7 @@ export interface PersonaProfile {
 }
 
 export interface RequesterRow {
-  id: string; title: string; request_type_name: string; status: string;
+  id: string; title: string; description: string; request_type_name: string; status: string;
   current_level: number; total_levels: number;
   created_at: string; submitted_at: string | null;
   approved_at: string | null; rejected_at: string | null;
@@ -482,11 +497,15 @@ export interface RequesterRow {
   task_assignee_name: string | null; task_due_date: string | null;
   task_blocked: number | null; task_done: number;
   deliverables_total: number; deliverables_ready: number;
+  delivered_at: string | null; confirmed_at: string | null;
+  reopen_due_at: string | null; reopen_count: number | null;
+  cancel_reason: string | null;
+  rating: number | null; return_count: number;
   next_step: string;
 }
 export interface RequesterSummary {
   drafts: number; in_flight: number; approved: number;
-  rejected: number; awaiting_delivery: number;
+  rejected: number; awaiting_delivery: number; awaiting_me: number;
 }
 
 export interface DecisionRow {

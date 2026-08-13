@@ -205,6 +205,72 @@ export async function createTaskFromRequest(db: DB, requestId: string): Promise<
   }
 }
 
+/** Días que el solicitante tiene para reabrir tras confirmar la entrega. */
+const REOPEN_WINDOW_DAYS = 7;
+
+/**
+ * El equipo terminó el trabajo: la solicitud pasa a "entregada".
+ *
+ * Hasta ahora `require_requester_confirmation` se configuraba en Process Studio
+ * y no ocurría nada. Aquí es donde esa configuración se vuelve real: si el
+ * proceso pide confirmación, la solicitud queda esperando al solicitante en vez
+ * de cerrarse sola; si no la pide, se cierra en el acto.
+ */
+export async function markRequestDelivered(db: DB, requestId: string, taskId: string): Promise<void> {
+  const req = await db.prepare(
+    'SELECT id, request_type_id, requester_email, requester_name, title, delivered_at, confirmed_at FROM requests WHERE id = ?'
+  ).bind(requestId).first<{
+    id: string; request_type_id: string; requester_email: string; requester_name: string;
+    title: string; delivered_at: string | null; confirmed_at: string | null;
+  }>();
+  if (!req || req.delivered_at) return;
+
+  const config = await db.prepare(
+    'SELECT require_requester_confirmation FROM process_configs WHERE id = ?'
+  ).bind(req.request_type_id).first<{ require_requester_confirmation: number | null }>();
+  const needsConfirmation = config?.require_requester_confirmation !== 0;
+
+  const reopenDueAt = new Date(Date.now() + REOPEN_WINDOW_DAYS * 86400000).toISOString();
+
+  if (needsConfirmation) {
+    await db.prepare(`
+      UPDATE requests SET delivered_at = datetime('now'), reopen_due_at = ?, updated_at = datetime('now')
+      WHERE id = ?
+    `).bind(reopenDueAt, requestId).run();
+
+    if (req.requester_email) {
+      const task = await db.prepare('SELECT space_id FROM ws_tasks WHERE id = ?')
+        .bind(taskId).first<{ space_id: string }>();
+      await db.prepare(`
+        INSERT INTO ws_notifications (user_email, type, task_id, task_title, space_id, actor_name, body)
+        VALUES (?, 'status', ?, ?, ?, 'FlowApp', ?)
+      `).bind(
+        req.requester_email, taskId, req.title, task?.space_id ?? null,
+        `"${req.title}" está lista. Revisa la entrega y confirma la recepción.`
+      ).run();
+    }
+
+    await recordWorkEvent(db, {
+      requestId, taskId, eventType: 'request_delivered',
+      title: 'Trabajo entregado, espera confirmación del solicitante',
+      actorName: 'FlowApp', detail: { reopen_due_at: reopenDueAt },
+    });
+    return;
+  }
+
+  await db.prepare(`
+    UPDATE requests SET delivered_at = datetime('now'), confirmed_at = datetime('now'),
+      closed_at = COALESCE(closed_at, datetime('now')), updated_at = datetime('now')
+    WHERE id = ?
+  `).bind(requestId).run();
+
+  await recordWorkEvent(db, {
+    requestId, taskId, eventType: 'request_delivered',
+    title: 'Trabajo entregado y cerrado automáticamente',
+    actorName: 'FlowApp', detail: { requires_confirmation: false },
+  });
+}
+
 // Marca la tarea de la solicitud como completada (al cerrar la solicitud)
 export async function completeTaskFromRequest(db: DB, requestId: string): Promise<void> {
   const task = await db.prepare(

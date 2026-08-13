@@ -3,6 +3,7 @@ import { AppEnv } from '../types';
 import { processApproval } from '../utils/approvals';
 import { recordWorkEvent } from '../utils/work-events';
 import { buildProfile, isPersonaKey, PersonaKey, readPersonaSignals } from '../utils/personas';
+import { markRequestDelivered } from '../utils/workspace-bridge';
 
 const router = new Hono<AppEnv>();
 
@@ -372,6 +373,19 @@ router.patch('/tasks/:id', async (c) => {
   if (body.approval_status === 'rejected') {
     await logActivity(c.env.DB, id, a, 'rejected');
     if (prev.created_by_email) await notify(c.env.DB, prev.created_by_email as string, 'approval', taskRef, a.name, `Rechazó "${prev.title}"`);
+  }
+
+  // Terminar el trabajo de una solicitud es entregarla: el solicitante debe
+  // enterarse sin que nadie tenga que avisarle por chat.
+  if (body.status !== undefined && body.status !== prev.status
+      && prev.source_type === 'request' && prev.source_id) {
+    const target = await c.env.DB.prepare(
+      'SELECT is_done FROM ws_space_statuses WHERE space_id = ? AND key = ?'
+    ).bind(prev.space_id, body.status).first<{ is_done: number }>();
+    if (target?.is_done) {
+      try { await markRequestDelivered(c.env.DB, prev.source_id as string, id); }
+      catch (error) { console.error('DELIVERY_MARK_FAILED', error instanceof Error ? error.message : String(error)); }
+    }
   }
 
   const task = await c.env.DB.prepare('SELECT * FROM ws_tasks WHERE id = ?').bind(id).first();
@@ -755,10 +769,13 @@ router.get('/requests/mine', async (c) => {
   const userId = c.get('userId') ?? '';
 
   const rows = await c.env.DB.prepare(`
-    SELECT r.id, r.title, r.request_type_name, r.status, r.current_level, r.total_levels,
+    SELECT r.id, r.title, r.description, r.request_type_name, r.status, r.current_level, r.total_levels,
            r.created_at, r.submitted_at, r.approved_at, r.rejected_at, r.closed_at, r.sla_due_at,
+           r.delivered_at, r.confirmed_at, r.reopen_due_at, r.reopen_count, r.cancel_reason,
            step.approver_name  AS pending_approver_name,
            step.label          AS pending_approver_label,
+           fb.rating           AS rating,
+           (SELECT COUNT(*) FROM request_returns rr WHERE rr.request_id = r.id) AS return_count,
            t.id                AS task_id,
            t.status            AS task_status,
            t.assignee_name     AS task_assignee_name,
@@ -775,6 +792,7 @@ router.get('/requests/mine', async (c) => {
       ON t.source_type = 'request' AND t.source_id = r.id AND t.archived = 0
     LEFT JOIN ws_space_statuses ss
       ON ss.space_id = t.space_id AND ss.key = t.status
+    LEFT JOIN request_feedback fb ON fb.request_id = r.id
     WHERE r.requester_id = ? OR lower(r.requester_email) = ?
     ORDER BY
       CASE r.status WHEN 'in_progress' THEN 0 WHEN 'pending' THEN 1 WHEN 'draft' THEN 2
@@ -788,15 +806,17 @@ router.get('/requests/mine', async (c) => {
     next_step: describeNextStep(row),
   }));
 
-  const summary = data.reduce<{ drafts: number; in_flight: number; approved: number; rejected: number; awaiting_delivery: number }>((acc, row) => {
+  const summary = data.reduce<{ drafts: number; in_flight: number; approved: number; rejected: number; awaiting_delivery: number; awaiting_me: number }>((acc, row) => {
     const status = String(row.status);
     if (status === 'draft') acc.drafts += 1;
     else if (status === 'pending' || status === 'in_progress') acc.in_flight += 1;
     else if (status === 'approved') acc.approved += 1;
     else if (status === 'rejected') acc.rejected += 1;
     if (row.task_done === 0 && row.deliverables_total) acc.awaiting_delivery += 1;
+    // Lo que está detenido esperando al propio solicitante.
+    if (status === 'draft' || (row.delivered_at && !row.confirmed_at)) acc.awaiting_me += 1;
     return acc;
-  }, { drafts: 0, in_flight: 0, approved: 0, rejected: 0, awaiting_delivery: 0 });
+  }, { drafts: 0, in_flight: 0, approved: 0, rejected: 0, awaiting_delivery: 0, awaiting_me: 0 });
 
   return c.json({ data, summary });
 });
@@ -806,7 +826,7 @@ function describeNextStep(row: Record<string, unknown>): string {
   const status = String(row.status ?? '');
   if (status === 'draft') return 'Falta que la envíes';
   if (status === 'rejected') return 'Rechazada — revisa el motivo en el detalle';
-  if (status === 'cancelled') return 'Cancelada';
+  if (status === 'cancelled') return row.cancel_reason ? `Cancelada: ${row.cancel_reason}` : 'Cancelada';
   if (status === 'pending' || status === 'in_progress') {
     const approver = row.pending_approver_name;
     const label = row.pending_approver_label;
@@ -814,7 +834,10 @@ function describeNextStep(row: Record<string, unknown>): string {
     return `En aprobación, nivel ${row.current_level} de ${row.total_levels}`;
   }
   if (status === 'approved') {
-    if (row.task_done === 1) return 'Trabajo terminado — revisa los entregables';
+    if (row.confirmed_at) {
+      return row.rating ? 'Cerrada y calificada' : 'Confirmada — puedes calificar el servicio';
+    }
+    if (row.delivered_at) return 'Entregada — confirma la recepción o devuélvela';
     if (row.task_blocked === 1) return 'El equipo reportó un bloqueo';
     if (row.task_assignee_name) return `${row.task_assignee_name} está trabajando en esto`;
     return 'Aprobada, pendiente de asignar responsable';

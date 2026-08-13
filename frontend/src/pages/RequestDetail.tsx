@@ -5,7 +5,7 @@ import {
   Card, PageHeader, StatusBadge, StepBadge, Spinner, Btn, LevelStepper, Field, Input
 } from '../components/ui';
 import CloseFormFill from '../components/CloseFormFill';
-import { confirmDialog, alertDialog } from '../components/AppDialog';
+import { confirmDialog, alertDialog, promptDialog } from '../components/AppDialog';
 import { useIsMobile } from '../lib/useIsMobile';
 
 const API = String(import.meta.env.VITE_API_URL || '').replace(/\/+$/, '');
@@ -69,14 +69,33 @@ export default function RequestDetail() {
             )}
             {canCancel && (
               <Btn variant="danger" onClick={async () => {
-                const ok = await confirmDialog({
-                  title: '¿Cancelar esta solicitud?',
-                  message: 'La solicitud quedará cancelada y los aprobadores ya no podrán actuar sobre ella.',
-                  confirmLabel: 'Cancelar solicitud', cancelLabel: 'Volver', danger: true,
-                });
-                if (!ok) return;
-                await api.cancelRequest(data.id);
-                navigate('/requests');
+                // Un borrador es privado; cancelar algo que ya movió a un
+                // aprobador exige explicar por qué (el backend lo valida igual).
+                const isDraft = data.status === 'draft';
+                let reason = '';
+                if (isDraft) {
+                  const ok = await confirmDialog({
+                    title: '¿Cancelar este borrador?',
+                    message: 'El borrador quedará cancelado y no se enviará a aprobación.',
+                    confirmLabel: 'Cancelar borrador', cancelLabel: 'Volver', danger: true,
+                  });
+                  if (!ok) return;
+                } else {
+                  const answer = await promptDialog({
+                    title: '¿Por qué cancelas la solicitud?',
+                    message: 'Quien ya la revisó verá tu explicación en la línea de tiempo.',
+                    confirmLabel: 'Cancelar solicitud', cancelLabel: 'Volver',
+                    danger: true, minLength: 10,
+                  });
+                  if (answer === null) return;
+                  reason = answer;
+                }
+                try {
+                  await api.cancelRequest(data.id, reason);
+                  navigate('/solicitudes');
+                } catch (err) {
+                  await alertDialog({ title: 'No se pudo cancelar', message: (err as Error).message, tone: 'danger' });
+                }
               }}>Cancelar</Btn>
             )}
             <Btn variant="secondary" onClick={() => navigate(-1)}>Volver</Btn>
