@@ -20,7 +20,9 @@ export interface AutomationCondition {
 }
 
 export type AutomationAction =
-  | { type: 'notify'; to: 'assignee' | 'requester' | 'lead' | 'email'; email?: string; body: string }
+  | { type: 'notify'; to: 'assignee' | 'requester' | 'lead' | 'email'; email?: string; body: string;
+      /** inbox = novedad dentro de la app; teams/email salen por la bandeja de salida. */
+      channel?: 'inbox' | 'teams' | 'email' }
   | { type: 'set_priority'; value: 'low' | 'normal' | 'high' | 'urgent' }
   | { type: 'set_due_in_days'; value: number }
   | { type: 'assign_to'; email: string; name?: string }
@@ -61,7 +63,14 @@ export const TRIGGERS: { event: string; label: string; scope: 'request' | 'task'
   { event: 'request_reopened',   label: 'Se reabre una solicitud',          scope: 'request' },
   { event: 'request_rated',      label: 'El solicitante califica',          scope: 'request' },
   { event: 'request_closed',     label: 'Se cierra el proceso',             scope: 'request' },
+  // Disparadores por tiempo. No los emite una acción de nadie: los produce el
+  // barrido programado cada quince minutos sobre el trabajo abierto.
+  { event: 'time_task_check',     label: 'Revisión periódica del trabajo',    scope: 'task' },
+  { event: 'time_approval_check', label: 'Revisión periódica de aprobaciones', scope: 'request' },
 ];
+
+/** Disparadores que solo produce el barrido programado. */
+export const TIME_TRIGGERS = new Set(['time_task_check', 'time_approval_check']);
 
 export const CONDITION_FIELDS: { field: string; label: string; kind: 'text' | 'number' | 'choice'; options?: string[] }[] = [
   { field: 'request.status',          label: 'Estado de la solicitud', kind: 'choice', options: ['draft', 'pending', 'in_progress', 'approved', 'rejected', 'cancelled'] },
@@ -75,6 +84,14 @@ export const CONDITION_FIELDS: { field: string; label: string; kind: 'text' | 'n
   { field: 'task.is_blocked',         label: 'Está bloqueada (1 o 0)', kind: 'number' },
   { field: 'task.estimate_minutes',   label: 'Minutos estimados',      kind: 'number' },
   { field: 'task.space_id',           label: 'Espacio',                kind: 'text' },
+  // Campos temporales. Solo tienen valor en los disparadores por tiempo; en un
+  // disparador por evento quedan vacíos y una condición sobre ellos no se
+  // cumple, que es el comportamiento seguro.
+  { field: 'task.days_to_due',        label: 'Días para vencer (negativo si venció)', kind: 'number' },
+  { field: 'task.hours_since_update', label: 'Horas sin movimiento',   kind: 'number' },
+  { field: 'task.hours_unassigned',   label: 'Horas sin responsable',  kind: 'number' },
+  { field: 'approval.hours_waiting',  label: 'Horas esperando decisión', kind: 'number' },
+  { field: 'approval.approver_email', label: 'Correo del aprobador',   kind: 'text' },
 ];
 
 export const CONDITION_OPS: { op: AutomationCondition['op']; label: string; needsValue: boolean }[] = [
@@ -100,6 +117,7 @@ export const ACTION_TYPES: { type: AutomationAction['type']; label: string; hint
 ];
 
 const VALID_PRIORITIES = new Set(['low', 'normal', 'high', 'urgent']);
+const VALID_CHANNELS = new Set(['inbox', 'teams', 'email']);
 const VALID_RECIPIENTS = new Set(['assignee', 'requester', 'lead', 'email']);
 const VALID_TRIGGERS = new Set(TRIGGERS.map(t => t.event));
 const VALID_FIELDS = new Set(CONDITION_FIELDS.map(f => f.field));
@@ -131,6 +149,9 @@ export function validateAutomation(
       if (!action.body?.trim()) return 'El aviso necesita un mensaje';
       if (!VALID_RECIPIENTS.has(action.to)) return `Destinatario no reconocido: ${action.to}`;
       if (action.to === 'email' && !action.email?.trim()) return 'Falta el correo del destinatario';
+      if (action.channel && !VALID_CHANNELS.has(action.channel)) {
+        return `Canal no reconocido: ${action.channel}`;
+      }
     }
     // ws_tasks restringe priority con un CHECK: un valor fuera de la lista
     // haría fallar la acción en ejecución, no al guardarla.
@@ -149,7 +170,20 @@ export function validateAutomation(
 
 const MAX_ACTIONS_PER_RUN = 10;
 
-export async function runAutomations(db: DB, event: WorkEventInput): Promise<void> {
+export interface RunOptions {
+  /** Contexto adicional del barrido por tiempo (días para vencer, horas, etc.). */
+  extraContext?: Record<string, string | number | null>;
+  /**
+   * Clave de deduplicación por día operativo. Con ella, una regla actúa como
+   * mucho una vez al día sobre la misma entidad, aunque el barrido pase cada
+   * quince minutos.
+   */
+  dedupeKey?: string;
+}
+
+export async function runAutomations(
+  db: DB, event: WorkEventInput, options: RunOptions = {},
+): Promise<void> {
   try {
     const rules = await db.prepare(`
       SELECT id, name, process_id, space_id, conditions_json, actions_json
@@ -160,8 +194,9 @@ export async function runAutomations(db: DB, event: WorkEventInput): Promise<voi
     const candidates = rules.results as unknown as AutomationRow[];
     if (!candidates.length) return;
 
-    const context = await buildContext(db, event);
-    if (!context) return;
+    const base = await buildContext(db, event);
+    if (!base) return;
+    const context: Context = { ...base, ...(options.extraContext ?? {}) };
 
     for (const rule of candidates) {
       // Ámbito: una regla sin proceso ni espacio aplica a todo.
@@ -182,6 +217,12 @@ export async function runAutomations(db: DB, event: WorkEventInput): Promise<voi
         continue; // No coincide: no se registra para no llenar la bitácora de ruido.
       }
 
+      // La deduplicación se comprueba después de las condiciones: reservar la
+      // marca antes gastaría el cupo del día en barridos que no coincidían.
+      if (options.dedupeKey && !(await claimOnce(db, `${rule.id}:${options.dedupeKey}`))) {
+        continue;
+      }
+
       const applied: string[] = [];
       let failure: string | null = null;
       for (const action of actions.slice(0, MAX_ACTIONS_PER_RUN)) {
@@ -200,6 +241,18 @@ export async function runAutomations(db: DB, event: WorkEventInput): Promise<voi
     console.error('AUTOMATION_ENGINE_FAILED', event.eventType,
       error instanceof Error ? error.message : String(error));
   }
+}
+
+/**
+ * Reserva una marca única. Devuelve true solo la primera vez.
+ * INSERT OR IGNORE sobre la clave primaria hace la comprobación atómica: dos
+ * barridos solapados no pueden ejecutar la misma regla dos veces.
+ */
+async function claimOnce(db: DB, key: string): Promise<boolean> {
+  const result = await db.prepare(
+    'INSERT OR IGNORE INTO automation_time_marks (id) VALUES (?)'
+  ).bind(key).run();
+  return (result.meta?.changes ?? 0) > 0;
 }
 
 async function buildContext(db: DB, event: WorkEventInput): Promise<Context | null> {
@@ -279,16 +332,34 @@ async function apply(
   switch (action.type) {
     case 'notify': {
       const target = await resolveRecipient(db, action, context);
-      if (!target) return null;
+      const body = render(action.body, context);
+      const channel = action.channel ?? 'inbox';
+
+      // Teams no tiene destinatario: publica en el canal configurado.
+      if (channel !== 'teams' && !target) return null;
+
+      if (channel === 'inbox') {
+        await db.prepare(`
+          INSERT INTO ws_notifications (user_email, type, task_id, task_title, space_id, actor_name, body)
+          VALUES (?, 'status', ?, ?, ?, ?, ?)
+        `).bind(
+          target, taskId, context['task.title'] ?? context['request.request_type_name'] ?? null,
+          context['task.space_id'] ?? null, `Automatización · ${rule.name}`, body,
+        ).run();
+        return `avisó a ${target}`;
+      }
+
+      // Teams y correo salen por la bandeja: aquí no hay acceso al entorno.
       await db.prepare(`
-        INSERT INTO ws_notifications (user_email, type, task_id, task_title, space_id, actor_name, body)
-        VALUES (?, 'status', ?, ?, ?, ?, ?)
+        INSERT INTO automation_outbox
+          (automation_id, automation_name, channel, target, subject, body, request_id, task_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `).bind(
-        target, taskId, context['task.title'] ?? context['request.request_type_name'] ?? null,
-        context['task.space_id'] ?? null, `Automatización · ${rule.name}`,
-        render(action.body, context),
+        rule.id, rule.name, channel, target,
+        String(context['task.title'] ?? context['request.request_type_name'] ?? 'FlowApp'),
+        body, requestId, taskId,
       ).run();
-      return `avisó a ${target}`;
+      return channel === 'teams' ? 'encoló aviso a Teams' : `encoló correo a ${target}`;
     }
 
     case 'set_priority': {
@@ -355,7 +426,6 @@ async function apply(
 
     default:
       // Acción desconocida: la regla se guardó con una versión más nueva.
-      void requestId;
       return null;
   }
 }

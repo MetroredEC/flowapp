@@ -7,7 +7,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   api, Automation, AutomationAction, AutomationCatalog, AutomationCondition,
-  AutomationInput, AutomationRun, ProcessWithFlow, Space,
+  AutomationInput, AutomationOutboxRow, AutomationRun, ProcessWithFlow, Space,
 } from '../lib/api';
 import { Card, Btn, Field, Input, Select, Spinner, Empty } from '../components/ui';
 import { alertDialog, confirmDialog } from '../components/AppDialog';
@@ -24,6 +24,7 @@ export default function AutomationsPanel() {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Automation | 'new' | null>(null);
   const [runsFor, setRunsFor] = useState<Automation | null>(null);
+  const [showOutbox, setShowOutbox] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -82,6 +83,7 @@ export default function AutomationsPanel() {
             Cada ejecución queda registrada.
           </div>
         </div>
+        <button onClick={() => setShowOutbox(true)} style={mini}>Bandeja de salida</button>
         <Btn onClick={() => setEditing('new')}>Nueva automatización</Btn>
       </div>
 
@@ -138,7 +140,65 @@ export default function AutomationsPanel() {
       )}
 
       {runsFor && <RunsDrawer rule={runsFor} onClose={() => setRunsFor(null)} />}
+      {showOutbox && <OutboxDrawer onClose={() => setShowOutbox(false)} />}
     </div>
+  );
+}
+
+// ─── BANDEJA DE SALIDA ────────────────────────────────────────────────────────
+// Los avisos a Teams y correo no se envían en el momento: los manda el barrido
+// programado. Sin esta vista, un webhook mal configurado falla en silencio.
+function OutboxDrawer({ onClose }: { onClose: () => void }) {
+  const [rows, setRows] = useState<AutomationOutboxRow[]>([]);
+  const [summary, setSummary] = useState<{ pending: number; sent: number; failed: number } | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api.getAutomationOutbox()
+      .then(r => { setRows(r.data); setSummary(r.summary); })
+      .catch(() => setRows([]))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const tone = (status: string) =>
+    status === 'sent' ? { color: '#0F6E56', bg: '#DCFCE7' }
+    : status === 'failed' ? { color: '#A32D2D', bg: '#FEE2E2' }
+    : { color: '#854F0B', bg: '#FEF3C7' };
+
+  return (
+    <Drawer title="Bandeja de salida" width={560} onClose={onClose}>
+      {loading ? (
+        <div style={{ padding: 50, textAlign: 'center' }}><Spinner /></div>
+      ) : (
+        <>
+          <div style={{ padding: '12px 22px', borderBottom: '1px solid #E4E4E7', fontSize: 12, color: '#71717A' }}>
+            {summary?.pending ?? 0} en cola · {summary?.sent ?? 0} enviados · {summary?.failed ?? 0} fallidos.
+            El barrido corre cada 15 minutos.
+          </div>
+          {rows.length === 0 ? (
+            <div style={{ padding: 32 }}><Empty message="Ninguna automatización ha encolado avisos externos todavía." /></div>
+          ) : rows.map(row => {
+            const palette = tone(row.status);
+            return (
+              <div key={row.id} style={{ padding: '12px 22px', borderBottom: '1px solid #F4F4F5' }}>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                  <span style={badge(palette.color, palette.bg)}>{row.status.toUpperCase()}</span>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: '#52525B' }}>{row.channel === 'teams' ? 'Teams' : 'Correo'}</span>
+                  <span style={{ fontSize: 12, color: '#18181B', flex: 1, minWidth: 0 }}>{row.subject}</span>
+                </div>
+                <div style={{ fontSize: 10.5, color: '#A1A1AA', marginTop: 3 }}>
+                  {row.automation_name}{row.target ? ` · ${row.target}` : ''}
+                  {row.attempts > 0 ? ` · ${row.attempts} intento(s)` : ''}
+                </div>
+                {row.last_error && (
+                  <div style={{ fontSize: 11, color: '#A32D2D', marginTop: 4 }}>{row.last_error}</div>
+                )}
+              </div>
+            );
+          })}
+        </>
+      )}
+    </Drawer>
   );
 }
 
@@ -328,16 +388,28 @@ function ActionRow({ action, catalog, onChange, onRemove }: {
       <div style={{ display: 'grid', gap: 7, marginTop: 9 }}>
         {action.type === 'notify' && (
           <>
-            <select value={action.to} onChange={e => onChange({ ...action, to: e.target.value as typeof action.to })} style={selectSm}>
-              <option value="assignee">Al responsable del trabajo</option>
-              <option value="requester">Al solicitante</option>
-              <option value="lead">Al líder del área</option>
-              <option value="email">A un correo fijo</option>
+            <select value={action.channel ?? 'inbox'} onChange={e => onChange({ ...action, channel: e.target.value as 'inbox' | 'teams' | 'email' })} style={selectSm}>
+              <option value="inbox">En la bandeja de FlowApp</option>
+              <option value="teams">Por Teams</option>
+              <option value="email">Por correo</option>
             </select>
-            {action.to === 'email' && (
+            {(action.channel ?? 'inbox') !== 'teams' && (
+              <select value={action.to} onChange={e => onChange({ ...action, to: e.target.value as typeof action.to })} style={selectSm}>
+                <option value="assignee">Al responsable del trabajo</option>
+                <option value="requester">Al solicitante</option>
+                <option value="lead">Al líder del área</option>
+                <option value="email">A un correo fijo</option>
+              </select>
+            )}
+            {(action.channel ?? 'inbox') !== 'teams' && action.to === 'email' && (
               <input value={action.email ?? ''} onChange={e => onChange({ ...action, email: e.target.value })} placeholder="correo@metrored.med.ec" style={selectSm} />
             )}
             <input value={action.body} onChange={e => onChange({ ...action, body: e.target.value })} placeholder="Mensaje. Puedes usar {{request.request_type_name}}" style={selectSm} />
+            {(action.channel ?? 'inbox') !== 'inbox' && (
+              <div style={{ fontSize: 10.5, color: '#854F0B', background: '#FEF3C7', padding: '6px 8px', borderRadius: 6 }}>
+                Se envía en el siguiente barrido, hasta 15 minutos después. Teams publica en el canal configurado, sin destinatario.
+              </div>
+            )}
           </>
         )}
         {action.type === 'set_priority' && (

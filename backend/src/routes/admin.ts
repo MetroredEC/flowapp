@@ -1105,6 +1105,25 @@ router.get('/automations/:id/runs', async (c) => {
   return c.json({ data: rows.results });
 });
 
+// Estado de los avisos que salen de la aplicación. Sin esta vista, un webhook
+// mal configurado falla en silencio dentro del proceso programado.
+router.get('/automations/outbox', async (c) => {
+  const rows = await c.env.DB.prepare(`
+    SELECT id, automation_name, channel, target, subject, status, attempts,
+           last_error, created_at, sent_at
+    FROM automation_outbox
+    ORDER BY created_at DESC LIMIT 60
+  `).all();
+  const summary = await c.env.DB.prepare(`
+    SELECT
+      SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS pending,
+      SUM(CASE WHEN status = 'sent'    THEN 1 ELSE 0 END) AS sent,
+      SUM(CASE WHEN status = 'failed'  THEN 1 ELSE 0 END) AS failed
+    FROM automation_outbox
+  `).first();
+  return c.json({ data: rows.results, summary });
+});
+
 interface AutomationBody {
   name?: string;
   description?: string | null;

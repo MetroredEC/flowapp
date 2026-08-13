@@ -3,6 +3,7 @@ import { cors } from 'hono/cors';
 
 import type { AppEnv } from './types';
 import { logEvent, newTraceId } from './utils/syslog';
+import { runScheduledAutomations } from './utils/automation-scheduler';
 
 import { authMiddleware } from './middleware/auth';
 
@@ -100,4 +101,29 @@ app.onError(async (err, c) => {
   }, 500);
 });
 
-export default app;
+// El worker deja de ser solo una app HTTP: además atiende el cron que dispara
+// las automatizaciones por tiempo y envía los avisos encolados.
+export default {
+  fetch: app.fetch,
+
+  async scheduled(
+    _event: ScheduledController, env: AppEnv['Bindings'], ctx: ExecutionContext,
+  ): Promise<void> {
+    ctx.waitUntil((async () => {
+      const startedAt = Date.now();
+      try {
+        await runScheduledAutomations(env);
+        await logEvent(env.DB, {
+          category: 'config', action: 'scheduled_sweep', source: 'cron',
+          duration_ms: Date.now() - startedAt,
+        });
+      } catch (error) {
+        await logEvent(env.DB, {
+          category: 'config', action: 'scheduled_sweep_failed', ok: false, severity: 'error',
+          source: 'cron', duration_ms: Date.now() - startedAt,
+          detail: { error: error instanceof Error ? error.message : String(error) },
+        });
+      }
+    })());
+  },
+};

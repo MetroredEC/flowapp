@@ -497,7 +497,18 @@ export const api = {
   deleteAutomation: (id: string) =>
     request<{ data: { deleted: boolean } }>('DELETE', `/api/admin/automations/${id}`),
 
+  getAutomationOutbox: () =>
+    request<{ data: AutomationOutboxRow[]; summary: { pending: number; sent: number; failed: number } }>(
+      'GET', '/api/admin/automations/outbox'),
+
 };
+
+export interface AutomationOutboxRow {
+  id: string; automation_name: string | null;
+  channel: 'teams' | 'email'; target: string | null; subject: string | null;
+  status: 'pending' | 'sent' | 'failed'; attempts: number;
+  last_error: string | null; created_at: string; sent_at: string | null;
+}
 
 // ─── Automatizaciones ─────────────────────────────────────────────────────────
 export interface AutomationCondition {
@@ -507,7 +518,8 @@ export interface AutomationCondition {
 }
 
 export type AutomationAction =
-  | { type: 'notify'; to: 'assignee' | 'requester' | 'lead' | 'email'; email?: string; body: string }
+  | { type: 'notify'; to: 'assignee' | 'requester' | 'lead' | 'email'; email?: string; body: string;
+      channel?: 'inbox' | 'teams' | 'email' }
   | { type: 'set_priority'; value: 'low' | 'normal' | 'high' | 'urgent' }
   | { type: 'set_due_in_days'; value: number }
   | { type: 'assign_to'; email: string; name?: string }

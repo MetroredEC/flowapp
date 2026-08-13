@@ -30,6 +30,12 @@ bucket_name = "flowapp-files"
 binding = "KV"
 id      = "095661415d644f4b924b8f11173896f0"
 
+# Barrido de automatizaciones por tiempo y envio de la bandeja de salida.
+# Cada 15 minutos: suficiente para avisos de vencimiento y escalamiento, sin
+# gastar invocaciones. La deduplicacion por dia operativo evita repetir avisos.
+[triggers]
+crons = ["*/15 * * * *"]
+
 [env.production]
 workers_dev = true
 account_id = "d6247c0bd94d548990eae1ee51e2b029"
@@ -57,3 +63,8 @@ bucket_name = "flowapp-files"
 [[env.production.kv_namespaces]]
 binding = "KV"
 id      = "095661415d644f4b924b8f11173896f0"
+
+# Los entornos con nombre no heredan [triggers]: hay que repetirlo o el cron
+# solo existiria en el worker por defecto, que no es el que atiende el sitio.
+[env.production.triggers]
+crons = ["*/15 * * * *"]
