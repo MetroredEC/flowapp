@@ -30,25 +30,24 @@ jobs:
       - name: Type check
         run: npm run type-check
 
+      # El worker que atiende a producción es el del entorno `production`
+      # (flowapp-production.dbermeo.workers.dev). Sin `--env production` esto
+      # desplegaba al worker por defecto, que nadie consume.
       - name: Deploy Worker
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: backend
-          command: deploy
+          command: deploy --env production
 
   deploy-frontend:
     name: Deploy Frontend (GitHub Pages)
     runs-on: ubuntu-latest
     needs: deploy-worker
     permissions:
-      contents: read
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
+      # Publicar es un push a la rama gh-pages, no un artefacto de Pages.
+      contents: write
     defaults:
       run:
         working-directory: frontend
@@ -66,7 +65,11 @@ jobs:
       - name: Type check and build
         run: npm run build
         env:
-          VITE_API_URL:          ${{ secrets.VITE_API_URL }}
+          # Debe coincidir con PUBLIC_API_URL de [env.production] en
+          # backend/wrangler.toml. No es un secreto: la URL viaja en el bundle
+          # y ya está en el repositorio. Mantenerla aquí evita que un secreto
+          # desactualizado apunte el frontend al worker equivocado.
+          VITE_API_URL:          https://flowapp-production.dbermeo.workers.dev
           VITE_ENTRA_CLIENT_ID:  ${{ secrets.VITE_ENTRA_CLIENT_ID }}
           VITE_ENTRA_TENANT_ID:  ${{ secrets.VITE_ENTRA_TENANT_ID }}
           VITE_ENTRA_SCOPE:      ${{ secrets.VITE_ENTRA_SCOPE }}
@@ -74,10 +77,18 @@ jobs:
       - name: SPA routing fallback
         run: cp dist/index.html dist/404.html
 
-      - uses: actions/configure-pages@v4
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: frontend/dist
-
-      - id: deploy
-        uses: actions/deploy-pages@v4
+      # GitHub Pages está configurado en modo legacy sirviendo desde la rama
+      # gh-pages, así que actions/deploy-pages no publicaba nada. El contenido
+      # de gh-pages es salida de compilación: se reescribe entero en cada
+      # despliegue y su historia no se conserva a propósito.
+      - name: Publish to gh-pages
+        working-directory: frontend/dist
+        run: |
+          git init -q
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Deploy FlowApp frontend from ${GITHUB_SHA::7}"
+          git push -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:gh-pages
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,5 +1,6 @@
 param(
-  [string]$ApiUrl = "https://flowapp.dbermeo.workers.dev",
+  # Vacío = se deduce del entorno desplegado. Fijarlo a mano solo para pruebas.
+  [string]$ApiUrl = "",
   [string]$FrontendUrl = "https://metroredec.github.io/flowapp",
   [switch]$Production,
   [switch]$ApplyDbSchema,
@@ -15,6 +16,23 @@ $ErrorActionPreference = "Stop"
 $Root = Resolve-Path (Join-Path $PSScriptRoot "..")
 $Backend = Join-Path $Root "backend"
 $Frontend = Join-Path $Root "frontend"
+
+# Cada entorno tiene su propio worker. El sitio real consume el de production;
+# construir el frontend contra el otro lo deja apuntando a una API que nadie
+# actualiza.
+if (-not $ApiUrl) {
+  $ApiUrl = if ($Production) {
+    "https://flowapp-production.dbermeo.workers.dev"
+  } else {
+    "https://flowapp.dbermeo.workers.dev"
+  }
+}
+
+# gh-pages es el sitio en vivo: publicar ahí un bundle que apunta al worker de
+# pruebas deja a producción hablando con una API desactualizada.
+if ($PublishPagesBranch -and -not $Production) {
+  throw "Usa -Production junto con -PublishPagesBranch: gh-pages sirve el sitio real y debe apuntar al worker de production."
+}
 
 function Invoke-Step {
   param([string]$Title, [scriptblock]$Block)
