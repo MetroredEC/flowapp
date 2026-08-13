@@ -428,7 +428,104 @@ export const api = {
   decideApproval: (stepId: string, action: 'approve' | 'reject', comment?: string) =>
     request<{ data: { done: boolean; nextLevel?: number } }>('POST', `/api/workspace/approvals/${stepId}/decide`, { action, comment }),
 
+  // ─── PERSONAS (pantalla principal según el trabajo real) ───────────────────
+  getMe: () =>
+    request<{ data: PersonaProfile }>('GET', '/api/workspace/me'),
+
+  setPersona: (persona: PersonaKey | null) =>
+    request<{ data: PersonaProfile }>('PUT', '/api/workspace/me/persona', { persona }),
+
+  getMyRequests: () =>
+    request<{ data: RequesterRow[]; summary: RequesterSummary }>('GET', '/api/workspace/requests/mine'),
+
+  getDecisions: () =>
+    request<{ data: DecisionRow[]; summary: DecisionSummary }>('GET', '/api/workspace/decisions'),
+
+  getTeamLoad: () =>
+    request<{ data: TeamLoad }>('GET', '/api/workspace/team-load'),
+
+  getSpaceMembers: (spaceId: string) =>
+    request<{ data: SpaceMember[] }>('GET', `/api/workspace/spaces/${spaceId}/members`),
+
+  saveSpaceMembers: (spaceId: string, members: { user_email: string; user_name?: string; role: 'lead' | 'member' }[]) =>
+    request<{ data: SpaceMember[] }>('PUT', `/api/workspace/spaces/${spaceId}/members`, { members }),
+
 };
+
+// ─── Personas ─────────────────────────────────────────────────────────────────
+export type PersonaKey = 'solicitante' | 'ejecutor' | 'aprobador' | 'lider' | 'gerencia' | 'admin';
+
+export interface DetectedPersona {
+  key: PersonaKey; label: string; purpose: string; home: string; reason: string;
+}
+export interface PersonaSignals {
+  pendingApprovals: number; approverInProcesses: number; openTasks: number;
+  ledSpaces: number; openRequests: number; totalRequests: number;
+}
+export interface PersonaProfile {
+  email: string; name: string;
+  personas: DetectedPersona[];
+  primary: PersonaKey;
+  preferred: PersonaKey | null;
+  home: string;
+  signals: PersonaSignals;
+}
+
+export interface RequesterRow {
+  id: string; title: string; request_type_name: string; status: string;
+  current_level: number; total_levels: number;
+  created_at: string; submitted_at: string | null;
+  approved_at: string | null; rejected_at: string | null;
+  closed_at: string | null; sla_due_at: string | null;
+  pending_approver_name: string | null; pending_approver_label: string | null;
+  task_id: string | null; task_status: string | null; task_status_label: string | null;
+  task_assignee_name: string | null; task_due_date: string | null;
+  task_blocked: number | null; task_done: number;
+  deliverables_total: number; deliverables_ready: number;
+  next_step: string;
+}
+export interface RequesterSummary {
+  drafts: number; in_flight: number; approved: number;
+  rejected: number; awaiting_delivery: number;
+}
+
+export interface DecisionRow {
+  step_id: string; level: number; label: string;
+  step_created_at: string; notified_at: string | null;
+  request_id: string; title: string; description: string;
+  request_type_name: string; requester_name: string; requester_email: string;
+  total_levels: number; created_at: string; submitted_at: string | null;
+  sla_due_at: string | null; campaign_data: string | null;
+  waiting_days: number; attachment_count: number; requester_in_flight: number;
+}
+export interface DecisionSummary {
+  pending: number; overdue: number; oldest_days: number;
+  decided30: number; avg_hours: number | null;
+}
+
+export interface TeamMemberLoad {
+  space_id: string; user_email: string; user_name: string; role: 'lead' | 'member';
+  open_tasks: number; overdue: number; blocked: number;
+  planned_minutes: number; done7: number;
+}
+export interface TeamBottleneck {
+  space_id: string; status: string; status_label: string;
+  open_tasks: number; avg_stale_days: number;
+}
+export interface TeamLoad {
+  spaces: { id: string; name: string; color: string }[];
+  members: TeamMemberLoad[];
+  bottlenecks: TeamBottleneck[];
+  summary: {
+    open_tasks: number; overdue: number; blocked: number;
+    unassigned: number; cycle_days: number | null;
+  } | null;
+}
+
+export interface SpaceMember {
+  id: string; space_id: string; user_email: string;
+  user_name: string | null; role: 'lead' | 'member'; created_at: string;
+}
 
 export interface PendingApproval {
   step_id: string; level: number; label: string;

@@ -1,8 +1,9 @@
 import { ReactNode, useEffect, useRef, useState } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useMsal } from '@azure/msal-react';
-import { api, Space } from '../../lib/api';
+import { api, PersonaKey, Space } from '../../lib/api';
 import { useIsMobile } from '../../lib/useIsMobile';
+import { PERSONA_HOME, usePersona } from '../../lib/persona';
 
 const T = { brand: '#0284C7', ink: '#0F172A', ink2: '#475569', ink3: '#94A3B8', line: '#E2E8F0' };
 
@@ -15,6 +16,20 @@ export default function Layout({ children }: { children: ReactNode }) {
   const initials = user?.name ? user.name.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase() : '?';
   const roles = ((user?.idTokenClaims as { roles?: string[] } | undefined)?.roles) ?? [];
   const isAdmin = roles.includes('flowapp-admin');
+
+  const { profile } = usePersona();
+  // Qué secciones ve cada quien. Un solicitante puro no necesita el tablero de
+  // un área, y un ejecutor no necesita el panel de capacidad.
+  //
+  // Si el perfil todavía no llegó (o el backend aún no tiene la migración de
+  // personas), se muestra la navegación completa: una detección que falla no
+  // debe quitarle secciones a nadie.
+  const known = Boolean(profile);
+  const has = (persona: PersonaKey) => Boolean(profile?.personas.some(p => p.key === persona));
+  const showWork = !known || has('ejecutor') || has('lider') || isAdmin;
+  const showDecisions = known && has('aprobador');
+  const showTeam = (known && has('lider')) || isAdmin;
+  const showManagement = (known && has('gerencia')) || isAdmin;
 
   const [spaces, setSpaces] = useState<Space[]>([]);
   const [unread, setUnread] = useState(0);
@@ -57,32 +72,41 @@ export default function Layout({ children }: { children: ReactNode }) {
       </div>
 
       <nav style={{ padding: '4px 10px', display: 'flex', flexDirection: 'column', gap: 2 }}>
-        <Item to="/" icon="◵" label="Mi día" />
+        <Item to="/mis-solicitudes" icon="◧" label="Mis solicitudes" />
+        {showDecisions && <Item to="/decisiones" icon="⚖" label="Decisiones" badge={profile?.signals.pendingApprovals} />}
+        {showWork && <Item to="/mi-dia" icon="◵" label="Mi día" />}
         <Item to="/bandeja" icon="✉" label="Bandeja" badge={unread} />
-        <Item to="/trabajo" icon="✓" label="Trabajo" />
+        {showWork && <Item to="/trabajo" icon="✓" label="Trabajo" />}
+        {showTeam && <Item to="/equipo" icon="◔" label="Mi equipo" />}
       </nav>
 
-      <div style={{ padding: '16px 18px 6px', fontSize: 10, fontWeight: 800, color: T.ink3, letterSpacing: 0.8 }}>ESPACIOS</div>
-      <nav style={{ padding: '0 10px', display: 'flex', flexDirection: 'column', gap: 1, flex: 1, overflowY: 'auto' }}>
-        {spaces.map(s => (
-          <NavLink key={s.id} to={`/espacio/${s.id}`} style={({ isActive }) => ({
-            display: 'flex', alignItems: 'center', gap: 10, padding: isMobile ? '11px 12px' : '8px 12px', borderRadius: 8,
-            textDecoration: 'none', fontSize: isMobile ? 14 : 13, fontWeight: isActive ? 700 : 500,
-            background: isActive ? 'rgba(2,132,199,0.1)' : 'transparent',
-            color: isActive ? T.brand : T.ink2, transition: 'all .12s',
-          })}>
-            <span style={{ width: 9, height: 9, borderRadius: '50%', background: s.color, flexShrink: 0 }} />
-            {s.name}
-          </NavLink>
-        ))}
-        {spaces.length === 0 && <div style={{ padding: '8px 12px', fontSize: 12, color: T.ink3 }}>Cargando…</div>}
-      </nav>
+      {showWork && (
+        <>
+          <div style={{ padding: '16px 18px 6px', fontSize: 10, fontWeight: 800, color: T.ink3, letterSpacing: 0.8 }}>ESPACIOS</div>
+          <nav style={{ padding: '0 10px', display: 'flex', flexDirection: 'column', gap: 1, flex: 1, overflowY: 'auto' }}>
+            {spaces.map(s => (
+              <NavLink key={s.id} to={`/espacio/${s.id}`} style={({ isActive }) => ({
+                display: 'flex', alignItems: 'center', gap: 10, padding: isMobile ? '11px 12px' : '8px 12px', borderRadius: 8,
+                textDecoration: 'none', fontSize: isMobile ? 14 : 13, fontWeight: isActive ? 700 : 500,
+                background: isActive ? 'rgba(2,132,199,0.1)' : 'transparent',
+                color: isActive ? T.brand : T.ink2, transition: 'all .12s',
+              })}>
+                <span style={{ width: 9, height: 9, borderRadius: '50%', background: s.color, flexShrink: 0 }} />
+                {s.name}
+              </NavLink>
+            ))}
+            {spaces.length === 0 && <div style={{ padding: '8px 12px', fontSize: 12, color: T.ink3 }}>Cargando…</div>}
+          </nav>
+        </>
+      )}
 
-      <div style={{ padding: '6px 10px', borderTop: `1px solid ${T.line}` }}>
+      <div style={{ padding: '6px 10px', borderTop: `1px solid ${T.line}`, marginTop: showWork ? 0 : 'auto' }}>
         <Item to="/solicitudes" icon="▤" label="Solicitudes" />
-        {isAdmin && <Item to="/gerencia" icon="▦" label="Gerencia" />}
+        {showManagement && <Item to="/gerencia" icon="▦" label="Gerencia" />}
         {isAdmin && <Item to="/admin" icon="⚙" label="Administrar" />}
       </div>
+
+      <PersonaSwitcher />
 
       <div style={{ padding: '10px 14px', borderTop: `1px solid ${T.line}`, display: 'flex', alignItems: 'center', gap: 10 }}>
         <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg, #0284C7, #4F46E5)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 12, fontWeight: 700, flexShrink: 0 }}>{initials}</div>
@@ -197,5 +221,87 @@ function Item({ to, icon, label, badge }: { to: string; icon: string; label: str
         <span style={{ background: T.brand, color: '#fff', fontSize: 10, fontWeight: 700, padding: '1px 7px', borderRadius: 9, minWidth: 18, textAlign: 'center' }}>{badge}</span>
       )}
     </NavLink>
+  );
+}
+
+/**
+ * Conmutador de persona.
+ *
+ * Casi nadie es una sola persona: un líder también ejecuta y aprueba. FlowApp
+ * elige el inicio más probable, pero la persona debe poder cambiarlo sin
+ * pedirle permiso a nadie, y fijarlo si el automático no acierta.
+ */
+function PersonaSwitcher() {
+  const { profile, active, view, pin } = usePersona();
+  const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  if (!profile || profile.personas.length <= 1) return null;
+
+  const current = profile.personas.find(p => p.key === active);
+
+  const choose = (key: PersonaKey) => {
+    view(key);
+    setOpen(false);
+    navigate(PERSONA_HOME[key]);
+  };
+
+  const togglePin = async () => {
+    setSaving(true);
+    try { await pin(profile.preferred === active ? null : active); }
+    finally { setSaving(false); }
+  };
+
+  return (
+    <div style={{ padding: '8px 10px', borderTop: `1px solid ${T.line}`, position: 'relative' }}>
+      {open && (
+        <div style={{
+          position: 'absolute', bottom: 'calc(100% - 4px)', left: 10, right: 10,
+          background: '#fff', border: `1px solid ${T.line}`, borderRadius: 11,
+          boxShadow: '0 14px 34px rgba(15,23,42,.18)', overflow: 'hidden', zIndex: 400,
+        }}>
+          <div style={{ padding: '10px 13px 6px', fontSize: 10, fontWeight: 800, color: T.ink3, letterSpacing: .6 }}>
+            EMPEZAR MI DÍA COMO
+          </div>
+          {profile.personas.map(persona => (
+            <button key={persona.key} onClick={() => choose(persona.key)} style={{
+              display: 'block', width: '100%', textAlign: 'left', border: 'none',
+              borderTop: `1px solid ${T.line}`, cursor: 'pointer', padding: '10px 13px',
+              background: persona.key === active ? 'rgba(2,132,199,0.07)' : '#fff', fontFamily: 'inherit',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                <span style={{ fontSize: 12.5, fontWeight: 750, color: persona.key === active ? T.brand : T.ink }}>{persona.label}</span>
+                {profile.preferred === persona.key && (
+                  <span style={{ fontSize: 9, fontWeight: 800, color: T.brand, background: '#E6F1FB', padding: '1px 5px', borderRadius: 5 }}>FIJADA</span>
+                )}
+              </div>
+              <div style={{ fontSize: 10.5, color: T.ink3, marginTop: 2 }}>{persona.reason}</div>
+            </button>
+          ))}
+          <button onClick={togglePin} disabled={saving} style={{
+            display: 'block', width: '100%', textAlign: 'left', border: 'none',
+            borderTop: `1px solid ${T.line}`, background: '#F8FAFC', cursor: saving ? 'wait' : 'pointer',
+            padding: '10px 13px', fontSize: 11.5, fontWeight: 700, color: T.ink2, fontFamily: 'inherit',
+          }}>
+            {profile.preferred === active
+              ? 'Volver a la detección automática'
+              : `Fijar ${current?.label ?? 'esta vista'} como mi inicio`}
+          </button>
+        </div>
+      )}
+
+      <button onClick={() => setOpen(v => !v)} style={{
+        width: '100%', display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer',
+        background: 'rgba(2,132,199,0.06)', border: `1px solid ${T.line}`, borderRadius: 9,
+        padding: '8px 11px', fontFamily: 'inherit', textAlign: 'left',
+      }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 9.5, fontWeight: 800, color: T.ink3, letterSpacing: .5 }}>VIENDO COMO</div>
+          <div style={{ fontSize: 12, fontWeight: 750, color: T.brand, marginTop: 1 }}>{current?.label ?? 'Solicitante'}</div>
+        </div>
+        <span style={{ fontSize: 10, color: T.ink3 }}>{open ? '▾' : '▴'}</span>
+      </button>
+    </div>
   );
 }

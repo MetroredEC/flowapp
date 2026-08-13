@@ -16,6 +16,11 @@ import Inbox from './pages/workspace/Inbox';
 import SpaceBoard from './pages/workspace/SpaceBoard';
 import MyTasksPage from './pages/workspace/MyTasksPage';
 import Management from './pages/workspace/Management';
+import Home from './pages/workspace/Home';
+import MyRequests from './pages/workspace/MyRequests';
+import Decisions from './pages/workspace/Decisions';
+import TeamLoad from './pages/workspace/TeamLoad';
+import { PersonaProvider } from './lib/persona';
 import AppDialogHost from './components/AppDialog';
 import SSOSales from './pages/SSOSales';
 
@@ -213,16 +218,25 @@ export default function App() {
 
   return (
     <HashRouter>
+      <PersonaProvider>
       <Layout>
         <Routes>
+          {/* La raíz no es una pantalla: enruta según la persona detectada */}
+          <Route path="/" element={<Home />} />
+
           {/* Workspace (núcleo) */}
-          <Route path="/" element={<MyDay />} />
+          <Route path="/mi-dia" element={<MyDay />} />
           <Route path="/bandeja" element={<Inbox />} />
           <Route path="/trabajo" element={<MyTasksPage />} />
           <Route path="/mis-tareas" element={<Navigate to="/trabajo" replace />} />
           <Route path="/espacio/sso" element={<SSOSales />} />
           <Route path="/espacio/:spaceId" element={<SpaceBoard />} />
           <Route path="/gerencia" element={<Management />} />
+
+          {/* Inicios por persona */}
+          <Route path="/mis-solicitudes" element={<MyRequests />} />
+          <Route path="/decisiones" element={<Decisions />} />
+          <Route path="/equipo" element={<TeamLoad />} />
 
           {/* Solicitudes (intake) */}
           <Route path="/solicitudes" element={<RequestList />} />
@@ -246,6 +260,7 @@ export default function App() {
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </Layout>
+      </PersonaProvider>
       <AppDialogHost />
     </HashRouter>
   );

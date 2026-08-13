@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { AppEnv } from '../types';
 import { processApproval } from '../utils/approvals';
 import { recordWorkEvent } from '../utils/work-events';
+import { buildProfile, isPersonaKey, PersonaKey, readPersonaSignals } from '../utils/personas';
 
 const router = new Hono<AppEnv>();
 
@@ -690,6 +691,310 @@ router.get('/metrics', async (c) => {
       requests: reqStats,
     },
   });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  PERSONAS — quién eres determina dónde empiezas
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Perfil de la sesión: personas detectadas, señales que las justifican e inicio.
+router.get('/me', async (c) => {
+  const email = c.get('userEmail') ?? '';
+  const userId = c.get('userId') ?? '';
+  const roles = c.get('userRoles') ?? [];
+
+  const [signals, preference] = await Promise.all([
+    readPersonaSignals(c.env.DB, userId, email),
+    c.env.DB.prepare('SELECT preferred_persona FROM user_preferences WHERE lower(user_email) = lower(?)')
+      .bind(email).first<{ preferred_persona: string | null }>(),
+  ]);
+
+  const stored = preference?.preferred_persona ?? null;
+  const preferred = isPersonaKey(stored) ? stored : null;
+  return c.json({ data: buildProfile(email, c.get('userName') ?? '', signals, roles, preferred) });
+});
+
+// Fijar o soltar la persona con la que arranca la sesión.
+router.put('/me/persona', async (c) => {
+  const email = c.get('userEmail') ?? '';
+  if (!email) return c.json({ error: 'unauthorized' }, 401);
+
+  const body = await c.req.json<{ persona: PersonaKey | null }>();
+  const persona = body.persona;
+  if (persona !== null && !isPersonaKey(persona)) {
+    return c.json({ error: 'invalid_persona', message: 'Persona no reconocida' }, 400);
+  }
+
+  const roles = c.get('userRoles') ?? [];
+  const signals = await readPersonaSignals(c.env.DB, c.get('userId') ?? '', email);
+
+  // Nadie puede fijarse una persona que no tiene: la preferencia elige entre
+  // lo detectado, no lo inventa.
+  if (persona) {
+    const profile = buildProfile(email, '', signals, roles, null);
+    if (!profile.personas.some(p => p.key === persona)) {
+      return c.json({ error: 'persona_unavailable', message: 'Esa persona no está disponible para tu cuenta' }, 403);
+    }
+  }
+
+  await c.env.DB.prepare(`
+    INSERT INTO user_preferences (user_email, preferred_persona, updated_at)
+    VALUES (lower(?), ?, datetime('now'))
+    ON CONFLICT(user_email) DO UPDATE SET
+      preferred_persona = excluded.preferred_persona, updated_at = excluded.updated_at
+  `).bind(email, persona).run();
+
+  return c.json({ data: buildProfile(email, c.get('userName') ?? '', signals, roles, persona) });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  SOLICITANTE — mis solicitudes, estado, próximo paso y entregables
+// ═══════════════════════════════════════════════════════════════════════════
+router.get('/requests/mine', async (c) => {
+  const email = (c.get('userEmail') || '').toLowerCase();
+  const userId = c.get('userId') ?? '';
+
+  const rows = await c.env.DB.prepare(`
+    SELECT r.id, r.title, r.request_type_name, r.status, r.current_level, r.total_levels,
+           r.created_at, r.submitted_at, r.approved_at, r.rejected_at, r.closed_at, r.sla_due_at,
+           step.approver_name  AS pending_approver_name,
+           step.label          AS pending_approver_label,
+           t.id                AS task_id,
+           t.status            AS task_status,
+           t.assignee_name     AS task_assignee_name,
+           t.due_date          AS task_due_date,
+           t.is_blocked        AS task_blocked,
+           ss.label            AS task_status_label,
+           COALESCE(ss.is_done, 0) AS task_done,
+           (SELECT COUNT(*) FROM ws_task_deliverables d WHERE d.task_id = t.id) AS deliverables_total,
+           (SELECT COUNT(*) FROM ws_task_deliverables d WHERE d.task_id = t.id AND d.is_completed = 1) AS deliverables_ready
+    FROM requests r
+    LEFT JOIN approval_steps step
+      ON step.request_id = r.id AND step.level = r.current_level AND step.status = 'pending'
+    LEFT JOIN ws_tasks t
+      ON t.source_type = 'request' AND t.source_id = r.id AND t.archived = 0
+    LEFT JOIN ws_space_statuses ss
+      ON ss.space_id = t.space_id AND ss.key = t.status
+    WHERE r.requester_id = ? OR lower(r.requester_email) = ?
+    ORDER BY
+      CASE r.status WHEN 'in_progress' THEN 0 WHEN 'pending' THEN 1 WHEN 'draft' THEN 2
+                    WHEN 'approved' THEN 3 ELSE 4 END,
+      r.created_at DESC
+    LIMIT 100
+  `).bind(userId, email).all();
+
+  const data: Record<string, unknown>[] = (rows.results as Record<string, unknown>[]).map(row => ({
+    ...row,
+    next_step: describeNextStep(row),
+  }));
+
+  const summary = data.reduce<{ drafts: number; in_flight: number; approved: number; rejected: number; awaiting_delivery: number }>((acc, row) => {
+    const status = String(row.status);
+    if (status === 'draft') acc.drafts += 1;
+    else if (status === 'pending' || status === 'in_progress') acc.in_flight += 1;
+    else if (status === 'approved') acc.approved += 1;
+    else if (status === 'rejected') acc.rejected += 1;
+    if (row.task_done === 0 && row.deliverables_total) acc.awaiting_delivery += 1;
+    return acc;
+  }, { drafts: 0, in_flight: 0, approved: 0, rejected: 0, awaiting_delivery: 0 });
+
+  return c.json({ data, summary });
+});
+
+// Traduce el estado interno en la frase que el solicitante necesita leer.
+function describeNextStep(row: Record<string, unknown>): string {
+  const status = String(row.status ?? '');
+  if (status === 'draft') return 'Falta que la envíes';
+  if (status === 'rejected') return 'Rechazada — revisa el motivo en el detalle';
+  if (status === 'cancelled') return 'Cancelada';
+  if (status === 'pending' || status === 'in_progress') {
+    const approver = row.pending_approver_name;
+    const label = row.pending_approver_label;
+    if (approver) return `Espera la decisión de ${approver}${label ? ` (${label})` : ''}`;
+    return `En aprobación, nivel ${row.current_level} de ${row.total_levels}`;
+  }
+  if (status === 'approved') {
+    if (row.task_done === 1) return 'Trabajo terminado — revisa los entregables';
+    if (row.task_blocked === 1) return 'El equipo reportó un bloqueo';
+    if (row.task_assignee_name) return `${row.task_assignee_name} está trabajando en esto`;
+    return 'Aprobada, pendiente de asignar responsable';
+  }
+  return 'Sin pasos pendientes';
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  APROBADOR — decisiones con contexto, impacto y vencimiento
+// ═══════════════════════════════════════════════════════════════════════════
+router.get('/decisions', async (c) => {
+  const email = (c.get('userEmail') || '').toLowerCase();
+  const uid = c.get('userId');
+
+  const [pending, decided] = await Promise.all([
+    c.env.DB.prepare(`
+      SELECT s.id AS step_id, s.level, s.label, s.created_at AS step_created_at, s.notified_at,
+             r.id AS request_id, r.title, r.description, r.request_type_name,
+             r.requester_name, r.requester_email, r.total_levels, r.created_at,
+             r.submitted_at, r.sla_due_at, r.campaign_data,
+             CAST(julianday('now') - julianday(COALESCE(s.notified_at, s.created_at)) AS INTEGER) AS waiting_days,
+             (SELECT COUNT(*) FROM attachments a WHERE a.request_id = r.id) AS attachment_count,
+             (SELECT COUNT(*) FROM requests o
+               WHERE o.requester_id = r.requester_id AND o.status IN ('pending','in_progress')) AS requester_in_flight
+      FROM approval_steps s
+      JOIN requests r ON r.id = s.request_id
+      WHERE s.status = 'pending' AND r.status = 'in_progress' AND r.current_level = s.level
+        AND (s.approver_id = ? OR lower(s.approver_email) = ?)
+      ORDER BY COALESCE(r.sla_due_at, '9999-12-31') ASC, s.created_at ASC
+    `).bind(uid, email).all(),
+
+    c.env.DB.prepare(`
+      SELECT COUNT(*) AS decided30,
+             ROUND(AVG((julianday(decided_at) - julianday(COALESCE(notified_at, created_at))) * 24), 1) AS avg_hours
+      FROM approval_steps
+      WHERE (approver_id = ? OR lower(approver_email) = ?)
+        AND decided_at IS NOT NULL AND decided_at >= datetime('now','-30 days')
+    `).bind(uid, email).first<{ decided30: number; avg_hours: number | null }>(),
+  ]);
+
+  const rows = pending.results as Record<string, unknown>[];
+  const overdue = rows.filter(row => row.sla_due_at && String(row.sla_due_at) < new Date().toISOString()).length;
+
+  return c.json({
+    data: rows,
+    summary: {
+      pending: rows.length,
+      overdue,
+      oldest_days: rows.reduce((max, row) => Math.max(max, Number(row.waiting_days ?? 0)), 0),
+      decided30: decided?.decided30 ?? 0,
+      avg_hours: decided?.avg_hours ?? null,
+    },
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  LÍDER DE ÁREA — capacidad, SLA, cuellos de botella y distribución
+// ═══════════════════════════════════════════════════════════════════════════
+router.get('/team-load', async (c) => {
+  const email = (c.get('userEmail') || '').toLowerCase();
+  const roles = c.get('userRoles') ?? [];
+  const seesEverything = roles.includes('flowapp-admin') || roles.includes('flowapp-manager');
+
+  const leadJoin = "JOIN ws_space_members m ON m.space_id = s.id AND lower(m.user_email) = ? AND m.role = 'lead'";
+  const led = await c.env.DB.prepare(`
+    SELECT s.id, s.name, s.color
+    FROM ws_spaces s
+    ${seesEverything ? '' : leadJoin}
+    WHERE s.is_active = 1
+    ORDER BY s.sort_order
+  `).bind(...(seesEverything ? [] : [email])).all();
+
+  const spaces = led.results as { id: string; name: string; color: string }[];
+  if (spaces.length === 0) {
+    return c.json({ data: { spaces: [], members: [], bottlenecks: [], summary: null } });
+  }
+
+  const ids = spaces.map(space => space.id);
+  const placeholders = ids.map(() => '?').join(',');
+
+  const [members, bottlenecks, summary] = await Promise.all([
+    // Carga por persona: abierto, vencido, bloqueado y minutos comprometidos.
+    c.env.DB.prepare(`
+      SELECT m.space_id, m.user_email, COALESCE(m.user_name, m.user_email) AS user_name, m.role,
+        COALESCE(SUM(CASE WHEN COALESCE(ss.is_done, 0) = 0 THEN 1 ELSE 0 END), 0) AS open_tasks,
+        COALESCE(SUM(CASE WHEN COALESCE(ss.is_done, 0) = 0 AND t.due_date < date('now') THEN 1 ELSE 0 END), 0) AS overdue,
+        COALESCE(SUM(CASE WHEN COALESCE(ss.is_done, 0) = 0 AND t.is_blocked = 1 THEN 1 ELSE 0 END), 0) AS blocked,
+        COALESCE(SUM(CASE WHEN COALESCE(ss.is_done, 0) = 0 THEN COALESCE(t.estimate_minutes, 0) ELSE 0 END), 0) AS planned_minutes,
+        COALESCE(SUM(CASE WHEN ss.is_done = 1 AND t.completed_at >= datetime('now','-7 days') THEN 1 ELSE 0 END), 0) AS done7
+      FROM ws_space_members m
+      LEFT JOIN ws_tasks t
+        ON t.space_id = m.space_id AND lower(t.assignee_email) = lower(m.user_email) AND t.archived = 0
+      LEFT JOIN ws_space_statuses ss ON ss.space_id = t.space_id AND ss.key = t.status
+      WHERE m.space_id IN (${placeholders})
+      GROUP BY m.space_id, m.user_email
+      ORDER BY open_tasks DESC
+    `).bind(...ids).all(),
+
+    // Dónde se acumula el trabajo: estado con más antigüedad media.
+    c.env.DB.prepare(`
+      SELECT t.space_id, t.status, COALESCE(ss.label, t.status) AS status_label,
+        COUNT(*) AS open_tasks,
+        ROUND(AVG(julianday('now') - julianday(t.updated_at)), 1) AS avg_stale_days
+      FROM ws_tasks t
+      LEFT JOIN ws_space_statuses ss ON ss.space_id = t.space_id AND ss.key = t.status
+      WHERE t.space_id IN (${placeholders}) AND t.archived = 0 AND COALESCE(ss.is_done, 0) = 0
+      GROUP BY t.space_id, t.status
+      HAVING COUNT(*) > 0
+      ORDER BY avg_stale_days DESC
+      LIMIT 10
+    `).bind(...ids).all(),
+
+    c.env.DB.prepare(`
+      SELECT
+        COALESCE(SUM(CASE WHEN COALESCE(ss.is_done, 0) = 0 THEN 1 ELSE 0 END), 0) AS open_tasks,
+        COALESCE(SUM(CASE WHEN COALESCE(ss.is_done, 0) = 0 AND t.due_date < date('now') THEN 1 ELSE 0 END), 0) AS overdue,
+        COALESCE(SUM(CASE WHEN COALESCE(ss.is_done, 0) = 0 AND t.is_blocked = 1 THEN 1 ELSE 0 END), 0) AS blocked,
+        COALESCE(SUM(CASE WHEN COALESCE(ss.is_done, 0) = 0 AND COALESCE(t.assignee_email, '') = '' THEN 1 ELSE 0 END), 0) AS unassigned,
+        ROUND(AVG(CASE WHEN ss.is_done = 1 AND t.completed_at >= datetime('now','-30 days')
+          THEN julianday(t.completed_at) - julianday(t.created_at) END), 1) AS cycle_days
+      FROM ws_tasks t
+      LEFT JOIN ws_space_statuses ss ON ss.space_id = t.space_id AND ss.key = t.status
+      WHERE t.space_id IN (${placeholders}) AND t.archived = 0
+    `).bind(...ids).first(),
+  ]);
+
+  return c.json({
+    data: {
+      spaces,
+      members: members.results,
+      bottlenecks: bottlenecks.results,
+      summary,
+    },
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  MIEMBROS DEL ESPACIO (quién ejecuta y quién lidera)
+// ═══════════════════════════════════════════════════════════════════════════
+router.get('/spaces/:id/members', async (c) => {
+  const rows = await c.env.DB.prepare(`
+    SELECT id, space_id, user_email, user_name, role, created_at
+    FROM ws_space_members WHERE space_id = ?
+    ORDER BY CASE role WHEN 'lead' THEN 0 ELSE 1 END, COALESCE(user_name, user_email)
+  `).bind(c.req.param('id')).all();
+  return c.json({ data: rows.results });
+});
+
+router.put('/spaces/:id/members', async (c) => {
+  const roles = c.get('userRoles') ?? [];
+  if (!roles.includes('flowapp-admin')) {
+    return c.json({ error: 'forbidden', message: 'Solo un administrador puede cambiar el equipo de un espacio' }, 403);
+  }
+
+  const spaceId = c.req.param('id');
+  const space = await c.env.DB.prepare('SELECT id FROM ws_spaces WHERE id = ?').bind(spaceId).first();
+  if (!space) return c.json({ error: 'not_found' }, 404);
+
+  const body = await c.req.json<{ members: { user_email: string; user_name?: string; role: 'lead' | 'member' }[] }>();
+  const members = (body.members ?? [])
+    .filter(member => member.user_email?.trim())
+    .map(member => ({
+      email: member.user_email.trim().toLowerCase(),
+      name: member.user_name?.trim() || member.user_email.trim(),
+      role: member.role === 'lead' ? 'lead' : 'member',
+    }));
+
+  const statements = [
+    c.env.DB.prepare('DELETE FROM ws_space_members WHERE space_id = ?').bind(spaceId),
+    ...members.map(member => c.env.DB.prepare(`
+      INSERT INTO ws_space_members (space_id, user_email, user_name, role) VALUES (?, ?, ?, ?)
+      ON CONFLICT(space_id, user_email) DO UPDATE SET user_name = excluded.user_name, role = excluded.role
+    `).bind(spaceId, member.email, member.name, member.role)),
+  ];
+  await c.env.DB.batch(statements);
+
+  const rows = await c.env.DB.prepare(
+    'SELECT id, space_id, user_email, user_name, role, created_at FROM ws_space_members WHERE space_id = ?'
+  ).bind(spaceId).all();
+  return c.json({ data: rows.results });
 });
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────

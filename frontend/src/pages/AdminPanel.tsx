@@ -1,12 +1,12 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { api, RequestType, FlowLevel, EntraUser, FormField, TeamMember, TicketDept, ProcessWithFlow, SysEvent, DiagnosticRun } from '../lib/api';
-import { Card, PageHeader, Btn, Field, Input, Select, Spinner } from '../components/ui';
+import { api, RequestType, FlowLevel, EntraUser, FormField, TeamMember, TicketDept, ProcessWithFlow, SysEvent, DiagnosticRun, Space, SpaceMember } from '../lib/api';
+import { Card, PageHeader, Btn, Field, Input, Select, Spinner, Empty } from '../components/ui';
 import { UserRow } from './ProcessBuilder';
 import FormBuilder from './FormBuilder';
 import { confirmDialog, alertDialog } from '../components/AppDialog';
 
-type Tab = 'builder' | 'forms' | 'types' | 'flows' | 'team' | 'logs';
+type Tab = 'builder' | 'forms' | 'types' | 'flows' | 'team' | 'spaces' | 'logs';
 
 export default function AdminPanel() {
   const [tab, setTab] = useState<Tab>('builder');
@@ -17,6 +17,7 @@ export default function AdminPanel() {
     { key: 'forms',   label: 'Formularios' },
     { key: 'flows',   label: 'Flujos' },
     { key: 'team',    label: 'Equipos' },
+    { key: 'spaces',  label: 'Líderes de área' },
     { key: 'types',   label: 'Tipos' },
     { key: 'logs',    label: 'Registro' },
   ];
@@ -66,9 +67,144 @@ export default function AdminPanel() {
       {tab === 'forms'   && <FormsPanel />}
       {tab === 'flows'   && <FlowsPanel />}
       {tab === 'team'    && <TeamPanel />}
+      {tab === 'spaces'  && <SpaceTeamPanel />}
       {tab === 'types'   && <TypesPanel />}
       {tab === 'logs'    && <LogsPanel />}
     </div>
+  );
+}
+
+// ─── LÍDERES Y MIEMBROS POR ESPACIO ───────────────────────────────────────────
+// Es la fuente de verdad de la persona "líder de área": quien aparezca como
+// líder aquí entra a FlowApp por el tablero de capacidad de su área.
+type DraftMember = { user_email: string; user_name: string; role: 'lead' | 'member' };
+
+function SpaceTeamPanel() {
+  const [spaces, setSpaces] = useState<Space[]>([]);
+  const [spaceId, setSpaceId] = useState('');
+  const [members, setMembers] = useState<DraftMember[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [dirty, setDirty] = useState(false);
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<EntraUser[]>([]);
+
+  useEffect(() => {
+    api.getSpaces()
+      .then(r => { setSpaces(r.data); setSpaceId(current => current || r.data[0]?.id || ''); })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const loadMembers = useCallback(async (id: string) => {
+    if (!id) return;
+    const result = await api.getSpaceMembers(id);
+    setMembers(result.data.map((m: SpaceMember) => ({
+      user_email: m.user_email,
+      user_name: m.user_name ?? m.user_email,
+      role: m.role,
+    })));
+    setDirty(false);
+  }, []);
+
+  useEffect(() => { void loadMembers(spaceId).catch(() => setMembers([])); }, [spaceId, loadMembers]);
+
+  useEffect(() => {
+    if (query.trim().length < 2) { setResults([]); return; }
+    const timer = setTimeout(async () => {
+      try { setResults((await api.searchUsers(query.trim())).data.slice(0, 6)); }
+      catch { setResults([]); }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [query]);
+
+  const add = (user: EntraUser) => {
+    const email = user.email.toLowerCase();
+    if (members.some(m => m.user_email === email)) return;
+    setMembers(current => [...current, { user_email: email, user_name: user.name, role: 'member' }]);
+    setDirty(true);
+    setQuery('');
+    setResults([]);
+  };
+
+  const setRole = (email: string, role: 'lead' | 'member') => {
+    setMembers(current => current.map(m => m.user_email === email ? { ...m, role } : m));
+    setDirty(true);
+  };
+
+  const remove = (email: string) => {
+    setMembers(current => current.filter(m => m.user_email !== email));
+    setDirty(true);
+  };
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      await api.saveSpaceMembers(spaceId, members);
+      setDirty(false);
+      await alertDialog({ title: 'Equipo actualizado', message: 'Los líderes verán el tablero de su área al iniciar sesión.' });
+    } catch (error) {
+      await alertDialog({ title: 'No se pudo guardar', message: (error as Error).message, tone: 'danger' });
+    } finally { setSaving(false); }
+  };
+
+  if (loading) return <Card><Spinner /></Card>;
+
+  const leads = members.filter(m => m.role === 'lead').length;
+
+  return (
+    <Card>
+      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12, flexWrap: 'wrap', marginBottom: 18 }}>
+        <Field label="Espacio">
+          <Select value={spaceId} onChange={e => setSpaceId(e.target.value)}>
+            {spaces.map(space => <option key={space.id} value={space.id}>{space.name}</option>)}
+          </Select>
+        </Field>
+        <div style={{ flex: 1, minWidth: 200, position: 'relative' }}>
+          <Field label="Añadir persona">
+            <Input value={query} onChange={e => setQuery(e.target.value)} placeholder="Buscar en Microsoft 365" />
+          </Field>
+          {results.length > 0 && (
+            <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff', border: '1px solid #E4E4E7', borderRadius: 10, boxShadow: '0 14px 34px rgba(15,23,42,.16)', zIndex: 60, maxHeight: 260, overflowY: 'auto' }}>
+              {results.map(user => <UserRow key={user.id} user={user} onPick={add} />)}
+            </div>
+          )}
+        </div>
+        <Btn onClick={save} disabled={!dirty || saving}>{saving ? 'Guardando…' : 'Guardar equipo'}</Btn>
+      </div>
+
+      <div style={{ fontSize: 12, color: '#71717A', marginBottom: 12 }}>
+        {members.length} {members.length === 1 ? 'persona' : 'personas'} · {leads} {leads === 1 ? 'líder' : 'líderes'}.
+        Un espacio sin líder no aparece en ningún tablero de capacidad.
+      </div>
+
+      {members.length === 0 ? (
+        <Empty message="Este espacio aún no tiene equipo asignado." />
+      ) : (
+        <div style={{ border: '1px solid #E4E4E7', borderRadius: 10, overflow: 'hidden' }}>
+          {members.map(member => (
+            <div key={member.user_email} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 14px', borderBottom: '1px solid #F4F4F5', flexWrap: 'wrap' }}>
+              <div style={{ flex: '1 1 200px', minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#18181B' }}>{member.user_name}</div>
+                <div style={{ fontSize: 11, color: '#A1A1AA' }}>{member.user_email}</div>
+              </div>
+              <div style={{ display: 'flex', padding: 3, background: '#F4F4F5', borderRadius: 8 }}>
+                {(['member', 'lead'] as const).map(role => (
+                  <button key={role} onClick={() => setRole(member.user_email, role)} style={{
+                    border: 0, borderRadius: 6, padding: '5px 11px', cursor: 'pointer', fontFamily: 'inherit',
+                    fontSize: 11.5, fontWeight: 700,
+                    background: member.role === role ? '#fff' : 'transparent',
+                    color: member.role === role ? '#0284C7' : '#71717A',
+                    boxShadow: member.role === role ? '0 1px 4px rgba(15,23,42,.12)' : 'none',
+                  }}>{role === 'lead' ? 'Líder' : 'Miembro'}</button>
+                ))}
+              </div>
+              <button onClick={() => remove(member.user_email)} style={{ border: 'none', background: 'none', color: '#A1A1AA', fontSize: 18, cursor: 'pointer' }}>×</button>
+            </div>
+          ))}
+        </div>
+      )}
+    </Card>
   );
 }
 
