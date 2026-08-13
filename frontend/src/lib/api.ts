@@ -871,6 +871,14 @@ export interface Attachment {
 }
 export interface RequestType {
   id: string; name: string; description: string | null; is_active: number;
+  /** Metadatos del catálogo guiado. Opcionales: un proceso sin configurar no los tiene. */
+  category?: string | null;
+  color?: string | null;
+  icon?: string | null;
+  default_sla_days?: number | null;
+  required_fields?: number;
+  document_fields?: number;
+  approval_levels?: number;
 }
 export interface FlowConfig {
   id: string; level: number; label: string;

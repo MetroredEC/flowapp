@@ -1,28 +1,130 @@
-import { useEffect, useState } from 'react';
+// Pedir algo en FlowApp.
+//
+// Antes esta pantalla mostraba todos los procesos en un desplegable y luego el
+// formulario entero de una sola vez. Quien no sabía qué proceso elegir se
+// equivocaba, y quien sí sabía se encontraba con un muro de campos.
+//
+// Ahora avanza como una conversación: primero qué necesitas, después con qué
+// proceso se resuelve, y por último las preguntas en tandas cortas. Los pasos
+// del formulario salen de las secciones que el administrador ya definió en el
+// wizard, así que respetan la estructura pensada para cada proceso sin pedir
+// configuración nueva.
+
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api, type RequestType, type FormField } from '../lib/api';
+import { alertDialog } from '../components/AppDialog';
 
 type FieldValue = string | boolean | string[];
+type Phase = 'intent' | 'process' | 'form' | 'review';
+
+interface FormStep {
+  title: string;
+  description?: string;
+  fields: FormField[];
+}
+
+const SIN_CATEGORIA = 'Otros';
+
+/** Título legible de una categoría; el wizard las guarda en minúscula. */
+const categoryLabel = (value: string) =>
+  value === SIN_CATEGORIA ? value : value.charAt(0).toUpperCase() + value.slice(1);
+
+function sectionDescription(field: FormField): string {
+  try {
+    const config = field.options_json ? JSON.parse(field.options_json) as { description?: string } : null;
+    return config?.description || field.placeholder || '';
+  } catch { return field.placeholder || ''; }
+}
+
+/**
+ * Convierte la lista plana de campos en pasos.
+ *
+ * Cada `section` abre un paso. Si el proceso no usa secciones y tiene muchos
+ * campos, se parte en tandas para no reproducir el muro que queremos evitar.
+ */
+function buildSteps(fields: FormField[]): FormStep[] {
+  const steps: FormStep[] = [];
+  let current: FormStep | null = null;
+
+  for (const field of fields) {
+    if (field.field_type === 'section') {
+      current = { title: field.label, description: sectionDescription(field), fields: [] };
+      steps.push(current);
+      continue;
+    }
+    if (!current) {
+      current = { title: 'Detalles de la solicitud', fields: [] };
+      steps.push(current);
+    }
+    current.fields.push(field);
+  }
+
+  const withFields = steps.filter(step => step.fields.length > 0);
+  if (withFields.length === 1 && withFields[0].fields.length > 5) {
+    const all = withFields[0].fields;
+    const chunks: FormStep[] = [];
+    for (let index = 0; index < all.length; index += 4) {
+      chunks.push({
+        title: withFields[0].title,
+        description: chunks.length === 0 ? withFields[0].description : undefined,
+        fields: all.slice(index, index + 4),
+      });
+    }
+    return chunks;
+  }
+  return withFields;
+}
+
+/** Devuelve el primer error de un conjunto de campos, o null si están bien. */
+function validateFields(
+  fields: FormField[], values: Record<string, FieldValue>, files: Record<string, File[]>,
+): string | null {
+  for (const field of fields) {
+    if (!field.required || field.field_type === 'section') continue;
+    const value = values[field.field_key];
+    if (field.field_type === 'file' && !files[field.field_key]?.length) {
+      return `Adjunta al menos un archivo en "${field.label}".`;
+    }
+    if (field.field_type === 'checkbox' && value !== true) {
+      return `El campo "${field.label}" es obligatorio.`;
+    }
+    if (field.field_type === 'checkbox_group' && (!Array.isArray(value) || value.length === 0)) {
+      return `Selecciona al menos una opción en "${field.label}".`;
+    }
+    if (!['checkbox', 'checkbox_group', 'file'].includes(field.field_type) && !String(value ?? '').trim()) {
+      return `El campo "${field.label}" es obligatorio.`;
+    }
+  }
+  return null;
+}
 
 export default function NewRequest() {
   const navigate = useNavigate();
 
-  const [types, setTypes]           = useState<RequestType[]>([]);
-  const [loading, setLoading]       = useState(true);
-  const [saving, setSaving]         = useState(false);
+  const [types, setTypes] = useState<RequestType[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [phase, setPhase] = useState<Phase>('intent');
+  const [category, setCategory] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
+
   const [requestTypeId, setRequestTypeId] = useState('');
-  const [title, setTitle]           = useState('');
-  const [description, setDescription] = useState('');
-  const [files, setFiles]           = useState<File[]>([]);
-  const [fieldFiles, setFieldFiles] = useState<Record<string, File[]>>({});
-  const [error, setError]           = useState('');
   const [formFields, setFormFields] = useState<FormField[]>([]);
-  const [fieldValues, setFieldValues] = useState<Record<string, FieldValue>>({});
   const [loadingFields, setLoadingFields] = useState(false);
+  const [fieldValues, setFieldValues] = useState<Record<string, FieldValue>>({});
+  const [fieldFiles, setFieldFiles] = useState<Record<string, File[]>>({});
+
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [files, setFiles] = useState<File[]>([]);
+
+  const [stepIndex, setStepIndex] = useState(0);
+  const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     api.getRequestTypes()
-      .then(r => setTypes(r.data.filter(t => t.is_active)))
+      .then(r => setTypes(r.data.filter(type => type.is_active)))
       .finally(() => setLoading(false));
   }, []);
 
@@ -33,9 +135,9 @@ export default function NewRequest() {
       .then(r => {
         setFormFields(r.data);
         const defaults: Record<string, FieldValue> = {};
-        r.data.forEach(f => {
-          defaults[f.field_key] = f.field_type === 'checkbox' ? false
-            : f.field_type === 'checkbox_group' ? [] : '';
+        r.data.forEach(field => {
+          defaults[field.field_key] = field.field_type === 'checkbox' ? false
+            : field.field_type === 'checkbox_group' ? [] : '';
         });
         setFieldValues(defaults);
         setFieldFiles({});
@@ -44,47 +146,71 @@ export default function NewRequest() {
       .finally(() => setLoadingFields(false));
   }, [requestTypeId]);
 
-  function setFieldValue(key: string, val: FieldValue) {
-    setFieldValues(prev => ({ ...prev, [key]: val }));
+  const selected = types.find(type => type.id === requestTypeId) ?? null;
+  const steps = useMemo(() => buildSteps(formFields), [formFields]);
+
+  // El paso 0 siempre es el resumen en palabras del solicitante; después vienen
+  // los pasos del formulario del proceso.
+  const totalSteps = steps.length + 1;
+
+  const categories = useMemo(() => {
+    const map = new Map<string, RequestType[]>();
+    for (const type of types) {
+      const key = (type.category || '').trim() || SIN_CATEGORIA;
+      map.set(key, [...(map.get(key) ?? []), type]);
+    }
+    return [...map.entries()].sort(([a], [b]) =>
+      a === SIN_CATEGORIA ? 1 : b === SIN_CATEGORIA ? -1 : a.localeCompare(b));
+  }, [types]);
+
+  const matches = useMemo(() => {
+    const term = query.trim().toLocaleLowerCase('es');
+    if (term.length < 2) return [];
+    return types.filter(type =>
+      `${type.name} ${type.description ?? ''} ${type.category ?? ''}`
+        .toLocaleLowerCase('es').includes(term));
+  }, [query, types]);
+
+  function chooseProcess(type: RequestType) {
+    setRequestTypeId(type.id);
+    setStepIndex(0);
+    setError('');
+    setPhase('form');
   }
 
-  function onFilesChange(e: React.ChangeEvent<HTMLInputElement>) {
-    setFiles(prev => [...prev, ...Array.from(e.target.files ?? [])]);
-    e.target.value = '';
+  function next() {
+    setError('');
+    if (stepIndex === 0) {
+      if (!title.trim()) { setError('Escribe en una línea qué necesitas.'); return; }
+      if (!description.trim()) { setError('Cuenta un poco más para que el equipo entienda el pedido.'); return; }
+    } else {
+      const invalid = validateFields(steps[stepIndex - 1].fields, fieldValues, fieldFiles);
+      if (invalid) { setError(invalid); return; }
+    }
+    if (stepIndex + 1 >= totalSteps) setPhase('review');
+    else setStepIndex(stepIndex + 1);
   }
 
-  async function submit() {
+  function back() {
+    setError('');
+    if (phase === 'review') { setStepIndex(totalSteps - 1); setPhase('form'); return; }
+    if (stepIndex === 0) { setPhase('process'); return; }
+    setStepIndex(stepIndex - 1);
+  }
+
+  /** Crea la solicitud. En borrador no se envía a aprobación: queda guardada. */
+  async function persist(mode: 'draft' | 'submit') {
     setSaving(true);
     setError('');
     try {
-      if (!requestTypeId) throw new Error('Selecciona un tipo de solicitud.');
-      if (!title.trim())  throw new Error('Ingresa un titulo.');
-      if (!description.trim()) throw new Error('Ingresa una descripcion.');
-
-      // Validate required custom fields
-      for (const f of formFields) {
-        if (f.required) {
-          const v = fieldValues[f.field_key];
-          if (f.field_type === 'section') continue;
-          if (f.field_type === 'file' && !(fieldFiles[f.field_key]?.length)) {
-            throw new Error('Adjunta al menos un archivo en "' + f.label + '".');
-          }
-          if (f.field_type === 'checkbox' && v !== true) {
-            throw new Error('El campo "' + f.label + '" es obligatorio.');
-          }
-          if (f.field_type === 'checkbox_group' && (!Array.isArray(v) || v.length === 0)) {
-            throw new Error('Selecciona al menos una opción en "' + f.label + '".');
-          }
-          if (!['checkbox', 'checkbox_group', 'file'].includes(f.field_type) && !String(v ?? '').trim()) {
-            throw new Error('El campo "' + f.label + '" es obligatorio.');
-          }
-        }
-      }
+      const invalid = validateFields(formFields, fieldValues, fieldFiles);
+      if (mode === 'submit' && invalid) throw new Error(invalid);
 
       const campaign_data = formFields.length > 0
         ? {
             fields: fieldValues,
-            file_fields: Object.fromEntries(Object.entries(fieldFiles).map(([key, value]) => [key, value.map(file => file.name)])),
+            file_fields: Object.fromEntries(
+              Object.entries(fieldFiles).map(([key, value]) => [key, value.map(file => file.name)])),
           }
         : undefined;
 
@@ -95,13 +221,20 @@ export default function NewRequest() {
         campaign_data,
       });
 
-      const allFiles = [...files, ...Object.values(fieldFiles).flat()];
-      for (const file of allFiles) {
+      for (const file of [...files, ...Object.values(fieldFiles).flat()]) {
         await api.uploadFile(created.data.id, file);
       }
 
-      await api.submitRequest(created.data.id);
-      navigate('/requests/' + created.data.id);
+      if (mode === 'submit') {
+        await api.submitRequest(created.data.id);
+      } else {
+        await alertDialog({
+          title: 'Guardada como borrador',
+          message: 'Puedes retomarla desde Mis solicitudes cuando quieras. Nadie la revisará hasta que la envíes.',
+          tone: 'success',
+        });
+      }
+      navigate('/solicitudes/' + created.data.id);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'No se pudo crear la solicitud.');
     } finally {
@@ -109,106 +242,368 @@ export default function NewRequest() {
     }
   }
 
-  if (loading) return <div style={{ padding: 32, color: '#777' }}>Cargando...</div>;
+  if (loading) return <div style={{ padding: 48, color: '#667085' }}>Preparando el catálogo…</div>;
+
+  // Sin procesos activos no hay nada que pedir. Antes esto se veía como una
+  // pantalla vacía sin explicación; conviene decir qué pasa y a quién acudir.
+  if (types.length === 0) {
+    return (
+      <div style={{ padding: '48px 20px', maxWidth: 560, margin: '0 auto', textAlign: 'center' }}>
+        <h1 style={{ fontSize: 22, fontWeight: 850, color: '#101828', marginBottom: 10 }}>
+          No hay procesos disponibles
+        </h1>
+        <p style={{ color: '#667085', fontSize: 14.5, lineHeight: 1.6 }}>
+          Ahora mismo no hay ningún proceso activo para crear solicitudes. Todos
+          están archivados. Un administrador puede reactivarlos desde
+          Administrar → Procesos.
+        </p>
+        <button onClick={() => navigate('/solicitudes')} style={{ ...cancelButton, marginTop: 20 }}>
+          Ver mis solicitudes
+        </button>
+      </div>
+    );
+  }
 
   return (
-    <div style={{ padding: 32, maxWidth: 900, margin: '0 auto' }}>
-      <h1 style={{ fontSize: 28, fontWeight: 900, color: '#111', marginBottom: 6 }}>Nueva solicitud</h1>
-      <p style={{ color: '#667085', fontSize: 14, marginBottom: 28 }}>
-        Completa la informacion y adjunta los respaldos necesarios.
+    <div style={{ padding: '32px 20px 64px', maxWidth: 760, margin: '0 auto' }}>
+      {phase === 'intent' && (
+        <IntentStep
+          categories={categories}
+          matches={matches}
+          query={query}
+          onQuery={setQuery}
+          onPickCategory={value => { setCategory(value); setPhase('process'); }}
+          onPickProcess={chooseProcess}
+        />
+      )}
+
+      {phase === 'process' && (
+        <ProcessStep
+          category={category}
+          types={types.filter(type => ((type.category || '').trim() || SIN_CATEGORIA) === category)}
+          onBack={() => { setPhase('intent'); setCategory(null); }}
+          onPick={chooseProcess}
+        />
+      )}
+
+      {(phase === 'form' || phase === 'review') && selected && (
+        <>
+          <Header
+            processName={selected.name}
+            current={phase === 'review' ? totalSteps : stepIndex}
+            total={totalSteps}
+            onExit={() => { setPhase('process'); setRequestTypeId(''); }}
+          />
+
+          {error && <Alert>{error}</Alert>}
+
+          {phase === 'form' && (
+            loadingFields ? (
+              <div style={{ padding: 40, color: '#667085' }}>Cargando el formulario…</div>
+            ) : stepIndex === 0 ? (
+              <StepCard
+                title="¿Qué necesitas?"
+                description="Resúmelo en una línea. Es lo que verá quien lo apruebe."
+              >
+                <div style={{ display: 'grid', gap: 16 }}>
+                  <div>
+                    <label style={labelStyle}>En una línea</label>
+                    <input
+                      autoFocus value={title} onChange={e => setTitle(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') next(); }}
+                      placeholder="Ej. Arte para la campaña de vacunación"
+                      style={input}
+                    />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Cuéntanos un poco más</label>
+                    <textarea
+                      value={description} onChange={e => setDescription(e.target.value)}
+                      placeholder="Para qué es, cuándo lo necesitas y cualquier detalle que ayude a resolverlo bien."
+                      rows={5} style={{ ...input, resize: 'vertical' }}
+                    />
+                  </div>
+                </div>
+              </StepCard>
+            ) : (
+              <StepCard
+                title={steps[stepIndex - 1].title}
+                description={steps[stepIndex - 1].description}
+              >
+                <div style={{ display: 'grid', gap: 22 }}>
+                  {steps[stepIndex - 1].fields.map(field => (
+                    field.field_type === 'file' ? (
+                      <FileField
+                        key={field.id} field={field}
+                        files={fieldFiles[field.field_key] ?? []}
+                        onChange={next => setFieldFiles(prev => ({ ...prev, [field.field_key]: next }))}
+                      />
+                    ) : (
+                      <DynamicField
+                        key={field.id} field={field}
+                        value={fieldValues[field.field_key]}
+                        onChange={value => setFieldValues(prev => ({ ...prev, [field.field_key]: value }))}
+                      />
+                    )
+                  ))}
+                </div>
+              </StepCard>
+            )
+          )}
+
+          {phase === 'review' && (
+            <ReviewStep
+              process={selected}
+              title={title}
+              description={description}
+              steps={steps}
+              values={fieldValues}
+              fieldFiles={fieldFiles}
+              files={files}
+              onAddFiles={list => setFiles(prev => [...prev, ...list])}
+              onRemoveFile={index => setFiles(prev => prev.filter((_, i) => i !== index))}
+              onEditStep={index => { setStepIndex(index); setPhase('form'); }}
+            />
+          )}
+
+          <div style={{ display: 'flex', gap: 10, marginTop: 22, flexWrap: 'wrap' }}>
+            <button onClick={back} disabled={saving} style={cancelButton}>Atrás</button>
+            <div style={{ flex: 1 }} />
+            <button onClick={() => persist('draft')} disabled={saving || !title.trim()} style={cancelButton}>
+              Guardar y seguir después
+            </button>
+            {phase === 'form' ? (
+              <button onClick={next} disabled={saving} style={submitButton}>Continuar</button>
+            ) : (
+              <button onClick={() => persist('submit')} disabled={saving} style={submitButton}>
+                {saving ? 'Enviando…' : 'Enviar solicitud'}
+              </button>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ─── Paso 1: qué necesitas ────────────────────────────────────────────────────
+function IntentStep({ categories, matches, query, onQuery, onPickCategory, onPickProcess }: {
+  categories: [string, RequestType[]][];
+  matches: RequestType[];
+  query: string;
+  onQuery: (value: string) => void;
+  onPickCategory: (value: string) => void;
+  onPickProcess: (type: RequestType) => void;
+}) {
+  return (
+    <div>
+      <h1 style={{ fontSize: 27, fontWeight: 850, color: '#101828', letterSpacing: -.6, margin: '0 0 8px' }}>
+        ¿Qué necesitas hacer?
+      </h1>
+      <p style={{ color: '#667085', fontSize: 15, lineHeight: 1.55, margin: '0 0 24px' }}>
+        Elige el área que resuelve tu pedido y te llevo al proceso correcto.
+        Si no sabes cuál es, descríbelo en tus palabras.
       </p>
 
-      {error && <Alert>{error}</Alert>}
+      <input
+        value={query} onChange={e => onQuery(e.target.value)}
+        placeholder="Describe lo que necesitas… por ejemplo: arte, reporte, convenio"
+        style={{ ...input, marginBottom: 20 }}
+      />
 
-      <div style={panel}>
-        {/* DATOS GENERALES */}
-        <Section title="DATOS GENERALES">
-          <div style={{ display: 'grid', gap: 16 }}>
-            <Field label="Tipo de solicitud *">
-              <select value={requestTypeId} onChange={e => setRequestTypeId(e.target.value)} style={input}>
-                <option value="">Selecciona...</option>
-                {types.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-              </select>
-            </Field>
-            <Field label="Titulo de la solicitud *">
-              <input value={title} onChange={e => setTitle(e.target.value)}
-                placeholder="Describe brevemente lo que solicitas" style={input} />
-            </Field>
-            <Field label="Descripcion y justificacion *">
-              <textarea value={description} onChange={e => setDescription(e.target.value)}
-                placeholder="Explica el motivo, contexto y necesidad de esta solicitud..."
-                style={{ ...input, minHeight: 110, resize: 'vertical' }} />
-            </Field>
+      {matches.length > 0 ? (
+        <div style={{ display: 'grid', gap: 10 }}>
+          <div style={{ fontSize: 12, fontWeight: 800, color: '#667085' }}>
+            {matches.length} proceso(s) coinciden
           </div>
-        </Section>
-
-        {/* CAMPOS DINAMICOS */}
-        {loadingFields && (
-          <div style={{ padding: '20px 32px', color: '#888', fontSize: 13 }}>
-            Cargando campos del formulario...
-          </div>
-        )}
-
-        {!loadingFields && formFields.length > 0 && (
-          <Section title="INFORMACION ESPECIFICA">
-            <div style={{ display: 'grid', gap: 16 }}>
-              {formFields.map(f => (
-                f.field_type === 'file' ? (
-                  <FileField key={f.field_key} field={f} files={fieldFiles[f.field_key] ?? []}
-                    onChange={next => setFieldFiles(previous => ({ ...previous, [f.field_key]: next }))} />
-                ) : <DynamicField
-                    key={f.field_key}
-                    field={f}
-                    value={fieldValues[f.field_key] ?? ''}
-                    onChange={v => setFieldValue(f.field_key, v)}
-                  />
-              ))}
-            </div>
-          </Section>
-        )}
-
-        {/* ARCHIVOS */}
-        <Section title="ARCHIVOS DE RESPALDO">
-          <label style={dropZone}>
-            <div style={{ fontSize: 28, marginBottom: 8 }}>📎</div>
-            <strong>Adjuntar archivos</strong>
-            <div style={{ color: '#667085', marginTop: 6, fontSize: 13 }}>
-              PDFs, imagenes, cotizaciones. Max 20 MB por archivo.
-            </div>
-            <input type="file" multiple onChange={onFilesChange} style={{ display: 'none' }} />
-          </label>
-          {files.length > 0 && (
-            <div style={{ marginTop: 12, display: 'grid', gap: 6 }}>
-              {files.map((file, i) => (
-                <div key={i} style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: 8,
-                  padding: '8px 12px', fontSize: 13,
-                }}>
-                  <span style={{ color: '#344054' }}>{file.name}</span>
-                  <button onClick={() => setFiles(prev => prev.filter((_, j) => j !== i))}
-                    style={{ background: 'none', border: 'none', color: '#F0997B', cursor: 'pointer', fontSize: 16 }}>
-                    ✕
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </Section>
-
-        {/* ACCIONES */}
-        <div style={{ padding: '20px 32px', display: 'flex', justifyContent: 'flex-end', gap: 12, borderTop: '1px solid #EAECF0' }}>
-          <button onClick={() => navigate('/requests')} style={cancelButton}>Cancelar</button>
-          <button onClick={submit} disabled={saving} style={submitButton}>
-            {saving ? 'Enviando...' : 'Enviar solicitud'}
-          </button>
+          {matches.map(type => (
+            <ProcessCard key={type.id} type={type} onPick={() => onPickProcess(type)} />
+          ))}
         </div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: 12 }}>
+          {categories.map(([name, list]) => (
+            <button key={name} onClick={() => onPickCategory(name)} style={cardButton}>
+              <div style={{ fontSize: 15, fontWeight: 800, color: '#101828' }}>{categoryLabel(name)}</div>
+              <div style={{ fontSize: 12.5, color: '#667085', marginTop: 4 }}>
+                {list.length} {list.length === 1 ? 'proceso disponible' : 'procesos disponibles'}
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Paso 2: con qué proceso ──────────────────────────────────────────────────
+function ProcessStep({ category, types, onBack, onPick }: {
+  category: string | null;
+  types: RequestType[];
+  onBack: () => void;
+  onPick: (type: RequestType) => void;
+}) {
+  return (
+    <div>
+      <button onClick={onBack} style={{ ...linkButton, marginBottom: 14 }}>← Cambiar de área</button>
+      <h1 style={{ fontSize: 24, fontWeight: 850, color: '#101828', margin: '0 0 6px' }}>
+        {categoryLabel(category ?? '')}
+      </h1>
+      <p style={{ color: '#667085', fontSize: 14.5, margin: '0 0 22px' }}>
+        Elige el proceso que mejor describe lo que necesitas. Cada uno indica qué te va a pedir.
+      </p>
+      <div style={{ display: 'grid', gap: 11 }}>
+        {types.length === 0 ? (
+          <div style={{ color: '#667085', fontSize: 14 }}>No hay procesos disponibles en esta área.</div>
+        ) : types.map(type => (
+          <ProcessCard key={type.id} type={type} onPick={() => onPick(type)} />
+        ))}
       </div>
     </div>
   );
 }
 
-// ─── Dynamic field renderer ───────────────────────────────────────────────────
+/** Tarjeta de proceso: dice de antemano qué van a pedirte y cuánto tarda. */
+function ProcessCard({ type, onPick }: { type: RequestType; onPick: () => void }) {
+  const requirements = [
+    type.required_fields ? `${type.required_fields} dato(s) obligatorio(s)` : null,
+    type.document_fields ? `${type.document_fields} documento(s)` : null,
+    type.approval_levels ? `${type.approval_levels} nivel(es) de aprobación` : null,
+  ].filter(Boolean) as string[];
+
+  return (
+    <button onClick={onPick} style={{ ...cardButton, textAlign: 'left', width: '100%' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 9, flexWrap: 'wrap' }}>
+        <span style={{ width: 9, height: 9, borderRadius: 99, background: type.color || '#0284C7' }} />
+        <span style={{ fontSize: 15, fontWeight: 800, color: '#101828' }}>{type.name}</span>
+        {type.default_sla_days ? (
+          <span style={{ fontSize: 10.5, fontWeight: 800, color: '#185FA5', background: '#E6F1FB', padding: '2px 7px', borderRadius: 6 }}>
+            ~{type.default_sla_days} días
+          </span>
+        ) : null}
+      </div>
+      {type.description && (
+        <div style={{ fontSize: 13, color: '#667085', marginTop: 5, lineHeight: 1.5 }}>{type.description}</div>
+      )}
+      {requirements.length > 0 && (
+        <div style={{ fontSize: 11.5, color: '#98A2B3', marginTop: 7 }}>
+          Te pedirá: {requirements.join(' · ')}
+        </div>
+      )}
+    </button>
+  );
+}
+
+// ─── Paso final: revisar y enviar ─────────────────────────────────────────────
+function ReviewStep({ process, title, description, steps, values, fieldFiles, files, onAddFiles, onRemoveFile, onEditStep }: {
+  process: RequestType;
+  title: string;
+  description: string;
+  steps: FormStep[];
+  values: Record<string, FieldValue>;
+  fieldFiles: Record<string, File[]>;
+  files: File[];
+  onAddFiles: (list: File[]) => void;
+  onRemoveFile: (index: number) => void;
+  onEditStep: (index: number) => void;
+}) {
+  const show = (value: FieldValue) =>
+    value === true ? 'Sí' : value === false ? 'No'
+    : Array.isArray(value) ? (value.join(', ') || '—')
+    : String(value ?? '').trim() || '—';
+
+  return (
+    <StepCard title="Revisa antes de enviar" description={`Se enviará como "${process.name}".`}>
+      <div style={{ display: 'grid', gap: 16 }}>
+        <ReviewBlock label="Tu pedido" onEdit={() => onEditStep(0)}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: '#101828' }}>{title}</div>
+          <div style={{ fontSize: 13, color: '#667085', marginTop: 4, whiteSpace: 'pre-line' }}>{description}</div>
+        </ReviewBlock>
+
+        {steps.map((step, index) => (
+          <ReviewBlock key={index} label={step.title} onEdit={() => onEditStep(index + 1)}>
+            <div style={{ display: 'grid', gap: 5 }}>
+              {step.fields.map(field => (
+                <div key={field.id} style={{ display: 'flex', gap: 10, fontSize: 12.5 }}>
+                  <span style={{ minWidth: 130, color: '#98A2B3' }}>{field.label}</span>
+                  <span style={{ color: '#344054', flex: 1 }}>
+                    {field.field_type === 'file'
+                      ? (fieldFiles[field.field_key]?.map(f => f.name).join(', ') || '—')
+                      : show(values[field.field_key])}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </ReviewBlock>
+        ))}
+
+        <div>
+          <label style={labelStyle}>Adjuntos adicionales (opcional)</label>
+          <label style={dropZone}>
+            <strong>Seleccionar archivos</strong>
+            <div style={{ color: '#667085', marginTop: 5, fontSize: 12 }}>Máximo 20 MB cada uno.</div>
+            <input type="file" multiple style={{ display: 'none' }} onChange={event => {
+              onAddFiles(Array.from(event.target.files ?? []));
+              event.target.value = '';
+            }} />
+          </label>
+          {files.map((file, index) => (
+            <div key={`${file.name}-${index}`} style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 10px', fontSize: 12, borderBottom: '1px solid #EAECF0' }}>
+              <span>{file.name}</span>
+              <button type="button" onClick={() => onRemoveFile(index)} style={{ border: 0, background: 'transparent', color: '#B42318', cursor: 'pointer' }}>Quitar</button>
+            </div>
+          ))}
+        </div>
+      </div>
+    </StepCard>
+  );
+}
+
+function ReviewBlock({ label, onEdit, children }: { label: string; onEdit: () => void; children: React.ReactNode }) {
+  return (
+    <div style={{ border: '1px solid #EAECF0', borderRadius: 10, padding: 14 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+        <span style={{ fontSize: 11, fontWeight: 800, color: '#98A2B3', textTransform: 'uppercase', letterSpacing: .5, flex: 1 }}>{label}</span>
+        <button onClick={onEdit} style={linkButton}>Editar</button>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+// ─── Piezas de la conversación ────────────────────────────────────────────────
+function Header({ processName, current, total, onExit }: {
+  processName: string; current: number; total: number; onExit: () => void;
+}) {
+  const progress = Math.round((current / total) * 100);
+  return (
+    <div style={{ marginBottom: 20 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 9, flexWrap: 'wrap' }}>
+        <span style={{ fontSize: 12.5, fontWeight: 800, color: '#0284C7' }}>{processName}</span>
+        <span style={{ fontSize: 11.5, color: '#98A2B3' }}>Paso {Math.min(current + 1, total)} de {total}</span>
+        <div style={{ flex: 1 }} />
+        <button onClick={onExit} style={linkButton}>Cambiar de proceso</button>
+      </div>
+      <div style={{ height: 5, borderRadius: 99, background: '#EAECF0', overflow: 'hidden' }}>
+        <div style={{ width: `${progress}%`, height: '100%', background: 'linear-gradient(90deg,#0284C7,#14B8A6)', transition: 'width .25s' }} />
+      </div>
+    </div>
+  );
+}
+
+function StepCard({ title, description, children }: {
+  title: string; description?: string; children: React.ReactNode;
+}) {
+  return (
+    <section style={{ ...panel, padding: 26 }}>
+      <h2 style={{ fontSize: 20, fontWeight: 820, color: '#101828', margin: '0 0 4px' }}>{title}</h2>
+      {description && <p style={{ fontSize: 13.5, color: '#667085', margin: '0 0 20px', lineHeight: 1.5 }}>{description}</p>}
+      {!description && <div style={{ height: 16 }} />}
+      {children}
+    </section>
+  );
+}
+
 function DynamicField({ field: f, value, onChange }: {
   field: FormField;
   value: FieldValue;
@@ -220,20 +615,6 @@ function DynamicField({ field: f, value, onChange }: {
       {f.required === 1 && <span style={{ color: '#993C1D', marginLeft: 4 }}>*</span>}
     </label>
   );
-
-  if (f.field_type === 'section') {
-    let description = f.placeholder ?? '';
-    try {
-      const config = f.options_json ? JSON.parse(f.options_json) as { description?: string } : null;
-      description = config?.description || description;
-    } catch { /* usa el placeholder */ }
-    return (
-      <div style={{ paddingTop: 8, borderBottom: '1px solid #E4E4E7', paddingBottom: 10 }}>
-        <h3 style={{ margin: 0, fontSize: 17, color: '#18181B' }}>{f.label}</h3>
-        {description && <p style={{ margin: '5px 0 0', fontSize: 13, color: '#667085' }}>{description}</p>}
-      </div>
-    );
-  }
 
   if (f.field_type === 'checkbox') {
     return (
@@ -353,25 +734,6 @@ function FileField({ field, files, onChange }: { field: FormField; files: File[]
   </div>;
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section style={{ padding: 32, borderBottom: '1px solid #EAECF0' }}>
-      <h2 style={{ color: '#0284C7', fontSize: 16, fontWeight: 900, marginBottom: 20 }}>{title}</h2>
-      {children}
-    </section>
-  );
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <label style={{ display: 'grid', gap: 6, fontSize: 14, fontWeight: 700, color: '#101828' }}>
-      {label}
-      {children}
-    </label>
-  );
-}
-
 function Alert({ children }: { children: React.ReactNode }) {
   return (
     <div style={{ background: '#FFF2EC', border: '1px solid #F0997B', color: '#993C1D', borderRadius: 10, padding: 14, fontWeight: 700, marginBottom: 18, fontSize: 14 }}>
@@ -380,8 +742,11 @@ function Alert({ children }: { children: React.ReactNode }) {
   );
 }
 
-const panel: React.CSSProperties = { background: '#fff', border: '1px solid #DDE3EA', borderRadius: 10, overflow: 'hidden', boxShadow: '0 4px 16px rgba(0,0,0,.04)' };
+const panel: React.CSSProperties = { background: '#fff', border: '1px solid #DDE3EA', borderRadius: 12, overflow: 'hidden', boxShadow: '0 4px 16px rgba(0,0,0,.04)' };
 const input: React.CSSProperties = { width: '100%', border: '1px solid #CBD5E1', borderRadius: 8, padding: '11px 14px', fontSize: 14, font: 'inherit', background: '#fff', boxSizing: 'border-box' };
+const labelStyle: React.CSSProperties = { display: 'block', fontSize: 14, fontWeight: 700, color: '#101828', marginBottom: 6 };
 const dropZone: React.CSSProperties = { border: '1.5px dashed #CBD5E1', borderRadius: 10, padding: 28, textAlign: 'center', display: 'block', cursor: 'pointer', background: '#FAFAF8' };
-const cancelButton: React.CSSProperties = { background: '#fff', color: '#0284C7', border: '1.5px solid #B5D4F4', borderRadius: 8, padding: '11px 24px', fontWeight: 700, cursor: 'pointer', fontSize: 14 };
+const cancelButton: React.CSSProperties = { background: '#fff', color: '#0284C7', border: '1.5px solid #B5D4F4', borderRadius: 8, padding: '11px 20px', fontWeight: 700, cursor: 'pointer', fontSize: 13.5 };
 const submitButton: React.CSSProperties = { background: '#0284C7', color: '#fff', border: 'none', borderRadius: 8, padding: '11px 28px', fontWeight: 900, cursor: 'pointer', fontSize: 14 };
+const linkButton: React.CSSProperties = { background: 'none', border: 'none', color: '#0284C7', fontSize: 12, fontWeight: 700, cursor: 'pointer', padding: 0, fontFamily: 'inherit' };
+const cardButton: React.CSSProperties = { background: '#fff', border: '1px solid #DDE3EA', borderRadius: 11, padding: '15px 17px', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit', boxShadow: '0 2px 8px rgba(0,0,0,.03)' };

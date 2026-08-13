@@ -26,8 +26,26 @@ router.use('*', async (c, next) => {
 });
 
 // ─── Tipos de solicitud ───────────────────────────────────────────────────────
+// Lectura pública: es el catálogo que ve el solicitante al pedir algo. Además
+// del tipo devuelve con qué se agrupa y qué le van a pedir, para que pueda
+// elegir bien y saber si tiene lo necesario antes de empezar.
 router.get('/request-types', async (c) => {
-  const rows = await c.env.DB.prepare('SELECT * FROM request_types ORDER BY name').all();
+  const rows = await c.env.DB.prepare(`
+    SELECT rt.id, rt.name, rt.description, rt.is_active, rt.created_at,
+           pc.category, pc.color, pc.icon, pc.default_sla_days,
+           (SELECT COUNT(*) FROM request_type_fields f
+             WHERE f.request_type_id = rt.id AND f.required = 1 AND f.field_type <> 'section')
+             AS required_fields,
+           (SELECT COUNT(*) FROM request_type_fields f
+             WHERE f.request_type_id = rt.id AND f.field_type = 'file')
+             AS document_fields,
+           (SELECT COUNT(*) FROM flow_configs fc
+             WHERE fc.request_type_id = rt.id AND fc.is_active = 1)
+             AS approval_levels
+    FROM request_types rt
+    LEFT JOIN process_configs pc ON pc.id = rt.id
+    ORDER BY rt.name
+  `).all();
   return c.json({ data: rows.results });
 });
 
