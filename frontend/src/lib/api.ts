@@ -478,7 +478,77 @@ export const api = {
     request<{ data: { restored_from: number; version: number } }>(
       'POST', `/api/admin/processes/${processId}/versions/${versionId}/restore`),
 
+  // ─── Automatizaciones ─────────────────────────────────────────────────────
+  getAutomationCatalog: () =>
+    request<{ data: AutomationCatalog }>('GET', '/api/admin/automations/catalog'),
+
+  getAutomations: () =>
+    request<{ data: Automation[] }>('GET', '/api/admin/automations'),
+
+  getAutomationRuns: (id: string) =>
+    request<{ data: AutomationRun[] }>('GET', `/api/admin/automations/${id}/runs`),
+
+  createAutomation: (body: AutomationInput) =>
+    request<{ data: { id: string } }>('POST', '/api/admin/automations', body),
+
+  updateAutomation: (id: string, body: Partial<AutomationInput>) =>
+    request<{ data: Automation }>('PATCH', `/api/admin/automations/${id}`, body),
+
+  deleteAutomation: (id: string) =>
+    request<{ data: { deleted: boolean } }>('DELETE', `/api/admin/automations/${id}`),
+
 };
+
+// ─── Automatizaciones ─────────────────────────────────────────────────────────
+export interface AutomationCondition {
+  field: string;
+  op: 'eq' | 'neq' | 'gt' | 'lt' | 'gte' | 'lte' | 'contains' | 'is_empty' | 'is_not_empty';
+  value?: string | number | null;
+}
+
+export type AutomationAction =
+  | { type: 'notify'; to: 'assignee' | 'requester' | 'lead' | 'email'; email?: string; body: string }
+  | { type: 'set_priority'; value: 'low' | 'normal' | 'high' | 'urgent' }
+  | { type: 'set_due_in_days'; value: number }
+  | { type: 'assign_to'; email: string; name?: string }
+  | { type: 'block'; reason: string }
+  | { type: 'unblock' }
+  | { type: 'comment'; body: string };
+
+export interface AutomationInput {
+  name: string;
+  description?: string | null;
+  process_id?: string | null;
+  space_id?: string | null;
+  trigger_event: string;
+  conditions: AutomationCondition[];
+  actions: AutomationAction[];
+  is_active?: number;
+}
+
+export interface Automation {
+  id: string; name: string; description: string | null;
+  process_id: string | null; space_id: string | null;
+  trigger_event: string;
+  conditions_json: string; actions_json: string;
+  is_active: number; created_by: string | null;
+  created_at: string; updated_at: string;
+  runs_total: number; runs30: number; errors: number; last_run_at: string | null;
+}
+
+export interface AutomationRun {
+  id: string; event_type: string;
+  request_id: string | null; task_id: string | null;
+  matched: number; actions_applied: string | null;
+  error: string | null; created_at: string;
+}
+
+export interface AutomationCatalog {
+  triggers: { event: string; label: string; scope: 'request' | 'task' }[];
+  fields: { field: string; label: string; kind: 'text' | 'number' | 'choice'; options?: string[] }[];
+  operators: { op: AutomationCondition['op']; label: string; needsValue: boolean }[];
+  actions: { type: AutomationAction['type']; label: string; hint: string }[];
+}
 
 export interface ProcessVersion {
   id: string; version: number; name: string; description: string | null;

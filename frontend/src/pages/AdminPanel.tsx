@@ -4,9 +4,10 @@ import { api, RequestType, FlowLevel, EntraUser, FormField, TeamMember, TicketDe
 import { Card, PageHeader, Btn, Field, Input, Select, Spinner, Empty } from '../components/ui';
 import { UserRow } from './ProcessBuilder';
 import FormBuilder from './FormBuilder';
+import AutomationsPanel from './AutomationsPanel';
 import { confirmDialog, alertDialog } from '../components/AppDialog';
 
-type Tab = 'builder' | 'forms' | 'types' | 'flows' | 'team' | 'spaces' | 'logs';
+type Tab = 'builder' | 'forms' | 'types' | 'flows' | 'team' | 'spaces' | 'automations' | 'logs';
 
 export default function AdminPanel() {
   const [tab, setTab] = useState<Tab>('builder');
@@ -18,6 +19,7 @@ export default function AdminPanel() {
     { key: 'flows',   label: 'Flujos' },
     { key: 'team',    label: 'Equipos' },
     { key: 'spaces',  label: 'Líderes de área' },
+    { key: 'automations', label: 'Automatizaciones' },
     { key: 'types',   label: 'Tipos' },
     { key: 'logs',    label: 'Registro' },
   ];
@@ -68,6 +70,7 @@ export default function AdminPanel() {
       {tab === 'flows'   && <FlowsPanel />}
       {tab === 'team'    && <TeamPanel />}
       {tab === 'spaces'  && <SpaceTeamPanel />}
+      {tab === 'automations' && <AutomationsPanel />}
       {tab === 'types'   && <TypesPanel />}
       {tab === 'logs'    && <LogsPanel />}
     </div>

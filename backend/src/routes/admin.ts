@@ -3,6 +3,10 @@ import { AppEnv } from '../types';
 import { getAppToken, searchUsers, sendMail } from '../utils/graph';
 import { appUrl, sendTeamsCard } from '../utils/teams';
 import { logEvent, newTraceId } from '../utils/syslog';
+import {
+  ACTION_TYPES, AutomationAction, AutomationCondition, CONDITION_FIELDS,
+  CONDITION_OPS, TRIGGERS, validateAutomation,
+} from '../utils/automations';
 
 const router = new Hono<AppEnv>();
 
@@ -1058,6 +1062,137 @@ router.post('/processes/:id/versions/:versionId/restore', async (c) => {
   });
 
   return c.json({ data: { restored_from: source.version, version: nextVersion } });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  AUTOMATIZACIONES — Cuando / Si / Entonces
+// ═══════════════════════════════════════════════════════════════════════════
+
+// El catálogo va antes que /:id para que Hono no lo tome como identificador.
+router.get('/automations/catalog', (c) => c.json({
+  data: {
+    triggers: TRIGGERS,
+    fields: CONDITION_FIELDS,
+    operators: CONDITION_OPS,
+    actions: ACTION_TYPES,
+  },
+}));
+
+router.get('/automations', async (c) => {
+  const rows = await c.env.DB.prepare(`
+    SELECT a.*,
+      (SELECT COUNT(*) FROM automation_runs r
+        WHERE r.automation_id = a.id AND r.matched = 1) AS runs_total,
+      (SELECT COUNT(*) FROM automation_runs r
+        WHERE r.automation_id = a.id AND r.matched = 1
+          AND r.created_at >= datetime('now','-30 days')) AS runs30,
+      (SELECT COUNT(*) FROM automation_runs r
+        WHERE r.automation_id = a.id AND r.error IS NOT NULL) AS errors,
+      (SELECT MAX(created_at) FROM automation_runs r
+        WHERE r.automation_id = a.id AND r.matched = 1) AS last_run_at
+    FROM automations a
+    ORDER BY a.is_active DESC, a.created_at DESC
+  `).all();
+  return c.json({ data: rows.results });
+});
+
+router.get('/automations/:id/runs', async (c) => {
+  const rows = await c.env.DB.prepare(`
+    SELECT id, event_type, request_id, task_id, matched, actions_applied, error, created_at
+    FROM automation_runs WHERE automation_id = ?
+    ORDER BY created_at DESC LIMIT 50
+  `).bind(c.req.param('id')).all();
+  return c.json({ data: rows.results });
+});
+
+interface AutomationBody {
+  name?: string;
+  description?: string | null;
+  process_id?: string | null;
+  space_id?: string | null;
+  trigger_event?: string;
+  conditions?: AutomationCondition[];
+  actions?: AutomationAction[];
+  is_active?: number;
+}
+
+router.post('/automations', async (c) => {
+  const body = await c.req.json<AutomationBody>();
+  const name = body.name?.trim();
+  if (!name) return c.json({ error: 'validation_error', message: 'La automatización necesita un nombre' }, 400);
+
+  const conditions = body.conditions ?? [];
+  const actions = body.actions ?? [];
+  const invalid = validateAutomation(body.trigger_event ?? '', conditions, actions);
+  if (invalid) return c.json({ error: 'validation_error', message: invalid }, 400);
+
+  const id = crypto.randomUUID().slice(0, 8);
+  await c.env.DB.prepare(`
+    INSERT INTO automations
+      (id, name, description, process_id, space_id, trigger_event, conditions_json, actions_json, is_active, created_by)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).bind(
+    id, name, body.description?.trim() || null,
+    body.process_id?.trim() || null, body.space_id?.trim() || null,
+    body.trigger_event, JSON.stringify(conditions), JSON.stringify(actions),
+    body.is_active === 0 ? 0 : 1, c.get('userEmail'),
+  ).run();
+
+  await logEvent(c.env.DB, {
+    category: 'config', action: 'automation_created', trace_id: c.get('traceId'),
+    source: 'automations', ref_type: 'automation', ref_id: id, actor: c.get('userEmail'),
+    detail: { name, trigger: body.trigger_event, actions: actions.length },
+  });
+  return c.json({ data: { id } }, 201);
+});
+
+router.patch('/automations/:id', async (c) => {
+  const id = c.req.param('id');
+  const existing = await c.env.DB.prepare('SELECT * FROM automations WHERE id = ?')
+    .bind(id).first<Record<string, unknown>>();
+  if (!existing) return c.json({ error: 'not_found' }, 404);
+
+  const body = await c.req.json<AutomationBody>();
+
+  // Si se toca la lógica, se valida el resultado completo, no solo el trozo
+  // enviado: una regla a medias se dispararía igual.
+  const touchesLogic = body.trigger_event !== undefined
+    || body.conditions !== undefined || body.actions !== undefined;
+  if (touchesLogic) {
+    const trigger = body.trigger_event ?? String(existing.trigger_event);
+    const conditions = body.conditions ?? JSON.parse(String(existing.conditions_json)) as AutomationCondition[];
+    const actions = body.actions ?? JSON.parse(String(existing.actions_json)) as AutomationAction[];
+    const invalid = validateAutomation(trigger, conditions, actions);
+    if (invalid) return c.json({ error: 'validation_error', message: invalid }, 400);
+  }
+
+  const sets: string[] = ["updated_at = datetime('now')"];
+  const vals: unknown[] = [];
+  if (body.name !== undefined)          { sets.push('name = ?');            vals.push(body.name.trim()); }
+  if (body.description !== undefined)   { sets.push('description = ?');     vals.push(body.description?.trim() || null); }
+  if (body.process_id !== undefined)    { sets.push('process_id = ?');      vals.push(body.process_id?.trim() || null); }
+  if (body.space_id !== undefined)      { sets.push('space_id = ?');        vals.push(body.space_id?.trim() || null); }
+  if (body.trigger_event !== undefined) { sets.push('trigger_event = ?');   vals.push(body.trigger_event); }
+  if (body.conditions !== undefined)    { sets.push('conditions_json = ?'); vals.push(JSON.stringify(body.conditions)); }
+  if (body.actions !== undefined)       { sets.push('actions_json = ?');    vals.push(JSON.stringify(body.actions)); }
+  if (body.is_active !== undefined)     { sets.push('is_active = ?');       vals.push(body.is_active ? 1 : 0); }
+
+  vals.push(id);
+  await c.env.DB.prepare(`UPDATE automations SET ${sets.join(', ')} WHERE id = ?`).bind(...vals).run();
+
+  const updated = await c.env.DB.prepare('SELECT * FROM automations WHERE id = ?').bind(id).first();
+  return c.json({ data: updated });
+});
+
+router.delete('/automations/:id', async (c) => {
+  const id = c.req.param('id');
+  // La bitácora se conserva: es la evidencia de lo que la regla llegó a hacer.
+  await c.env.DB.prepare('DELETE FROM automations WHERE id = ?').bind(id).run();
+  await logEvent(c.env.DB, {
+    category: 'config', action: 'automation_deleted', trace_id: c.get('traceId'),
+    source: 'automations', ref_type: 'automation', ref_id: id, actor: c.get('userEmail'),
+  });
+  return c.json({ data: { deleted: true } });
 });
 
 export default router;

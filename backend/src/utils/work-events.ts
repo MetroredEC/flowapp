@@ -1,3 +1,5 @@
+import { runAutomations } from './automations';
+
 export interface WorkEventInput {
   requestId: string;
   taskId?: string | null;
@@ -25,6 +27,11 @@ export async function recordWorkEvent(db: D1Database, event: WorkEventInput): Pr
     console.error('WORK_EVENT_WRITE_FAILED', event.requestId, event.eventType,
       error instanceof Error ? error.message : String(error));
   }
+
+  // Punto único de entrada del motor de automatizaciones. Va después de
+  // escribir el evento y nunca propaga errores: una regla rota no puede
+  // impedir que la operación que la disparó termine.
+  await runAutomations(db, event);
 }
 
 export function addBusinessDays(from: Date, days: number): string {
