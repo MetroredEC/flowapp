@@ -7,3 +7,6 @@ dist/
 
 .flowapp_backup_*
 fix_*.py
+
+# Artefactos de redirecciones fallidas en PowerShell
+-File
