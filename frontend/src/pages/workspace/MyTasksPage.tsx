@@ -3,6 +3,7 @@ import { api, Space, Task } from '../../lib/api';
 import { useIsMobile } from '../../lib/useIsMobile';
 import { PRIORITY, T } from './theme';
 import TaskDetail from './TaskDetail';
+import Availability from './Availability';
 
 const localDateKey = (date = new Date()) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 const taskDateKey = (value?: string | null) => {
@@ -29,6 +30,7 @@ export default function MyTasksPage() {
   const [scope, setScope] = useState<Scope>('open');
   const [query, setQuery] = useState('');
   const [openId, setOpenId] = useState<string | null>(null);
+  const [showAvailability, setShowAvailability] = useState(false);
 
   const load = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
@@ -72,8 +74,13 @@ export default function MyTasksPage() {
     <div style={{ padding: isMobile ? '20px 14px' : 32, maxWidth: 1180, margin: '0 auto' }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', marginBottom: 20 }}>
         <div><div style={{ fontSize: 12, fontWeight: 800, color: T.brand, textTransform: 'uppercase', letterSpacing: .8 }}>Ejecución personal</div><h1 style={{ fontSize: 26, fontWeight: 850, color: T.ink, margin: '4px 0' }}>Trabajo</h1><p style={{ fontSize: 13, color: T.ink3 }}>Todas tus tareas, sin mezclar decisiones ni notificaciones.</p></div>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+        <button onClick={() => setShowAvailability(true)} style={{ border: `1px solid ${T.line}`, background: '#fff', color: T.ink2, borderRadius: 8, padding: '8px 12px', fontSize: 11.5, fontWeight: 750, cursor: 'pointer' }}>
+          Mi disponibilidad
+        </button>
         <div style={{ display: 'flex', padding: 3, background: '#E9EEF5', borderRadius: 9 }}>
           {([['list','Lista'],['board','Tablero'],['calendar','Calendario']] as const).map(([key, label]) => <button key={key} onClick={() => setView(key)} style={{ border: 0, borderRadius: 7, padding: '7px 11px', background: view === key ? '#fff' : 'transparent', color: view === key ? T.ink : T.ink3, boxShadow: view === key ? '0 1px 4px rgba(15,23,42,.12)' : 'none', fontSize: 11.5, fontWeight: 750, cursor: 'pointer' }}>{label}</button>)}
+        </div>
         </div>
       </div>
 
@@ -91,6 +98,7 @@ export default function MyTasksPage() {
       )}
 
       {openId && <TaskDetail taskId={openId} space={spaces.find(space => space.id === openTask?.space_id)} onClose={() => setOpenId(null)} onChange={() => load(true)} />}
+      {showAvailability && <Availability onClose={() => setShowAvailability(false)} />}
     </div>
   );
 }

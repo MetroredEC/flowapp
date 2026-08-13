@@ -497,11 +497,48 @@ export const api = {
   deleteAutomation: (id: string) =>
     request<{ data: { deleted: boolean } }>('DELETE', `/api/admin/automations/${id}`),
 
+  // ─── Capacidad y disponibilidad ───────────────────────────────────────────
+  getSpaceCapacity: (spaceId: string) =>
+    request<{ data: MemberCapacity[] }>('GET', `/api/workspace/spaces/${spaceId}/capacity`),
+
+  getMyAvailability: () =>
+    request<{ data: { memberships: AvailabilityMembership[]; absences: Absence[] } }>(
+      'GET', '/api/workspace/me/availability'),
+
+  updateAvailability: (spaceId: string, body: { weekly_hours?: number; specialties?: string[]; accepts_auto_assign?: number }) =>
+    request<{ data: { updated: boolean } }>('PUT', `/api/workspace/me/availability/${spaceId}`, body),
+
+  createAbsence: (body: { starts_on: string; ends_on: string; reason?: string }) =>
+    request<{ data: { created: boolean } }>('POST', '/api/workspace/me/absences', body),
+
+  deleteAbsence: (id: string) =>
+    request<{ data: { deleted: boolean } }>('DELETE', `/api/workspace/me/absences/${id}`),
+
   getAutomationOutbox: () =>
     request<{ data: AutomationOutboxRow[]; summary: { pending: number; sent: number; failed: number } }>(
       'GET', '/api/admin/automations/outbox'),
 
 };
+
+export interface TeamMemberCapacityFields {
+  weekly_hours: number; accepts_auto_assign: number; absent: number;
+}
+
+export interface MemberCapacity {
+  user_email: string; user_name: string; role: 'lead' | 'member';
+  weekly_hours: number; specialties: string[]; accepts_auto_assign: number;
+  open_tasks: number; committed_minutes: number; load_pct: number;
+  absent: boolean; absence_until: string | null;
+}
+
+export interface AvailabilityMembership {
+  space_id: string; space_name: string; role: 'lead' | 'member';
+  weekly_hours: number; specialties_json: string; accepts_auto_assign: number;
+}
+
+export interface Absence {
+  id: string; starts_on: string; ends_on: string; reason: string | null;
+}
 
 export interface AutomationOutboxRow {
   id: string; automation_name: string | null;
@@ -640,6 +677,7 @@ export interface TeamMemberLoad {
   space_id: string; user_email: string; user_name: string; role: 'lead' | 'member';
   open_tasks: number; overdue: number; blocked: number;
   planned_minutes: number; done7: number;
+  weekly_hours: number; accepts_auto_assign: number; absent: number;
 }
 export interface TeamBottleneck {
   space_id: string; status: string; status_label: string;

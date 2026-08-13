@@ -4,6 +4,7 @@ import { processApproval } from '../utils/approvals';
 import { recordWorkEvent } from '../utils/work-events';
 import { buildProfile, isPersonaKey, PersonaKey, readPersonaSignals } from '../utils/personas';
 import { markRequestDelivered } from '../utils/workspace-bridge';
+import { spaceCapacity } from '../utils/capacity';
 
 const router = new Hono<AppEnv>();
 
@@ -922,11 +923,22 @@ router.get('/team-load', async (c) => {
     // Carga por persona: abierto, vencido, bloqueado y minutos comprometidos.
     c.env.DB.prepare(`
       SELECT m.space_id, m.user_email, COALESCE(m.user_name, m.user_email) AS user_name, m.role,
+        m.weekly_hours, m.accepts_auto_assign,
         COALESCE(SUM(CASE WHEN COALESCE(ss.is_done, 0) = 0 THEN 1 ELSE 0 END), 0) AS open_tasks,
         COALESCE(SUM(CASE WHEN COALESCE(ss.is_done, 0) = 0 AND t.due_date < date('now') THEN 1 ELSE 0 END), 0) AS overdue,
         COALESCE(SUM(CASE WHEN COALESCE(ss.is_done, 0) = 0 AND t.is_blocked = 1 THEN 1 ELSE 0 END), 0) AS blocked,
-        COALESCE(SUM(CASE WHEN COALESCE(ss.is_done, 0) = 0 THEN COALESCE(t.estimate_minutes, 0) ELSE 0 END), 0) AS planned_minutes,
-        COALESCE(SUM(CASE WHEN ss.is_done = 1 AND t.completed_at >= datetime('now','-7 days') THEN 1 ELSE 0 END), 0) AS done7
+        -- Sin estimación propia se asume el coste típico de su complejidad,
+        -- para que la carga no aparezca en cero solo por no haber estimado.
+        COALESCE(SUM(CASE WHEN COALESCE(ss.is_done, 0) = 0 THEN
+          COALESCE(NULLIF(t.estimate_minutes, 0),
+                   CASE t.complexity WHEN 'low' THEN 60 WHEN 'high' THEN 480 ELSE 180 END)
+          ELSE 0 END), 0) AS planned_minutes,
+        COALESCE(SUM(CASE WHEN ss.is_done = 1 AND t.completed_at >= datetime('now','-7 days') THEN 1 ELSE 0 END), 0) AS done7,
+        EXISTS (
+          SELECT 1 FROM member_absences a
+          WHERE lower(a.user_email) = lower(m.user_email)
+            AND date('now','-5 hours') BETWEEN a.starts_on AND a.ends_on
+        ) AS absent
       FROM ws_space_members m
       LEFT JOIN ws_tasks t
         ON t.space_id = m.space_id AND lower(t.assignee_email) = lower(m.user_email) AND t.archived = 0
@@ -1018,6 +1030,101 @@ router.put('/spaces/:id/members', async (c) => {
     'SELECT id, space_id, user_email, user_name, role, created_at FROM ws_space_members WHERE space_id = ?'
   ).bind(spaceId).all();
   return c.json({ data: rows.results });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  CAPACIDAD Y DISPONIBILIDAD
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Capacidad de un espacio: horas comprometidas contra horas disponibles.
+router.get('/spaces/:id/capacity', async (c) => {
+  const data = await spaceCapacity(c.env.DB, c.req.param('id'));
+  return c.json({ data });
+});
+
+// Mi disponibilidad: cada persona administra sus horas, especialidades y
+// ausencias sin depender de un administrador.
+router.get('/me/availability', async (c) => {
+  const email = (c.get('userEmail') || '').toLowerCase();
+  const [memberships, absences] = await Promise.all([
+    c.env.DB.prepare(`
+      SELECT m.space_id, s.name AS space_name, m.role, m.weekly_hours,
+             m.specialties_json, m.accepts_auto_assign
+      FROM ws_space_members m
+      JOIN ws_spaces s ON s.id = m.space_id
+      WHERE lower(m.user_email) = ?
+      ORDER BY s.sort_order
+    `).bind(email).all(),
+    c.env.DB.prepare(`
+      SELECT id, starts_on, ends_on, reason
+      FROM member_absences WHERE lower(user_email) = ?
+      ORDER BY starts_on DESC LIMIT 30
+    `).bind(email).all(),
+  ]);
+  return c.json({ data: { memberships: memberships.results, absences: absences.results } });
+});
+
+router.put('/me/availability/:spaceId', async (c) => {
+  const email = (c.get('userEmail') || '').toLowerCase();
+  const spaceId = c.req.param('spaceId');
+  const body = await c.req.json<{
+    weekly_hours?: number; specialties?: string[]; accepts_auto_assign?: number;
+  }>();
+
+  const member = await c.env.DB.prepare(
+    'SELECT id FROM ws_space_members WHERE space_id = ? AND lower(user_email) = ?'
+  ).bind(spaceId, email).first();
+  if (!member) return c.json({ error: 'not_found', message: 'No perteneces a ese espacio' }, 404);
+
+  const sets: string[] = [];
+  const vals: unknown[] = [];
+  if (body.weekly_hours !== undefined) {
+    const hours = Number(body.weekly_hours);
+    if (!Number.isFinite(hours) || hours < 0 || hours > 80) {
+      return c.json({ error: 'invalid_hours', message: 'Las horas semanales deben estar entre 0 y 80' }, 400);
+    }
+    sets.push('weekly_hours = ?'); vals.push(Math.round(hours));
+  }
+  if (body.specialties !== undefined) {
+    const list = (body.specialties ?? []).map(s => String(s).trim()).filter(Boolean).slice(0, 12);
+    sets.push('specialties_json = ?'); vals.push(JSON.stringify(list));
+  }
+  if (body.accepts_auto_assign !== undefined) {
+    sets.push('accepts_auto_assign = ?'); vals.push(body.accepts_auto_assign ? 1 : 0);
+  }
+  if (!sets.length) return c.json({ error: 'nothing_to_update' }, 400);
+
+  vals.push(spaceId, email);
+  await c.env.DB.prepare(
+    `UPDATE ws_space_members SET ${sets.join(', ')} WHERE space_id = ? AND lower(user_email) = ?`
+  ).bind(...vals).run();
+  return c.json({ data: { updated: true } });
+});
+
+router.post('/me/absences', async (c) => {
+  const email = (c.get('userEmail') || '').toLowerCase();
+  const body = await c.req.json<{ starts_on?: string; ends_on?: string; reason?: string }>();
+  const isDate = (value?: string) => Boolean(value && /^\d{4}-\d{2}-\d{2}$/.test(value));
+
+  if (!isDate(body.starts_on) || !isDate(body.ends_on)) {
+    return c.json({ error: 'invalid_dates', message: 'Las fechas deben usar formato AAAA-MM-DD' }, 400);
+  }
+  if (String(body.ends_on) < String(body.starts_on)) {
+    return c.json({ error: 'invalid_range', message: 'La fecha final no puede ser anterior a la inicial' }, 400);
+  }
+
+  await c.env.DB.prepare(
+    'INSERT INTO member_absences (user_email, starts_on, ends_on, reason, created_by) VALUES (?, ?, ?, ?, ?)'
+  ).bind(email, body.starts_on, body.ends_on, body.reason?.trim() || null, email).run();
+  return c.json({ data: { created: true } }, 201);
+});
+
+router.delete('/me/absences/:id', async (c) => {
+  const email = (c.get('userEmail') || '').toLowerCase();
+  // El filtro por correo evita que alguien borre la ausencia de otra persona.
+  await c.env.DB.prepare('DELETE FROM member_absences WHERE id = ? AND lower(user_email) = ?')
+    .bind(c.req.param('id'), email).run();
+  return c.json({ data: { deleted: true } });
 });
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────

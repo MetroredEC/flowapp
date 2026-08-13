@@ -3,6 +3,7 @@
 // para que el equipo la ejecute, con trazabilidad completa.
 import { recordWorkEvent } from './work-events';
 import { resolveExecutionConfig } from './process-version';
+import { pickAssignee } from './capacity';
 
 type DB = D1Database;
 
@@ -60,20 +61,18 @@ function detectPriority(fields: Record<string, unknown> | null): string {
   return 'normal';
 }
 
-// Auto-asignación: miembro del equipo del espacio con menos tareas abiertas
-async function autoAssignForSpace(db: DB, spaceId: string): Promise<{ user_id: string; user_name: string; user_email: string } | null> {
-  const row = await db.prepare(`
-    SELECT dtm.user_id, dtm.user_name, dtm.user_email,
-           COUNT(CASE WHEN wt.status NOT IN ('done','cerrado_ganado','cerrado_perdido') AND wt.archived = 0 THEN 1 END) AS open_count
-    FROM dept_team_members dtm
-    LEFT JOIN ws_tasks wt
-      ON wt.assignee_id = dtm.user_id AND wt.space_id = dtm.department
-    WHERE dtm.department = ? AND dtm.is_active = 1
-    GROUP BY dtm.user_id
-    ORDER BY open_count ASC, dtm.created_at ASC
-    LIMIT 1
-  `).bind(spaceId).first<{ user_id: string; user_name: string; user_email: string }>();
-  return row ?? null;
+// Auto-asignación por capacidad real. Ver utils/capacity.ts: la versión
+// anterior leía dept_team_members, una tabla vacía y limitada a dos
+// departamentos, así que nunca asignaba a nadie.
+async function autoAssignForSpace(
+  db: DB, spaceId: string, specialty?: string | null,
+): Promise<{ user_id: string; user_name: string; user_email: string; reason: string } | null> {
+  const pick = await pickAssignee(db, spaceId, { specialty });
+  if (!pick) return null;
+  return {
+    user_id: pick.user_email, user_name: pick.user_name,
+    user_email: pick.user_email, reason: pick.reason,
+  };
 }
 
 // Crea la tarea (idempotente por source_id)
@@ -108,13 +107,18 @@ export async function createTaskFromRequest(db: DB, requestId: string): Promise<
 
   // La estrategia se define en Process Studio. Procesos antiguos conservan auto-asignación.
   const mode = config?.assignment_mode ?? 'auto_load';
+  // La categoría del proceso hace de especialidad: si alguien del espacio la
+  // tiene declarada, se le da preferencia sobre quien solo está más libre.
+  const processCategory = await db.prepare('SELECT category FROM process_configs WHERE id = ?')
+    .bind(req.request_type_id).first<{ category: string | null }>();
   const assignee = mode === 'fixed_user' && config?.fixed_assignee_email
     ? {
         user_id: config.fixed_assignee_id ?? config.fixed_assignee_email,
         user_name: config.fixed_assignee_name ?? config.fixed_assignee_email,
         user_email: config.fixed_assignee_email,
+        reason: 'Responsable fijo del proceso',
       }
-    : mode === 'manual' ? null : await autoAssignForSpace(db, finalSpace);
+    : mode === 'manual' ? null : await autoAssignForSpace(db, finalSpace, processCategory?.category);
   const executionDue = config?.execution_sla_days
     ? new Date(Date.now() + Number(config.execution_sla_days) * 86400000).toISOString().slice(0, 10)
     : req.sla_due_at;
@@ -174,7 +178,7 @@ export async function createTaskFromRequest(db: DB, requestId: string): Promise<
       await db.prepare(`
         INSERT INTO ws_task_activity (task_id, actor_name, action, meta_json)
         VALUES (?, 'FlowApp', 'assigned', ?)
-      `).bind(task.id, JSON.stringify({ to: assignee.user_name, source: 'auto-asignación por carga' })).run();
+      `).bind(task.id, JSON.stringify({ to: assignee.user_name, source: assignee.reason })).run();
       await db.prepare(`
         INSERT INTO ws_notifications (user_email, type, task_id, task_title, space_id, actor_name, body)
         VALUES (?, 'assignment', ?, ?, ?, 'FlowApp', ?)

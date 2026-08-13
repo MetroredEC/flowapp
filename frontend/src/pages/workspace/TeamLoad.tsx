@@ -7,8 +7,9 @@ import { api, TeamLoad as TeamLoadData, TeamMemberLoad } from '../../lib/api';
 import { useIsMobile } from '../../lib/useIsMobile';
 import { initials, T } from './theme';
 
-/** Umbral de saturación por persona, en tareas abiertas simultáneas. */
-const CAPACITY = 8;
+/** Se considera saturada a quien supera su capacidad semanal declarada. */
+const overloaded = (member: TeamMemberLoad) =>
+  member.planned_minutes >= Math.max(1, (member.weekly_hours || 30) * 60);
 
 export default function TeamLoad() {
   const isMobile = useIsMobile();
@@ -48,7 +49,7 @@ export default function TeamLoad() {
   }
 
   const summary = data.summary;
-  const saturated = members.filter(member => member.open_tasks >= CAPACITY).length;
+  const saturated = members.filter(overloaded).length;
 
   return (
     <div style={{ padding: isMobile ? '20px 14px' : 32, maxWidth: 1140, margin: '0 auto' }}>
@@ -76,14 +77,14 @@ export default function TeamLoad() {
 
       {saturated > 0 && (
         <div style={{ background: '#FFF7ED', border: '1px solid #FED7AA', borderRadius: 12, padding: '12px 16px', marginBottom: 20, fontSize: 12.5, color: '#9A3412', fontWeight: 700 }}>
-          {saturated === 1 ? '1 persona está' : `${saturated} personas están`} en o sobre el umbral de {CAPACITY} tareas simultáneas. Considera redistribuir antes de asignar más.
+          {saturated === 1 ? '1 persona ha' : `${saturated} personas han`} comprometido más horas de las que tiene disponibles esta semana. Considera redistribuir antes de asignar más.
         </div>
       )}
 
       <section style={{ background: '#fff', border: `1px solid ${T.line}`, borderRadius: 14, overflow: 'hidden', marginBottom: 20 }}>
         <div style={{ padding: '15px 17px 11px', borderBottom: `1px solid ${T.line}` }}>
           <h2 style={{ fontSize: 14.5, fontWeight: 800, color: T.ink }}>Carga por persona</h2>
-          <p style={{ fontSize: 11.5, color: T.ink3, marginTop: 2 }}>Ordenado por trabajo abierto. La barra compara contra {CAPACITY} tareas simultáneas.</p>
+          <p style={{ fontSize: 11.5, color: T.ink3, marginTop: 2 }}>La barra compara las horas comprometidas contra la capacidad semanal que cada persona declaró.</p>
         </div>
         {members.length === 0 ? (
           <div style={{ padding: '28px 16px', textAlign: 'center', color: T.ink3, fontSize: 12.5 }}>
@@ -121,12 +122,17 @@ export default function TeamLoad() {
 }
 
 function MemberRow({ member, spaceName, showSpace }: { member: TeamMemberLoad; spaceName: string; showSpace: boolean }) {
-  const ratio = Math.min(member.open_tasks / CAPACITY, 1.4);
-  const color = ratio >= 1 ? '#C2413B' : ratio >= 0.75 ? '#B7791F' : '#0F9F6E';
+  // La saturación se mide en horas comprometidas contra las horas que la
+  // persona declaró disponibles. Contar tareas trataba igual una revisión de
+  // media hora y un proyecto de dos días.
+  const capacityMinutes = Math.max(1, (member.weekly_hours || 30) * 60);
+  const ratio = member.planned_minutes / capacityMinutes;
+  const color = member.absent ? '#7C3AED'
+    : ratio >= 1 ? '#C2413B' : ratio >= 0.75 ? '#B7791F' : '#0F9F6E';
   const hours = Math.round((member.planned_minutes / 60) * 10) / 10;
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 13, padding: '13px 17px', borderBottom: `1px solid ${T.line}`, flexWrap: 'wrap' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 13, padding: '13px 17px', borderBottom: `1px solid ${T.line}`, flexWrap: 'wrap', opacity: member.absent ? 0.75 : 1 }}>
       <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'linear-gradient(135deg,#0284C7,#4F46E5)', color: '#fff', display: 'grid', placeItems: 'center', fontSize: 12, fontWeight: 800, flexShrink: 0 }}>
         {initials(member.user_name)}
       </div>
@@ -135,19 +141,24 @@ function MemberRow({ member, spaceName, showSpace }: { member: TeamMemberLoad; s
         <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
           <span style={{ fontSize: 13.5, fontWeight: 700, color: T.ink }}>{member.user_name}</span>
           {member.role === 'lead' && <span style={{ fontSize: 9.5, fontWeight: 800, color: T.brand, background: '#E6F1FB', padding: '2px 6px', borderRadius: 6 }}>Líder</span>}
+          {member.absent === 1 && <span style={{ fontSize: 9.5, fontWeight: 800, color: '#6D28D9', background: '#EDE9FE', padding: '2px 6px', borderRadius: 6 }}>Ausente</span>}
+          {member.accepts_auto_assign === 0 && <span style={{ fontSize: 9.5, fontWeight: 800, color: '#854F0B', background: '#FEF3C7', padding: '2px 6px', borderRadius: 6 }}>Sin auto-asignación</span>}
           {showSpace && <span style={{ fontSize: 10.5, color: T.ink3 }}>{spaceName}</span>}
         </div>
         <div style={{ height: 5, borderRadius: 99, background: '#E2E8F0', marginTop: 7, overflow: 'hidden' }}>
           <div style={{ width: `${Math.min(ratio, 1) * 100}%`, height: '100%', background: color, transition: 'width .3s' }} />
         </div>
+        <div style={{ fontSize: 10, color: T.ink3, marginTop: 4 }}>
+          {hours} h comprometidas de {member.weekly_hours || 30} h semanales
+        </div>
       </div>
 
       <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-        <Stat value={member.open_tasks} label="abiertas" color={color} />
+        <Stat value={`${Math.round(ratio * 100)}%`} label="capacidad" color={color} />
+        <Stat value={member.open_tasks} label="abiertas" color={T.ink2} />
         <Stat value={member.overdue} label="vencidas" color={member.overdue ? '#C2413B' : T.ink3} />
         <Stat value={member.blocked} label="bloqueadas" color={member.blocked ? '#B7791F' : T.ink3} />
         <Stat value={member.done7} label="hechas 7d" color="#0F9F6E" />
-        <Stat value={hours ? `${hours}h` : '—'} label="estimadas" color={T.ink2} />
       </div>
     </div>
   );
