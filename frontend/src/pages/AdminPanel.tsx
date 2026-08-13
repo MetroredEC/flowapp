@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { api, RequestType, FlowLevel, EntraUser, FormField, TeamMember, TicketDept, ProcessWithFlow, SysEvent, DiagnosticRun, Space, SpaceMember } from '../lib/api';
+import { api, RequestType, FlowLevel, EntraUser, FormField, TeamMember, TicketDept, ProcessWithFlow, SysEvent, DiagnosticRun, Space, SpaceMember, ProcessVersion, ProcessSnapshot } from '../lib/api';
 import { Card, PageHeader, Btn, Field, Input, Select, Spinner, Empty } from '../components/ui';
 import { UserRow } from './ProcessBuilder';
 import FormBuilder from './FormBuilder';
@@ -216,6 +216,7 @@ function ProcessesPanel({ onNew, onEdit }: { onNew: () => void; onEdit: (id: str
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [query, setQuery] = useState('');
+  const [versionsFor, setVersionsFor] = useState<{ id: string; name: string } | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -381,6 +382,12 @@ function ProcessesPanel({ onNew, onEdit }: { onNew: () => void; onEdit: (id: str
                   }}>
                     Editar en wizard
                   </button>
+                  <button onClick={() => setVersionsFor({ id: p.id, name: p.name })} style={{
+                    background: 'none', border: '1px solid #E4E4E7', borderRadius: 7,
+                    padding: '8px 12px', fontSize: 12, color: '#52525B', cursor: 'pointer',
+                  }}>
+                    Versiones
+                  </button>
                   <button
                     onClick={() => handleLifecycle(p)}
                     disabled={deleting === p.id}
@@ -399,9 +406,191 @@ function ProcessesPanel({ onNew, onEdit }: { onNew: () => void; onEdit: (id: str
         </div>}
         </>
       )}
+
+      {versionsFor && (
+        <VersionsDrawer
+          processId={versionsFor.id}
+          processName={versionsFor.name}
+          onClose={() => setVersionsFor(null)}
+          onRestored={() => { setVersionsFor(null); void load(); }}
+        />
+      )}
     </div>
   );
 }
+
+// ─── HISTORIAL DE VERSIONES ───────────────────────────────────────────────────
+// Publicar una versión no altera lo que ya está en ejecución. El contador de
+// solicitudes vivas por versión hace visible ese aislamiento.
+function VersionsDrawer({ processId, processName, onClose, onRestored }: {
+  processId: string; processName: string; onClose: () => void; onRestored: () => void;
+}) {
+  const [versions, setVersions] = useState<ProcessVersion[]>([]);
+  const [currentId, setCurrentId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [detail, setDetail] = useState<{ id: string; snapshot: ProcessSnapshot | null } | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const result = await api.getProcessVersions(processId);
+      setVersions(result.data);
+      setCurrentId(result.currentVersionId);
+    } catch (e) {
+      await alertDialog({ title: 'No se pudo cargar el historial', message: (e as Error).message, tone: 'danger' });
+    } finally { setLoading(false); }
+  }, [processId]);
+
+  useEffect(() => { void load(); }, [load]);
+
+  const inspect = async (versionId: string) => {
+    if (detail?.id === versionId) { setDetail(null); return; }
+    setBusy(versionId);
+    try {
+      const result = await api.getProcessVersion(processId, versionId);
+      setDetail({ id: versionId, snapshot: result.data.snapshot });
+    } catch (e) {
+      await alertDialog({ title: 'No se pudo abrir la versión', message: (e as Error).message, tone: 'danger' });
+    } finally { setBusy(null); }
+  };
+
+  const restore = async (version: ProcessVersion) => {
+    const ok = await confirmDialog({
+      title: `¿Restaurar la versión ${version.version}?`,
+      message: 'Se publicará como una versión nueva. Las solicitudes en curso mantienen las reglas con las que nacieron.',
+      confirmLabel: 'Restaurar',
+    });
+    if (!ok) return;
+    setBusy(version.id);
+    try {
+      const result = await api.restoreProcessVersion(processId, version.id);
+      await alertDialog({
+        title: 'Versión restaurada',
+        message: `El contenido de la versión ${result.data.restored_from} se publicó como versión ${result.data.version}.`,
+        tone: 'success',
+      });
+      onRestored();
+    } catch (e) {
+      await alertDialog({ title: 'No se pudo restaurar', message: (e as Error).message, tone: 'danger' });
+    } finally { setBusy(null); }
+  };
+
+  return (
+    <div onClick={onClose} style={{
+      position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.45)', zIndex: 1500,
+      display: 'flex', justifyContent: 'flex-end',
+    }}>
+      <aside onClick={e => e.stopPropagation()} style={{
+        width: 520, maxWidth: '94vw', background: '#fff', height: '100%',
+        overflowY: 'auto', boxShadow: '-8px 0 32px rgba(0,0,0,0.18)',
+      }}>
+        <div style={{ padding: '20px 24px 14px', borderBottom: '1px solid #E4E4E7', display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 16, fontWeight: 800, color: '#18181B' }}>Versiones</div>
+            <div style={{ fontSize: 12, color: '#71717A', marginTop: 2 }}>{processName}</div>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 20, color: '#A1A1AA', cursor: 'pointer' }}>✕</button>
+        </div>
+
+        {loading ? (
+          <div style={{ padding: 60, textAlign: 'center' }}><Spinner /></div>
+        ) : versions.length === 0 ? (
+          <div style={{ padding: 40 }}><Empty message="Este proceso todavía no tiene versiones publicadas." /></div>
+        ) : (
+          <div style={{ padding: '8px 0' }}>
+            {versions.map(version => {
+              const isCurrent = version.id === currentId;
+              const open = detail?.id === version.id;
+              return (
+                <div key={version.id} style={{ borderBottom: '1px solid #F4F4F5', padding: '14px 24px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 9, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: 13.5, fontWeight: 800, color: '#18181B' }}>Versión {version.version}</span>
+                    {isCurrent && <span style={{ fontSize: 9.5, fontWeight: 800, color: '#0284C7', background: '#E6F1FB', padding: '2px 7px', borderRadius: 6 }}>VIGENTE</span>}
+                    {version.requests_open > 0 && (
+                      <span style={{ fontSize: 9.5, fontWeight: 800, color: '#854F0B', background: '#FEF3C7', padding: '2px 7px', borderRadius: 6 }}>
+                        {version.requests_open} EN CURSO
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ fontSize: 11, color: '#A1A1AA', marginTop: 4 }}>
+                    {new Date(String(version.created_at).replace(' ', 'T') + 'Z').toLocaleString('es-EC', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    {version.created_by ? ` · ${version.created_by}` : ''}
+                    {` · ${version.requests_total} solicitud${version.requests_total === 1 ? '' : 'es'}`}
+                  </div>
+
+                  <div style={{ display: 'flex', gap: 7, marginTop: 10, flexWrap: 'wrap' }}>
+                    <button onClick={() => inspect(version.id)} disabled={busy === version.id} style={miniBtn}>
+                      {open ? 'Ocultar' : 'Ver contenido'}
+                    </button>
+                    {!isCurrent && (
+                      <button onClick={() => restore(version)} disabled={busy === version.id} style={{ ...miniBtn, borderColor: '#0284C7', color: '#0284C7' }}>
+                        {busy === version.id ? '…' : 'Restaurar'}
+                      </button>
+                    )}
+                  </div>
+
+                  {open && (
+                    <div style={{ marginTop: 11, padding: 13, background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: 9 }}>
+                      {detail?.snapshot ? <SnapshotSummary snapshot={detail.snapshot} /> : (
+                        <div style={{ fontSize: 11.5, color: '#71717A' }}>
+                          Esta versión es anterior al versionado completo: no guarda aprobadores ni campos, y por eso no puede restaurarse.
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </aside>
+    </div>
+  );
+}
+
+function SnapshotSummary({ snapshot }: { snapshot: ProcessSnapshot }) {
+  // Distinguir "guardó cero" de "no guardó el dato": los snapshots anteriores a
+  // Process Studio v2 no incluyen la configuración de ejecución, y mostrar "0"
+  // haría creer que esa versión no tenía checklist ni entregables.
+  const NOT_STORED = 'no guardado en esta versión';
+  const hasExecution = snapshot.checklist !== undefined || snapshot.assignment_mode !== undefined;
+
+  const rows: [string, string][] = [
+    ['Aprobación', (snapshot.levels ?? []).map(l => l.label).join(' → ') || 'Sin niveles'],
+    ['Campos', `${(snapshot.fields ?? []).length} en el formulario`],
+    ['Checklist', snapshot.checklist ? `${snapshot.checklist.length} paso(s)` : NOT_STORED],
+    ['Entregables', snapshot.deliverables ? String(snapshot.deliverables.length) : NOT_STORED],
+    ['SLA proceso', snapshot.default_sla_days != null ? `${snapshot.default_sla_days} día(s)` : NOT_STORED],
+    ['SLA ejecución', hasExecution ? `${snapshot.execution_sla_days ?? 'sin definir'}` : NOT_STORED],
+    ['Asignación', snapshot.assignment_mode ?? NOT_STORED],
+    ['Confirmación', hasExecution
+      ? (snapshot.require_requester_confirmation === 0 ? 'No requiere' : 'La pide al solicitante')
+      : NOT_STORED],
+  ];
+
+  return (
+    <div style={{ display: 'grid', gap: 6 }}>
+      {rows.map(([label, value]) => (
+        <div key={label} style={{ display: 'flex', gap: 10, fontSize: 11.5 }}>
+          <span style={{ minWidth: 92, color: '#A1A1AA', fontWeight: 700 }}>{label}</span>
+          <span style={{ color: value === NOT_STORED ? '#A1A1AA' : '#3F3F46', flex: 1, fontStyle: value === NOT_STORED ? 'italic' : 'normal' }}>{value}</span>
+        </div>
+      ))}
+      {!hasExecution && (
+        <div style={{ fontSize: 10.5, color: '#854F0B', background: '#FEF3C7', padding: '7px 9px', borderRadius: 7, marginTop: 3 }}>
+          Al restaurarla se conserva la configuración de ejecución vigente, porque esta versión no la guardó.
+        </div>
+      )}
+    </div>
+  );
+}
+
+const miniBtn: React.CSSProperties = {
+  border: '1px solid #E4E4E7', background: '#fff', color: '#52525B',
+  borderRadius: 7, padding: '6px 11px', fontSize: 11.5, fontWeight: 700,
+  cursor: 'pointer', fontFamily: 'inherit',
+};
 
 // ─── FORMULARIOS DE SOLICITUD Y CIERRE ───────────────────────────────────────
 type FormTab = 'intake' | 'close';

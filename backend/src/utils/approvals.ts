@@ -6,6 +6,7 @@ import { createTaskFromRequest } from './workspace-bridge';
 import { logEvent } from './syslog';
 import { sendTeamsCard, appUrl } from './teams';
 import { recordWorkEvent } from './work-events';
+import { resolveExecutionConfig } from './process-version';
 
 // Notificación en la Bandeja del workspace (best-effort, nunca rompe el flujo)
 async function wsNotify(
@@ -413,18 +414,20 @@ async function notifyRequesterOutcome(
   if (!request) return;
 
   const isApproved = outcome === 'approved';
-  const processConfig = isApproved
-    ? await env.DB.prepare(`
-        SELECT email_subject, email_body, send_on_approve
-        FROM process_configs WHERE id = ?
-      `).bind(request.request_type_id).first<{
-        email_subject: string | null;
-        email_body: string | null;
-        send_on_approve: number | null;
-      }>()
+  // El texto del correo pertenece a la versión con la que nació la solicitud;
+  // send_on_approve es un interruptor de notificación y se lee vigente.
+  const [versioned, liveConfig] = isApproved
+    ? await Promise.all([
+        resolveExecutionConfig(env.DB, requestId),
+        env.DB.prepare('SELECT send_on_approve FROM process_configs WHERE id = ?')
+          .bind(request.request_type_id).first<{ send_on_approve: number | null }>(),
+      ])
+    : [null, null];
+  const processConfig = versioned
+    ? { email_subject: versioned.email_subject, email_body: versioned.email_body }
     : null;
 
-  if (isApproved && processConfig?.send_on_approve === 0) {
+  if (isApproved && liveConfig?.send_on_approve === 0) {
     await logEvent(env.DB, {
       category: 'email', action: 'outcome_skipped', ref_type: 'request', ref_id: requestId,
       detail: { reason: 'send_on_approve_disabled', process: request.request_type_id },

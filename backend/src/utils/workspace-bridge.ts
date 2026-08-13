@@ -2,6 +2,7 @@
 // Cuando una solicitud se aprueba, se crea una tarea en el espacio del área
 // para que el equipo la ejecute, con trazabilidad completa.
 import { recordWorkEvent } from './work-events';
+import { resolveExecutionConfig } from './process-version';
 
 type DB = D1Database;
 
@@ -18,24 +19,8 @@ interface RequestRowLite {
   sla_due_at: string | null;
 }
 
-interface ExecutionConfig {
-  workspace_id: string | null;
-  assignment_mode: 'auto_load' | 'manual' | 'fixed_user' | null;
-  fixed_assignee_id: string | null;
-  fixed_assignee_name: string | null;
-  fixed_assignee_email: string | null;
-  execution_sla_days: number | null;
-  checklist_json: string | null;
-  deliverables_json: string | null;
-}
-
-async function executionConfig(db: DB, requestTypeId: string): Promise<ExecutionConfig | null> {
-  return db.prepare(`
-    SELECT workspace_id, assignment_mode, fixed_assignee_id, fixed_assignee_name,
-           fixed_assignee_email, execution_sla_days, checklist_json, deliverables_json
-    FROM process_configs WHERE id = ?
-  `).bind(requestTypeId).first<ExecutionConfig>();
-}
+// La configuración de ejecución sale de la versión anclada en la solicitud,
+// no de la configuración vigente del proceso. Ver utils/process-version.ts.
 
 // Mapea el tipo de solicitud → espacio de trabajo
 async function spaceForRequestType(db: DB, requestTypeId: string, configured?: string | null): Promise<string> {
@@ -102,7 +87,7 @@ export async function createTaskFromRequest(db: DB, requestId: string): Promise<
   ).bind(requestId).first();
   if (exists) return;
 
-  const config = await executionConfig(db, req.request_type_id);
+  const config = await resolveExecutionConfig(db, requestId);
   const spaceId = await spaceForRequestType(db, req.request_type_id, config?.workspace_id);
   const okSpace = await db.prepare('SELECT id FROM ws_spaces WHERE id = ?').bind(spaceId).first();
   const finalSpace = okSpace ? spaceId : 'comercial';
@@ -225,9 +210,7 @@ export async function markRequestDelivered(db: DB, requestId: string, taskId: st
   }>();
   if (!req || req.delivered_at) return;
 
-  const config = await db.prepare(
-    'SELECT require_requester_confirmation FROM process_configs WHERE id = ?'
-  ).bind(req.request_type_id).first<{ require_requester_confirmation: number | null }>();
+  const config = await resolveExecutionConfig(db, requestId);
   const needsConfirmation = config?.require_requester_confirmation !== 0;
 
   const reopenDueAt = new Date(Date.now() + REOPEN_WINDOW_DAYS * 86400000).toISOString();

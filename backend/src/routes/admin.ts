@@ -849,4 +849,215 @@ router.post('/campaign-costs', async (c) => {
   return c.json({ data: { id: costId } }, 201);
 });
 
+// ═══════════════════════════════════════════════════════════════════════════
+//  VERSIONES DE PROCESO
+//
+//  Publicar una versión no toca lo que ya está en ejecución: cada solicitud
+//  guarda la versión con la que nació y la ejecución lee ese snapshot.
+//  Restaurar tampoco reescribe la historia: publica una versión nueva cuyo
+//  contenido es igual al de la elegida, para que el registro siga siendo
+//  cronológico y auditable.
+// ═══════════════════════════════════════════════════════════════════════════
+
+interface VersionSnapshot {
+  name?: string;
+  description?: string | null;
+  levels?: { label: string; approver_type: string; approver_value: string; approver_name?: string | null; approver_email?: string | null }[];
+  fields?: { field_key: string; label: string; field_type: string; placeholder?: string | null; required?: boolean | number; options_json?: string | null; sort_order?: number }[];
+  form_schema_json?: string;
+  email_subject?: string;
+  email_body?: string;
+  color?: string;
+  icon?: string;
+  category?: string | null;
+  default_sla_days?: number;
+  workspace_id?: string | null;
+  assignment_mode?: string | null;
+  fixed_assignee_id?: string | null;
+  fixed_assignee_name?: string | null;
+  fixed_assignee_email?: string | null;
+  execution_sla_days?: number | null;
+  checklist?: { label: string; required?: boolean }[];
+  deliverables?: { label: string; required?: boolean }[];
+  require_requester_confirmation?: number;
+}
+
+// Historial con el impacto real de cada versión: cuántas solicitudes nacieron
+// con ella y cuántas siguen vivas bajo sus reglas.
+router.get('/processes/:id/versions', async (c) => {
+  const processId = c.req.param('id');
+  const rows = await c.env.DB.prepare(`
+    SELECT pv.id, pv.version, pv.name, pv.description, pv.created_by, pv.created_at,
+           (SELECT COUNT(*) FROM requests r WHERE r.process_version_id = pv.id) AS requests_total,
+           (SELECT COUNT(*) FROM requests r
+             WHERE r.process_version_id = pv.id
+               AND r.status IN ('draft','pending','in_progress')) AS requests_open
+    FROM process_versions pv
+    WHERE pv.process_id = ?
+    ORDER BY pv.version DESC
+  `).bind(processId).all();
+
+  const current = await c.env.DB.prepare(
+    'SELECT id FROM process_versions WHERE process_id = ? ORDER BY version DESC LIMIT 1'
+  ).bind(processId).first<{ id: string }>();
+
+  return c.json({ data: rows.results, currentVersionId: current?.id ?? null });
+});
+
+// Contenido completo de una versión, para inspeccionarla antes de restaurar.
+router.get('/processes/:id/versions/:versionId', async (c) => {
+  const row = await c.env.DB.prepare(
+    'SELECT id, process_id, version, name, description, snapshot_json, created_by, created_at FROM process_versions WHERE id = ? AND process_id = ?'
+  ).bind(c.req.param('versionId'), c.req.param('id')).first<Record<string, unknown>>();
+  if (!row) return c.json({ error: 'not_found' }, 404);
+
+  let snapshot: VersionSnapshot | null = null;
+  try { snapshot = JSON.parse(String(row.snapshot_json)) as VersionSnapshot; } catch { snapshot = null; }
+  return c.json({ data: { ...row, snapshot } });
+});
+
+router.post('/processes/:id/versions/:versionId/restore', async (c) => {
+  const processId = c.req.param('id');
+  const versionId = c.req.param('versionId');
+
+  const source = await c.env.DB.prepare(
+    'SELECT id, version, name, description, snapshot_json FROM process_versions WHERE id = ? AND process_id = ?'
+  ).bind(versionId, processId).first<{ id: string; version: number; name: string; description: string | null; snapshot_json: string }>();
+  if (!source) return c.json({ error: 'not_found', message: 'Esa versión no existe' }, 404);
+
+  let snapshot: VersionSnapshot;
+  try { snapshot = JSON.parse(source.snapshot_json) as VersionSnapshot; }
+  catch { return c.json({ error: 'corrupt_snapshot', message: 'El contenido de esa versión no se puede leer' }, 422); }
+
+  // Las versiones creadas por la migración inicial solo guardaron la parte de
+  // formulario. Restaurar una de ellas borraría aprobadores y campos, así que
+  // se rechaza en vez de dejar el proceso a medias.
+  if (!Array.isArray(snapshot.levels) || !Array.isArray(snapshot.fields)) {
+    return c.json({
+      error: 'incomplete_snapshot',
+      message: 'Esa versión es anterior al versionado completo y no guarda aprobadores ni campos. No se puede restaurar sin dañar el proceso.',
+    }, 422);
+  }
+
+  const latest = await c.env.DB.prepare(
+    'SELECT MAX(version) AS version FROM process_versions WHERE process_id = ?'
+  ).bind(processId).first<{ version: number | null }>();
+  const nextVersion = (latest?.version ?? 0) + 1;
+
+  const name = (snapshot.name ?? source.name).trim();
+  const description = snapshot.description ?? source.description ?? null;
+
+  // Los snapshots anteriores a Process Studio v2 guardan formulario y
+  // aprobadores pero no la configuración de ejecución. Restaurar uno de ellos
+  // con valores por defecto borraría el checklist, los entregables y la
+  // asignación vigentes: lo que el snapshot no trae, se conserva.
+  const live = await c.env.DB.prepare(`
+    SELECT workspace_id, assignment_mode, fixed_assignee_id, fixed_assignee_name,
+           fixed_assignee_email, execution_sla_days, checklist_json, deliverables_json,
+           require_requester_confirmation
+    FROM process_configs WHERE id = ?
+  `).bind(processId).first<Record<string, unknown>>();
+
+  const keep = <T>(fromSnapshot: T | undefined | null, fromLive: unknown, fallback: T): T =>
+    fromSnapshot !== undefined && fromSnapshot !== null
+      ? fromSnapshot
+      : (fromLive ?? fallback) as T;
+
+  const checklistJson = Array.isArray(snapshot.checklist)
+    ? JSON.stringify(snapshot.checklist)
+    : (live?.checklist_json as string | null) ?? '[]';
+  const deliverablesJson = Array.isArray(snapshot.deliverables)
+    ? JSON.stringify(snapshot.deliverables)
+    : (live?.deliverables_json as string | null) ?? '[]';
+
+  const statements: D1PreparedStatement[] = [
+    c.env.DB.prepare('UPDATE request_types SET name = ?, description = ? WHERE id = ?')
+      .bind(name, description, processId),
+    c.env.DB.prepare('DELETE FROM flow_configs WHERE request_type_id = ?').bind(processId),
+    c.env.DB.prepare('DELETE FROM request_type_fields WHERE request_type_id = ?').bind(processId),
+  ];
+
+  snapshot.levels.forEach((level, index) => {
+    statements.push(c.env.DB.prepare(`
+      INSERT INTO flow_configs
+        (id, request_type_id, level, label, approver_type, approver_value, approver_name, approver_email)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+      crypto.randomUUID().slice(0, 8), processId, index + 1, level.label,
+      level.approver_type, level.approver_value,
+      level.approver_name ?? null, level.approver_email ?? null,
+    ));
+  });
+
+  snapshot.fields.forEach((field, index) => {
+    statements.push(c.env.DB.prepare(`
+      INSERT INTO request_type_fields
+        (id, request_type_id, field_key, label, field_type, placeholder, required, options_json, sort_order)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+      crypto.randomUUID().slice(0, 8), processId, field.field_key, field.label,
+      field.field_type, field.placeholder ?? null, field.required ? 1 : 0,
+      field.options_json ?? null, field.sort_order ?? index,
+    ));
+  });
+
+  statements.push(c.env.DB.prepare(`
+    INSERT INTO process_configs
+      (id, form_schema_json, email_subject, email_body, color, icon, category, default_sla_days,
+       workspace_id, assignment_mode, fixed_assignee_id, fixed_assignee_name, fixed_assignee_email,
+       execution_sla_days, checklist_json, deliverables_json, require_requester_confirmation, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+    ON CONFLICT(id) DO UPDATE SET
+      form_schema_json = excluded.form_schema_json,
+      email_subject = excluded.email_subject,
+      email_body = excluded.email_body,
+      color = excluded.color,
+      icon = excluded.icon,
+      category = excluded.category,
+      default_sla_days = excluded.default_sla_days,
+      workspace_id = excluded.workspace_id,
+      assignment_mode = excluded.assignment_mode,
+      fixed_assignee_id = excluded.fixed_assignee_id,
+      fixed_assignee_name = excluded.fixed_assignee_name,
+      fixed_assignee_email = excluded.fixed_assignee_email,
+      execution_sla_days = excluded.execution_sla_days,
+      checklist_json = excluded.checklist_json,
+      deliverables_json = excluded.deliverables_json,
+      require_requester_confirmation = excluded.require_requester_confirmation,
+      updated_at = datetime('now')
+  `).bind(
+    processId, snapshot.form_schema_json ?? '[]',
+    snapshot.email_subject ?? '', snapshot.email_body ?? '',
+    snapshot.color ?? '#0284C7', snapshot.icon ?? 'flow',
+    snapshot.category ?? null, snapshot.default_sla_days ?? 5,
+    keep(snapshot.workspace_id, live?.workspace_id, null),
+    keep(snapshot.assignment_mode, live?.assignment_mode, 'auto_load'),
+    keep(snapshot.fixed_assignee_id, live?.fixed_assignee_id, null),
+    keep(snapshot.fixed_assignee_name, live?.fixed_assignee_name, null),
+    keep(snapshot.fixed_assignee_email, live?.fixed_assignee_email, null),
+    keep(snapshot.execution_sla_days, live?.execution_sla_days, null),
+    checklistJson, deliverablesJson,
+    keep(snapshot.require_requester_confirmation, live?.require_requester_confirmation, 1),
+  ));
+
+  statements.push(c.env.DB.prepare(`
+    INSERT INTO process_versions
+      (id, process_id, version, name, description, snapshot_json, created_by)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `).bind(
+    crypto.randomUUID(), processId, nextVersion, name, description,
+    source.snapshot_json, c.get('userEmail'),
+  ));
+
+  await c.env.DB.batch(statements);
+  await logEvent(c.env.DB, {
+    category: 'config', action: 'process_version_restored',
+    trace_id: c.get('traceId'), source: 'process-versions',
+    ref_type: 'process', ref_id: processId, actor: c.get('userEmail'),
+    detail: { restored_from: source.version, published_as: nextVersion },
+  });
+
+  return c.json({ data: { restored_from: source.version, version: nextVersion } });
+});
+
 export default router;

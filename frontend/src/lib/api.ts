@@ -465,7 +465,39 @@ export const api = {
   saveSpaceMembers: (spaceId: string, members: { user_email: string; user_name?: string; role: 'lead' | 'member' }[]) =>
     request<{ data: SpaceMember[] }>('PUT', `/api/workspace/spaces/${spaceId}/members`, { members }),
 
+  // ─── Versiones de proceso ─────────────────────────────────────────────────
+  getProcessVersions: (processId: string) =>
+    request<{ data: ProcessVersion[]; currentVersionId: string | null }>(
+      'GET', `/api/admin/processes/${processId}/versions`),
+
+  getProcessVersion: (processId: string, versionId: string) =>
+    request<{ data: ProcessVersion & { snapshot: ProcessSnapshot | null } }>(
+      'GET', `/api/admin/processes/${processId}/versions/${versionId}`),
+
+  restoreProcessVersion: (processId: string, versionId: string) =>
+    request<{ data: { restored_from: number; version: number } }>(
+      'POST', `/api/admin/processes/${processId}/versions/${versionId}/restore`),
+
 };
+
+export interface ProcessVersion {
+  id: string; version: number; name: string; description: string | null;
+  created_by: string | null; created_at: string;
+  requests_total: number; requests_open: number;
+}
+
+export interface ProcessSnapshot {
+  name?: string;
+  levels?: { label: string; approver_name?: string | null; approver_email?: string | null }[];
+  fields?: { label: string; field_type: string; required?: boolean | number }[];
+  checklist?: { label: string; required?: boolean }[];
+  deliverables?: { label: string; required?: boolean }[];
+  default_sla_days?: number;
+  execution_sla_days?: number | null;
+  assignment_mode?: string | null;
+  workspace_id?: string | null;
+  require_requester_confirmation?: number;
+}
 
 // ─── Personas ─────────────────────────────────────────────────────────────────
 export type PersonaKey = 'solicitante' | 'ejecutor' | 'aprobador' | 'lider' | 'gerencia' | 'admin';
