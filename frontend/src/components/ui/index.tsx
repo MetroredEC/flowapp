@@ -4,8 +4,9 @@ import { ReactNode, CSSProperties } from 'react';
 export function Card({ children, style }: { children: ReactNode; style?: CSSProperties }) {
   return (
     <div style={{
-      background: '#fff', borderRadius: 12, padding: 24,
-      border: '1px solid #E8E8E4', ...style,
+      background: '#fff', borderRadius: 14, padding: 24,
+      boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)',
+      border: '1px solid rgba(0,0,0,0.05)', ...style,
     }}>
       {children}
     </div>
@@ -18,10 +19,10 @@ export function PageHeader({ title, subtitle, action }: {
 }) {
   return (
     <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
-      marginBottom: 24 }}>
+      marginBottom: 28 }}>
       <div>
-        <h1 style={{ fontSize: 22, fontWeight: 800, color: '#111', letterSpacing: -0.3 }}>{title}</h1>
-        {subtitle && <p style={{ color: '#888', fontSize: 13, marginTop: 4 }}>{subtitle}</p>}
+        <h1 style={{ fontSize: 22, fontWeight: 700, color: '#18181B', letterSpacing: -0.4 }}>{title}</h1>
+        {subtitle && <p style={{ color: '#71717A', fontSize: 13, marginTop: 4 }}>{subtitle}</p>}
       </div>
       {action && <div>{action}</div>}
     </div>
@@ -30,29 +31,29 @@ export function PageHeader({ title, subtitle, action }: {
 
 // ─── Status badge ─────────────────────────────────────────────────────────────
 const STATUS_MAP: Record<string, { label: string; bg: string; color: string }> = {
-  pending:     { label: 'Pendiente',   bg: '#FAEEDA', color: '#633806' },
-  in_progress: { label: 'En proceso',  bg: '#E6F1FB', color: '#0C447C' },
-  approved:    { label: 'Aprobada',    bg: '#E1F5EE', color: '#085041' },
-  rejected:    { label: 'Rechazada',   bg: '#FAECE7', color: '#712B13' },
-  cancelled:   { label: 'Cancelada',   bg: '#F1EFE8', color: '#5F5E5A' },
-  draft:       { label: 'Borrador',    bg: '#F1EFE8', color: '#5F5E5A' },
+  pending:     { label: 'Pendiente',   bg: '#FEF3C7', color: '#92400E' },
+  in_progress: { label: 'En proceso',  bg: '#EDE9FE', color: '#5B21B6' },
+  approved:    { label: 'Aprobada',    bg: '#D1FAE5', color: '#065F46' },
+  rejected:    { label: 'Rechazada',   bg: '#FEE2E2', color: '#991B1B' },
+  cancelled:   { label: 'Cancelada',   bg: '#F4F4F5', color: '#52525B' },
+  draft:       { label: 'Borrador',    bg: '#F4F4F5', color: '#52525B' },
 };
 export function StatusBadge({ status }: { status: string }) {
-  const s = STATUS_MAP[status] ?? { label: status, bg: '#F1EFE8', color: '#444' };
+  const s = STATUS_MAP[status] ?? { label: status, bg: '#F4F4F5', color: '#444' };
   return (
     <span style={{
-      background: s.bg, color: s.color, fontSize: 11, fontWeight: 700,
-      padding: '3px 10px', borderRadius: 20, letterSpacing: 0.3,
+      background: s.bg, color: s.color, fontSize: 11, fontWeight: 600,
+      padding: '3px 10px', borderRadius: 20, letterSpacing: 0.2,
     }}>{s.label}</span>
   );
 }
 
 // ─── Step badge ───────────────────────────────────────────────────────────────
 const STEP_MAP: Record<string, { bg: string; color: string }> = {
-  pending:  { bg: '#F1EFE8', color: '#5F5E5A' },
-  approved: { bg: '#E1F5EE', color: '#085041' },
-  rejected: { bg: '#FAECE7', color: '#712B13' },
-  skipped:  { bg: '#F1EFE8', color: '#888' },
+  pending:  { bg: '#F4F4F5', color: '#52525B' },
+  approved: { bg: '#D1FAE5', color: '#065F46' },
+  rejected: { bg: '#FEE2E2', color: '#991B1B' },
+  skipped:  { bg: '#F4F4F5', color: '#A1A1AA' },
 };
 export function StepBadge({ status }: { status: string }) {
   const s = STEP_MAP[status] ?? STEP_MAP.pending;
@@ -70,10 +71,10 @@ export function StepBadge({ status }: { status: string }) {
 // ─── Button ───────────────────────────────────────────────────────────────────
 type BtnVariant = 'primary' | 'secondary' | 'danger' | 'ghost';
 const BTN: Record<BtnVariant, CSSProperties> = {
-  primary:   { background: '#0C447C', color: '#fff', border: 'none' },
-  secondary: { background: '#fff', color: '#0C447C', border: '1.5px solid #B5D4F4' },
-  danger:    { background: '#993C1D', color: '#fff', border: 'none' },
-  ghost:     { background: 'transparent', color: '#0C447C', border: 'none' },
+  primary:   { background: '#0284C7', color: '#fff', border: 'none' },
+  secondary: { background: '#fff', color: '#0284C7', border: '1.5px solid #DDD6FE' },
+  danger:    { background: '#DC2626', color: '#fff', border: 'none' },
+  ghost:     { background: 'transparent', color: '#0284C7', border: 'none' },
 };
 export function Btn({
   children, onClick, variant = 'primary', disabled, type = 'button', style,
@@ -110,12 +111,12 @@ export function Field({
 export function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
   return (
     <input {...props} style={{
-      width: '100%', padding: '10px 12px', border: '1.5px solid #ddd',
+      width: '100%', padding: '10px 12px', border: '1.5px solid #E4E4E7',
       borderRadius: 8, fontSize: 14, outline: 'none', fontFamily: 'inherit',
-      transition: 'border-color .15s', ...props.style,
+      transition: 'border-color .15s', background: '#fff', color: '#18181B', ...props.style,
     }}
-    onFocus={e => e.target.style.borderColor = '#185FA5'}
-    onBlur={e => e.target.style.borderColor = '#ddd'}
+    onFocus={e => e.target.style.borderColor = '#0284C7'}
+    onBlur={e => e.target.style.borderColor = '#E4E4E7'}
     />
   );
 }
@@ -123,12 +124,12 @@ export function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
 export function Textarea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
   return (
     <textarea {...props} style={{
-      width: '100%', padding: '10px 12px', border: '1.5px solid #ddd',
+      width: '100%', padding: '10px 12px', border: '1.5px solid #E4E4E7',
       borderRadius: 8, fontSize: 14, outline: 'none', fontFamily: 'inherit',
       resize: 'vertical', minHeight: 100, transition: 'border-color .15s', ...props.style,
     }}
-    onFocus={e => e.target.style.borderColor = '#185FA5'}
-    onBlur={e => e.target.style.borderColor = '#ddd'}
+    onFocus={e => e.target.style.borderColor = '#0284C7'}
+    onBlur={e => e.target.style.borderColor = '#E4E4E7'}
     />
   );
 }
@@ -148,7 +149,7 @@ export function Spinner({ size = 24 }: { size?: number }) {
   return (
     <div style={{
       width: size, height: size, borderRadius: '50%',
-      border: `2px solid #E8E8E4`, borderTopColor: '#185FA5',
+      border: `2px solid #EDE9FE`, borderTopColor: '#0284C7',
       animation: 'spin .7s linear infinite',
     }}>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
@@ -179,7 +180,7 @@ export function LevelStepper({ current, total, steps }: {
         const isDone    = n < current || step?.status === 'approved';
         const isCurrent = n === current && step?.status === 'pending';
         const isRejected= step?.status === 'rejected';
-        const bg = isRejected ? '#F0997B' : isDone ? '#1D9E75' : isCurrent ? '#185FA5' : '#D3D1C7';
+        const bg = isRejected ? '#EF4444' : isDone ? '#10B981' : isCurrent ? '#0284C7' : '#E4E4E7';
         const color = isDone || isCurrent || isRejected ? '#fff' : '#888';
         return (
           <div key={n} style={{ display: 'flex', alignItems: 'center' }}>
@@ -188,7 +189,7 @@ export function LevelStepper({ current, total, steps }: {
               fontSize: 13, fontWeight: 700, display: 'flex', alignItems: 'center',
               justifyContent: 'center', cursor: 'default',
             }}>{isRejected ? '✕' : isDone ? '✓' : n}</div>
-            {n < total && <div style={{ width: 24, height: 2, background: isDone ? '#1D9E75' : '#E8E8E4' }} />}
+            {n < total && <div style={{ width: 24, height: 2, background: isDone ? '#10B981' : '#E4E4E7' }} />}
           </div>
         );
       })}

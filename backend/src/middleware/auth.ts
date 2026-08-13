@@ -1,5 +1,6 @@
 import { Context, Next } from 'hono';
 import { AppEnv } from '../types';
+import { logEvent } from '../utils/syslog';
 
 interface JwtHeader { alg: string; kid: string; }
 interface JwtPayload {
@@ -15,6 +16,11 @@ const JWKS_TTL = 3600;
 export async function authMiddleware(c: Context<AppEnv>, next: Next): Promise<Response | void> {
   const authHeader = c.req.header('Authorization');
   if (!authHeader?.startsWith('Bearer ')) {
+    c.executionCtx.waitUntil(logEvent(c.env.DB, {
+      category: 'auth', action: 'token_missing', ok: false, severity: 'warn',
+      trace_id: c.get('traceId'), source: 'auth-middleware', http_status: 401,
+      detail: { method: c.req.method, path: c.req.path },
+    }));
     return c.json({ error: 'unauthorized', message: 'Token requerido' }, 401);
   }
   const token = authHeader.slice(7);
@@ -27,6 +33,11 @@ export async function authMiddleware(c: Context<AppEnv>, next: Next): Promise<Re
     await next();
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : 'Token invalido';
+    c.executionCtx.waitUntil(logEvent(c.env.DB, {
+      category: 'auth', action: 'token_rejected', ok: false, severity: 'warn',
+      trace_id: c.get('traceId'), source: 'auth-middleware', http_status: 401,
+      detail: { method: c.req.method, path: c.req.path, reason: msg },
+    }));
     return c.json({ error: 'unauthorized', message: msg }, 401);
   }
 }

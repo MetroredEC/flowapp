@@ -6,7 +6,21 @@ import App from './App';
 
 async function bootstrap() {
   await msalInstance.initialize();
-  await msalInstance.handleRedirectPromise();
+
+  // Handle redirect result (clears interaction.status on successful redirect)
+  try {
+    await msalInstance.handleRedirectPromise();
+  } catch {
+    // If the redirect failed or was interrupted, clear any stale MSAL state
+    Object.keys(sessionStorage)
+      .filter(k => k === 'msal.interaction.status' || k.endsWith('.interaction.status'))
+      .forEach(k => sessionStorage.removeItem(k));
+  }
+
+  // Also defensively clear if the status is stuck as the literal string "undefined"
+  if (sessionStorage.getItem('msal.interaction.status') === 'undefined') {
+    sessionStorage.removeItem('msal.interaction.status');
+  }
 
   const accounts = msalInstance.getAllAccounts();
   if (accounts.length > 0) {

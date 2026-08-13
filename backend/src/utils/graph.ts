@@ -53,7 +53,10 @@ export async function searchUsers(
     headers: { Authorization: `Bearer ${token}`, ConsistencyLevel: 'eventual' }
   });
 
-  if (!res2.ok) return [];
+  if (!res2.ok) {
+    const body = await res2.text().catch(() => '');
+    throw new Error(`Graph user search error: ${res2.status}: ${body.slice(0, 600)}`);
+  }
   const data2 = await res2.json() as { value: GraphUser[] };
   return data2.value ?? [];
 }

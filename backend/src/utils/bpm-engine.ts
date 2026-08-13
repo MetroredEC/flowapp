@@ -51,10 +51,14 @@ export async function startProcessByKey(
     SELECT id
       FROM process_definitions
      WHERE key = ?
+       AND status = 'active'
+     ORDER BY version DESC
      LIMIT 1
   `).bind(processKey).first<{ id: string }>();
 
-  if (!proc) throw new Error('Process not found for key: ' + processKey);
+  if (!proc) {
+    throw new Error('Process not found for key: ' + processKey);
+  }
 
   return startProcess(proc.id, requestId, data, env);
 }
@@ -76,11 +80,20 @@ export async function startProcess(
      LIMIT 1
   `).bind(processDefinitionId).first<WorkflowNode>();
 
-  if (!startNode) throw new Error('No start node');
+  if (!startNode) {
+    throw new Error('No start node');
+  }
 
   await db.prepare(`
-    INSERT INTO process_instances (id, process_definition_id, request_id, current_node_id, data_json)
-    VALUES (?, ?, ?, ?, ?)
+    INSERT INTO process_instances (
+      id,
+      process_definition_id,
+      request_id,
+      current_node_id,
+      status,
+      data_json
+    )
+    VALUES (?, ?, ?, ?, 'active', ?)
   `).bind(
     instanceId,
     processDefinitionId,
@@ -90,6 +103,7 @@ export async function startProcess(
   ).run();
 
   await executeNode(instanceId, startNode.id, env);
+
   return instanceId;
 }
 
@@ -108,8 +122,13 @@ export async function completeTask(
      WHERE id = ?
   `).bind(taskId).first<TaskRow>();
 
-  if (!task) throw new Error('Task not found');
-  if (task.status !== 'pending') throw new Error('Task already completed');
+  if (!task) {
+    throw new Error('Task not found');
+  }
+
+  if (task.status !== 'pending') {
+    throw new Error('Task already completed');
+  }
 
   const instance = await db.prepare(`
     SELECT id, request_id, data_json
@@ -117,12 +136,23 @@ export async function completeTask(
      WHERE id = ?
   `).bind(task.process_instance_id).first<InstanceRow>();
 
-  if (!instance) throw new Error('Process instance not found');
+  if (!instance) {
+    throw new Error('Process instance not found');
+  }
 
   await db.prepare(`
     INSERT INTO task_events (
-      id, task_id, process_instance_id, request_id, action, comment, actor_id, actor_name, actor_email
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      id,
+      task_id,
+      process_instance_id,
+      request_id,
+      action,
+      comment,
+      actor_id,
+      actor_name,
+      actor_email
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).bind(
     crypto.randomUUID(),
     task.id,
@@ -142,7 +172,12 @@ export async function completeTask(
      WHERE id = ?
   `).bind(task.id).run();
 
-  const nextEdge = await findNextEdgeFromTask(task.node_id ?? '', action, instance.data_json, env);
+  const nextEdge = await findNextEdgeFromTask(
+    task.node_id ?? '',
+    action,
+    instance.data_json,
+    env
+  );
 
   if (!nextEdge) {
     await db.prepare(`
@@ -152,17 +187,31 @@ export async function completeTask(
        WHERE id = ?
     `).bind(instance.id).run();
 
-    return { completed: true, nextNodeId: null };
+    return {
+      completed: true,
+      nextNodeId: null,
+    };
   }
 
   await db.prepare(`
     UPDATE process_instances
        SET current_node_id = ?
      WHERE id = ?
-  `).bind(nextEdge.target_node_id, instance.id).run();
+  `).bind(
+    nextEdge.target_node_id,
+    instance.id
+  ).run();
 
-  await executeNode(instance.id, nextEdge.target_node_id, env);
-  return { completed: true, nextNodeId: nextEdge.target_node_id };
+  await executeNode(
+    instance.id,
+    nextEdge.target_node_id,
+    env
+  );
+
+  return {
+    completed: true,
+    nextNodeId: nextEdge.target_node_id,
+  };
 }
 
 export async function executeNode(
@@ -178,7 +227,9 @@ export async function executeNode(
      WHERE id = ?
   `).bind(nodeId).first<WorkflowNode>();
 
-  if (!node) throw new Error('Node not found');
+  if (!node) {
+    throw new Error('Node not found');
+  }
 
   switch (node.type) {
     case 'start':
@@ -186,28 +237,79 @@ export async function executeNode(
       return;
 
     case 'task': {
-      const config = safeJson<{ assign?: { type?: string; value?: string } }>(node.config_json, {});
-      const assigneeEmail = config.assign?.type === 'email'
-        ? (config.assign.value ?? null)
-        : null;
+      const config = safeJson<{
+        assign?: {
+          type?: string;
+          value?: string;
+        };
+      }>(node.config_json, {});
 
       const instance = await db.prepare(`
-        SELECT request_id
+        SELECT request_id, data_json
           FROM process_instances
          WHERE id = ?
-      `).bind(instanceId).first<{ request_id?: string | null }>();
+      `).bind(instanceId).first<{
+        request_id?: string | null;
+        data_json?: string | null;
+      }>();
+
+      const processData = safeJson<Record<string, unknown>>(
+        instance?.data_json,
+        {}
+      );
+
+      let assigneeEmail: string | null = null;
+
+      if (config.assign?.type === 'email') {
+        assigneeEmail = config.assign.value ?? null;
+      }
+
+      if (config.assign?.type === 'requester') {
+        const request = await db.prepare(`
+          SELECT requester_email
+            FROM requests
+           WHERE id = ?
+        `).bind(
+          instance?.request_id ?? ''
+        ).first<{ requester_email?: string | null }>();
+
+        assigneeEmail = request?.requester_email ?? null;
+      }
+
+      const isReceiptTask =
+        node.label.toLowerCase().includes('recep');
+
+      const isDispatchTask =
+        node.label.toLowerCase().includes('despach');
 
       await db.prepare(`
-        INSERT INTO tasks (id, process_instance_id, request_id, node_id, title, assignee_email, status)
-        VALUES (?, ?, ?, ?, ?, ?, 'pending')
+        INSERT INTO tasks (
+          id,
+          process_instance_id,
+          request_id,
+          node_id,
+          title,
+          assignee_email,
+          status,
+          payload_json
+        )
+        VALUES (?, ?, ?, ?, ?, ?, 'pending', ?)
       `).bind(
         crypto.randomUUID(),
         instanceId,
         instance?.request_id ?? null,
-        nodeId,
+        node.id,
         node.label,
-        assigneeEmail
+        assigneeEmail,
+        JSON.stringify({
+          node_id: node.id,
+          node_label: node.label,
+          requires_receipt: isReceiptTask,
+          requires_dispatch: isDispatchTask,
+          process_data: processData,
+        })
       ).run();
+
       return;
     }
 
@@ -241,15 +343,24 @@ async function moveNext(
      LIMIT 1
   `).bind(nodeId).first<WorkflowEdge>();
 
-  if (!edge) return;
+  if (!edge) {
+    return;
+  }
 
   await env.DB.prepare(`
     UPDATE process_instances
        SET current_node_id = ?
      WHERE id = ?
-  `).bind(edge.target_node_id, instanceId).run();
+  `).bind(
+    edge.target_node_id,
+    instanceId
+  ).run();
 
-  await executeNode(instanceId, edge.target_node_id, env);
+  await executeNode(
+    instanceId,
+    edge.target_node_id,
+    env
+  );
 }
 
 async function findNextEdgeFromTask(
@@ -258,9 +369,14 @@ async function findNextEdgeFromTask(
   dataJson: string | null | undefined,
   env: Env
 ): Promise<WorkflowEdge | null> {
-  if (!nodeId) return null;
+  if (!nodeId) {
+    return null;
+  }
 
-  const data = safeJson<Record<string, unknown>>(dataJson, {});
+  const data = safeJson<Record<string, unknown>>(
+    dataJson,
+    {}
+  );
 
   const edges = await env.DB.prepare(`
     SELECT target_node_id, condition_json
@@ -269,14 +385,25 @@ async function findNextEdgeFromTask(
   `).bind(nodeId).all<WorkflowEdge>();
 
   const all = edges.results ?? [];
+
   const actionEdges = all.filter(edge => {
-    const cond = safeJson<Condition>(edge.condition_json, {});
+    const cond = safeJson<Condition>(
+      edge.condition_json,
+      {}
+    );
+
     return cond.action === action;
   });
 
   for (const edge of actionEdges.length ? actionEdges : all) {
-    const cond = safeJson<Condition>(edge.condition_json, {});
-    if (evaluate(cond, data, action)) return edge;
+    const cond = safeJson<Condition>(
+      edge.condition_json,
+      {}
+    );
+
+    if (evaluate(cond, data, action)) {
+      return edge;
+    }
   }
 
   return null;
@@ -295,9 +422,14 @@ async function evaluateDecision(
      WHERE id = ?
   `).bind(instanceId).first<ProcessInstanceData>();
 
-  if (!instance) throw new Error('Process instance not found');
+  if (!instance) {
+    throw new Error('Process instance not found');
+  }
 
-  const data = safeJson<Record<string, unknown>>(instance.data_json, {});
+  const data = safeJson<Record<string, unknown>>(
+    instance.data_json,
+    {}
+  );
 
   const edges = await db.prepare(`
     SELECT target_node_id, condition_json
@@ -306,36 +438,72 @@ async function evaluateDecision(
   `).bind(nodeId).all<WorkflowEdge>();
 
   for (const edge of edges.results ?? []) {
-    const cond = safeJson<Condition>(edge.condition_json, {});
+    const cond = safeJson<Condition>(
+      edge.condition_json,
+      {}
+    );
 
     if (evaluate(cond, data)) {
       await db.prepare(`
         UPDATE process_instances
            SET current_node_id = ?
          WHERE id = ?
-      `).bind(edge.target_node_id, instanceId).run();
+      `).bind(
+        edge.target_node_id,
+        instanceId
+      ).run();
 
-      await executeNode(instanceId, edge.target_node_id, env);
+      await executeNode(
+        instanceId,
+        edge.target_node_id,
+        env
+      );
+
       return;
     }
   }
 }
 
-function evaluate(cond: Condition, data: Record<string, unknown>, action?: string): boolean {
-  if (cond.action && action && cond.action !== action) return false;
-  if (cond.action && !action) return false;
-  if (!cond.field) return true;
+function evaluate(
+  cond: Condition,
+  data: Record<string, unknown>,
+  action?: string
+): boolean {
+  if (cond.action && action && cond.action !== action) {
+    return false;
+  }
+
+  if (cond.action && !action) {
+    return false;
+  }
+
+  if (!cond.field) {
+    return true;
+  }
 
   const value = data[cond.field];
 
   switch (cond.op) {
-    case '>': return Number(value) > Number(cond.value);
-    case '<': return Number(value) < Number(cond.value);
-    case '>=': return Number(value) >= Number(cond.value);
-    case '<=': return Number(value) <= Number(cond.value);
-    case '=': return String(value) === String(cond.value);
-    case '!=': return String(value) !== String(cond.value);
-    default: return false;
+    case '>':
+      return Number(value) > Number(cond.value);
+
+    case '<':
+      return Number(value) < Number(cond.value);
+
+    case '>=':
+      return Number(value) >= Number(cond.value);
+
+    case '<=':
+      return Number(value) <= Number(cond.value);
+
+    case '=':
+      return String(value) === String(cond.value);
+
+    case '!=':
+      return String(value) !== String(cond.value);
+
+    default:
+      return false;
   }
 }
 
@@ -343,8 +511,14 @@ function normalizeComment(comment: string): string {
   return comment.trim().slice(0, 1200);
 }
 
-function safeJson<T>(value: string | null | undefined, fallback: T): T {
-  if (!value) return fallback;
+function safeJson<T>(
+  value: string | null | undefined,
+  fallback: T
+): T {
+  if (!value) {
+    return fallback;
+  }
+
   try {
     return JSON.parse(value) as T;
   } catch {

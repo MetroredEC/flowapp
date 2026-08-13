@@ -3,6 +3,7 @@ main = "src/index.ts"
 compatibility_date = "2026-01-20"
 compatibility_flags = ["nodejs_compat"]
 workers_dev = true
+account_id = "d6247c0bd94d548990eae1ee51e2b029"
 
 [vars]
 ALLOWED_ORIGINS    = "https://metroredec.github.io,http://localhost:5173"
@@ -31,6 +32,7 @@ id      = "095661415d644f4b924b8f11173896f0"
 
 [env.production]
 workers_dev = true
+account_id = "d6247c0bd94d548990eae1ee51e2b029"
 
 [env.production.vars]
 ALLOWED_ORIGINS    = "https://metroredec.github.io"

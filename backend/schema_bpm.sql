@@ -1,4 +1,5 @@
-﻿CREATE TABLE IF NOT EXISTS process_definitions (
+﻿
+CREATE TABLE IF NOT EXISTS process_definitions (
   id TEXT PRIMARY KEY,
   key TEXT NOT NULL UNIQUE,
   name TEXT NOT NULL,

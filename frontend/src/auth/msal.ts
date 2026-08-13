@@ -1,14 +1,19 @@
 import { PublicClientApplication, Configuration, LogLevel } from '@azure/msal-browser';
 
+// Fallback values ensure login never fails due to missing env vars at build time
+const CLIENT_ID  = import.meta.env.VITE_ENTRA_CLIENT_ID  ?? '66130291-fc50-43f1-943c-6818dac1ba99';
+const TENANT_ID  = import.meta.env.VITE_ENTRA_TENANT_ID  ?? '480bd49c-6f89-4faa-b39e-c7728d95d130';
+const SCOPE      = import.meta.env.VITE_ENTRA_SCOPE       ?? 'api://66130291-fc50-43f1-943c-6818dac1ba99/basedeconocimiento';
+
 export const msalConfig: Configuration = {
   auth: {
-    clientId:    import.meta.env.VITE_ENTRA_CLIENT_ID,
-    authority:   `https://login.microsoftonline.com/${import.meta.env.VITE_ENTRA_TENANT_ID}`,
-    redirectUri: window.location.origin + '/flowapp/',
-    postLogoutRedirectUri: window.location.origin + '/flowapp/',
+    clientId:               CLIENT_ID,
+    authority:              `https://login.microsoftonline.com/${TENANT_ID}`,
+    redirectUri:            window.location.origin + '/flowapp/',
+    postLogoutRedirectUri:  window.location.origin + '/flowapp/',
   },
   cache: {
-    cacheLocation:       'sessionStorage',
+    cacheLocation:          'sessionStorage',
     storeAuthStateInCookie: false,
   },
   system: {
@@ -23,7 +28,7 @@ export const msalConfig: Configuration = {
 };
 
 export const loginRequest = {
-  scopes: [import.meta.env.VITE_ENTRA_SCOPE],
+  scopes: [SCOPE],
 };
 
 export const msalInstance = new PublicClientApplication(msalConfig);

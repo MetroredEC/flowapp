@@ -9,6 +9,19 @@ CREATE TABLE IF NOT EXISTS request_types (
   created_at  TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+-- Versiones inmutables de la configuración publicada
+CREATE TABLE IF NOT EXISTS process_versions (
+  id            TEXT PRIMARY KEY,
+  process_id    TEXT NOT NULL REFERENCES request_types(id),
+  version       INTEGER NOT NULL,
+  name          TEXT NOT NULL,
+  description   TEXT,
+  snapshot_json TEXT NOT NULL,
+  created_by    TEXT,
+  created_at    TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE(process_id, version)
+);
+
 -- Configuración de niveles de aprobación por tipo
 CREATE TABLE IF NOT EXISTS flow_configs (
   id               TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(8)))),
@@ -39,6 +52,14 @@ CREATE TABLE IF NOT EXISTS requests (
   current_level    INTEGER NOT NULL DEFAULT 1,
   total_levels     INTEGER NOT NULL DEFAULT 4,
   campaign_data    TEXT,
+  process_version_id TEXT,
+  process_version  INTEGER,
+  submitted_at     TEXT,
+  approved_at      TEXT,
+  rejected_at      TEXT,
+  cancelled_at     TEXT,
+  closed_at        TEXT,
+  sla_due_at       TEXT,
   created_at       TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at       TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -72,6 +93,20 @@ CREATE TABLE IF NOT EXISTS approval_steps (
   notified_at     TEXT,
   created_at      TEXT NOT NULL DEFAULT (datetime('now')),
   UNIQUE(request_id, level)
+);
+
+-- Línea de tiempo transversal solicitud → aprobación → tarea → cierre
+CREATE TABLE IF NOT EXISTS work_events (
+  id          TEXT PRIMARY KEY,
+  request_id  TEXT NOT NULL REFERENCES requests(id) ON DELETE CASCADE,
+  task_id     TEXT,
+  event_type  TEXT NOT NULL,
+  title       TEXT NOT NULL,
+  actor_id    TEXT,
+  actor_name  TEXT,
+  actor_email TEXT,
+  detail_json TEXT,
+  created_at  TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
 -- Tokens magic link (un solo uso, 72h)
@@ -132,6 +167,9 @@ CREATE INDEX IF NOT EXISTS idx_tokens_hash         ON approval_tokens(token_hash
 CREATE INDEX IF NOT EXISTS idx_tokens_step         ON approval_tokens(step_id);
 CREATE INDEX IF NOT EXISTS idx_attachments_req     ON attachments(request_id);
 CREATE INDEX IF NOT EXISTS idx_audit_entity        ON audit_log(entity, entity_id);
+CREATE INDEX IF NOT EXISTS idx_process_versions    ON process_versions(process_id, version DESC);
+CREATE INDEX IF NOT EXISTS idx_work_events_request ON work_events(request_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_work_events_task    ON work_events(task_id, created_at DESC);
 
 -- Datos iniciales
 INSERT OR IGNORE INTO request_types (id, name, description) VALUES

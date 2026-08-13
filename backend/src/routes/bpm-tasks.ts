@@ -1,4 +1,6 @@
+
 import { Hono } from 'hono';
+
 import { AppEnv } from '../types';
 import { completeTask } from '../utils/bpm-engine';
 
@@ -52,6 +54,7 @@ router.get('/:id', async (c) => {
     SELECT t.*,
            r.title as request_title,
            r.description as request_description,
+           r.payload_json as request_payload_json,
            r.request_type_name,
            r.requester_name,
            r.requester_email
@@ -114,6 +117,70 @@ router.post('/:id/complete', async (c) => {
     return c.json({ error: 'comment_required', message: 'El comentario es obligatorio para rechazar.' }, 400);
   }
 
+  
+  const receiptLines = body.receipt_lines || [];
+
+  if (receiptLines.length > 0) {
+
+    for (const line of receiptLines) {
+
+      await c.env.DB.prepare(`
+        INSERT INTO supply_request_receipts (
+          id,
+          task_id,
+          request_id,
+          item_id,
+          quantity_requested,
+          quantity_received,
+          evidence_attachment_id
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `).bind(
+        crypto.randomUUID(),
+        id,
+        body.request_id || null,
+        line.item_id,
+        Number(line.quantity_requested || 0),
+        Number(line.quantity_received || 0),
+        body.evidence_attachment_id || null
+      ).run();
+
+      const movementId = crypto.randomUUID();
+
+      await c.env.DB.prepare(`
+        INSERT INTO inventory_movements (
+          id,
+          movement_type,
+          status,
+          notes,
+          created_at
+        )
+        VALUES (?, 'IN', 'posted', ?, datetime('now'))
+      `).bind(
+        movementId,
+        'Ingreso automatico por recepcion de suministros'
+      ).run();
+
+      await c.env.DB.prepare(`
+        INSERT INTO inventory_movement_lines (
+          id,
+          movement_id,
+          item_id,
+          quantity,
+          unit_cost,
+          total_cost
+        )
+        VALUES (?, ?, ?, ?, 0, 0)
+      `).bind(
+        crypto.randomUUID(),
+        movementId,
+        line.item_id,
+        Number(line.quantity_received || 0)
+      ).run();
+
+    }
+
+  }
   const result = await completeTask(id, action, comment, {
     id: c.get('userId'),
     name: c.get('userName'),

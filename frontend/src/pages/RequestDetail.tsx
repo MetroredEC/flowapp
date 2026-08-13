@@ -4,12 +4,16 @@ import { api, RequestDetail as RD } from '../lib/api';
 import {
   Card, PageHeader, StatusBadge, StepBadge, Spinner, Btn, LevelStepper, Field, Input
 } from '../components/ui';
+import CloseFormFill from '../components/CloseFormFill';
+import { confirmDialog, alertDialog } from '../components/AppDialog';
+import { useIsMobile } from '../lib/useIsMobile';
 
 const API = String(import.meta.env.VITE_API_URL || '').replace(/\/+$/, '');
 
 export default function RequestDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const isMobile = useIsMobile(900);
   const [data, setData]           = useState<RD | null>(null);
   const [loading, setLoading]     = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -30,7 +34,7 @@ export default function RequestDetail() {
       await api.uploadFile(id, file);
       load();
     } catch (err) {
-      alert((err as Error).message);
+      await alertDialog({ title: 'No se pudo subir el archivo', message: (err as Error).message, tone: 'danger' });
     } finally {
       setUploading(false);
     }
@@ -43,17 +47,34 @@ export default function RequestDetail() {
   );
 
   const canCancel = ['pending','in_progress'].includes(data.status);
+  const isDraft = data.status === 'draft';
 
   return (
-    <div style={{ padding: 32, maxWidth: 860, margin: '0 auto' }}>
+    <div style={{ padding: isMobile ? 16 : 32, maxWidth: 1040, margin: '0 auto' }}>
       <PageHeader
         title={data.title}
         subtitle={`${data.request_type_name} · ${data.requester_name}`}
         action={
           <div style={{ display: 'flex', gap: 10 }}>
+            {isDraft && (
+              <Btn onClick={async () => {
+                try {
+                  await api.submitRequest(data.id);
+                  await alertDialog({ title: 'Solicitud enviada', message: 'El aprobador fue notificado.', tone: 'success' });
+                  load();
+                } catch (err) {
+                  await alertDialog({ title: 'No se pudo enviar', message: (err as Error).message, tone: 'danger' });
+                }
+              }}>Enviar solicitud</Btn>
+            )}
             {canCancel && (
               <Btn variant="danger" onClick={async () => {
-                if (!confirm('Cancelar esta solicitud?')) return;
+                const ok = await confirmDialog({
+                  title: '¿Cancelar esta solicitud?',
+                  message: 'La solicitud quedará cancelada y los aprobadores ya no podrán actuar sobre ella.',
+                  confirmLabel: 'Cancelar solicitud', cancelLabel: 'Volver', danger: true,
+                });
+                if (!ok) return;
                 await api.cancelRequest(data.id);
                 navigate('/requests');
               }}>Cancelar</Btn>
@@ -63,7 +84,7 @@ export default function RequestDetail() {
         }
       />
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 20 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'minmax(0, 1fr) 320px', gap: 20 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
           <Card>
@@ -85,14 +106,55 @@ export default function RequestDetail() {
                 value={new Date(data.updated_at).toLocaleDateString('es-EC', {
                   day: 'numeric', month: 'long', year: 'numeric'
                 })} />
+              <InfoRow label="Versión del proceso" value={data.process_version ? `v${data.process_version}` : 'Proceso anterior'} />
+              <InfoRow label="SLA" value={slaLabel(data.sla_due_at, data.closed_at)} />
             </div>
+            {data.linked_task && (
+              <div style={{ marginTop: 16, padding: '12px 14px', borderRadius: 10, background: '#F0F9FF', border: '1px solid #BAE6FD', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: '#075985' }}>Trabajo del área</div>
+                  <div style={{ fontSize: 12, color: '#475569', marginTop: 2 }}>
+                    {data.linked_task.assignee_name ? `Responsable: ${data.linked_task.assignee_name}` : 'Pendiente de asignación'}
+                  </div>
+                </div>
+                <Btn variant="secondary" onClick={() => navigate(`/espacio/${data.linked_task?.space_id}`)}>Ver tablero</Btn>
+              </div>
+            )}
+          </Card>
+
+          <Card>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 18 }}>
+              <h2 style={{ fontSize: 15, fontWeight: 700 }}>Línea de tiempo</h2>
+              <span style={{ fontSize: 11, color: '#94A3B8' }}>{data.timeline?.length ?? 0} eventos</span>
+            </div>
+            {(data.timeline ?? []).length === 0 ? (
+              <p style={{ fontSize: 13, color: '#94A3B8' }}>Todavía no hay actividad registrada.</p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                {(data.timeline ?? []).map((event, index) => (
+                  <div key={event.id} style={{ display: 'grid', gridTemplateColumns: '24px minmax(0, 1fr)', gap: 12, minHeight: 58 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                      <div style={{ width: 10, height: 10, borderRadius: '50%', background: eventColor(event.event_type), marginTop: 5, flexShrink: 0 }} />
+                      {index < data.timeline.length - 1 && <div style={{ width: 1, flex: 1, background: '#E2E8F0', marginTop: 4 }} />}
+                    </div>
+                    <div style={{ paddingBottom: 16, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 750, color: '#1E293B' }}>{event.title}</div>
+                      <div style={{ fontSize: 11.5, color: '#64748B', marginTop: 3 }}>
+                        {event.actor_name || 'FlowApp'} · {new Date(event.created_at).toLocaleString('es-EC', { dateStyle: 'medium', timeStyle: 'short' })}
+                      </div>
+                      {Boolean(event.detail?.comment) && <div style={{ fontSize: 12, color: '#475569', marginTop: 5, fontStyle: 'italic' }}>{String(event.detail?.comment)}</div>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </Card>
 
           <Card>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <h2 style={{ fontSize: 15, fontWeight: 700 }}>Archivos adjuntos</h2>
               <label style={{
-                background: '#E6F1FB', color: '#0C447C', fontSize: 12, fontWeight: 600,
+                background: '#E6F1FB', color: '#0284C7', fontSize: 12, fontWeight: 600,
                 padding: '6px 12px', borderRadius: 6, cursor: 'pointer',
               }}>
                 {uploading ? 'Subiendo...' : '+ Adjuntar'}
@@ -112,7 +174,7 @@ export default function RequestDetail() {
                       textDecoration: 'none' }}>
                     <span style={{ fontSize: 11, fontWeight: 800, color: '#888' }}>DOC</span>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: '#185FA5',
+                      <div style={{ fontSize: 13, fontWeight: 600, color: '#0284C7',
                         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {a.filename}
                       </div>
@@ -151,9 +213,46 @@ export default function RequestDetail() {
               )}
             </Card>
           )}
+
+          {/* ── Cierre de proceso ─────────────────────────────────────────── */}
+          {data.status === 'approved' && (
+            <Card style={{
+              border: data.closure
+                ? '1.5px solid #A7F3D0'
+                : '1.5px solid #DDD6FE',
+              background: data.closure ? '#F0FDF4' : '#FAFAF8',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+                <div style={{
+                  width: 34, height: 34, borderRadius: 9,
+                  background: data.closure
+                    ? 'linear-gradient(135deg, #10B981, #059669)'
+                    : 'linear-gradient(135deg, #0284C7, #4F46E5)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  flexShrink: 0,
+                }}>
+                  <span style={{ fontSize: 16 }}>{data.closure ? '✅' : '📋'}</span>
+                </div>
+                <div>
+                  <h2 style={{ fontSize: 15, fontWeight: 700, color: '#18181B', margin: 0 }}>
+                    {data.closure ? 'Proceso cerrado' : 'Cierre del proceso'}
+                  </h2>
+                  <p style={{ fontSize: 12, color: '#71717A', margin: 0, marginTop: 2 }}>
+                    {data.closure
+                      ? 'El solicitante ha completado el formulario de cierre.'
+                      : 'La solicitud fue aprobada. Completa el formulario de cierre para finalizar el proceso.'}
+                  </p>
+                </div>
+              </div>
+              <CloseFormFill
+                requestId={data.id}
+                onClosed={load}
+              />
+            </Card>
+          )}
         </div>
 
-        <Card style={{ alignSelf: 'start' }}>
+        <Card style={{ alignSelf: 'start', order: isMobile ? -1 : 0 }}>
           <div style={{ marginBottom: 16 }}>
             <h2 style={{ fontSize: 15, fontWeight: 700, marginBottom: 8 }}>Flujo de aprobacion</h2>
             <LevelStepper
@@ -169,9 +268,9 @@ export default function RequestDetail() {
               <div key={step.id} style={{
                 padding: '12px 14px', background: '#F8F8F6', borderRadius: 8,
                 borderLeft: `3px solid ${
-                  step.status === 'approved' ? '#1D9E75' :
+                  step.status === 'approved' ? '#10B981' :
                   step.status === 'rejected' ? '#D85A30' :
-                  step.level === data.current_level ? '#185FA5' : '#D3D1C7'
+                  step.level === data.current_level ? '#0284C7' : '#D3D1C7'
                 }`,
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
@@ -202,6 +301,23 @@ export default function RequestDetail() {
   );
 }
 
+function slaLabel(dueAt?: string | null, closedAt?: string | null): string {
+  if (!dueAt) return 'Se calcula al enviar';
+  const due = new Date(dueAt);
+  if (closedAt) return new Date(closedAt) <= due ? 'Cumplido' : 'Cerrado fuera de SLA';
+  const diffDays = Math.ceil((due.getTime() - Date.now()) / 86_400_000);
+  if (diffDays < 0) return `Vencido hace ${Math.abs(diffDays)} día${Math.abs(diffDays) === 1 ? '' : 's'}`;
+  if (diffDays === 0) return 'Vence hoy';
+  return `Vence en ${diffDays} día${diffDays === 1 ? '' : 's'}`;
+}
+
+function eventColor(type: string): string {
+  if (type.includes('rejected') || type.includes('cancelled')) return '#DC2626';
+  if (type.includes('approved') || type.includes('completed') || type.includes('closed')) return '#059669';
+  if (type.includes('assigned') || type.includes('submitted')) return '#0284C7';
+  return '#94A3B8';
+}
+
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <div>
@@ -225,7 +341,7 @@ function CampaignCostView({ cost }: { cost: NonNullable<RD['campaign_cost']> }) 
           <div style={{ fontSize: 12, color: '#aaa', marginBottom: 8 }}>Proveedores</div>
           {cost.vendors.map((v, i) => (
             <div key={i} style={{ display: 'flex', justifyContent: 'space-between',
-              padding: '8px 0', borderBottom: '1px solid #F2F2F0', fontSize: 13 }}>
+              padding: '8px 0', borderBottom: '1px solid #F9F9FB', fontSize: 13 }}>
               <span style={{ color: '#333' }}>{v.vendor_name}
                 {v.is_selected === 1 && (
                   <span style={{ marginLeft: 6, fontSize: 11, background: '#E1F5EE',
@@ -234,7 +350,7 @@ function CampaignCostView({ cost }: { cost: NonNullable<RD['campaign_cost']> }) 
                   </span>
                 )}
               </span>
-              <span style={{ fontWeight: 700, color: '#0C447C' }}>
+              <span style={{ fontWeight: 700, color: '#0284C7' }}>
                 {cost.currency} {v.amount.toLocaleString('es-EC')}
               </span>
             </div>
@@ -275,7 +391,7 @@ function CampaignCostForm({ requestId, onSaved }: { requestId: string; onSaved: 
       });
       onSaved();
     } catch (err) {
-      alert((err as Error).message);
+      await alertDialog({ title: 'No se pudo guardar', message: (err as Error).message, tone: 'danger' });
     } finally {
       setSaving(false);
     }
@@ -317,7 +433,7 @@ function CampaignCostForm({ requestId, onSaved }: { requestId: string; onSaved: 
           </div>
         ))}
         <button onClick={() => setVendors(v => [...v, { vendor_name: '', amount: '', is_selected: false }])}
-          style={{ fontSize: 12, color: '#185FA5', background: 'none', border: 'none', cursor: 'pointer' }}>
+          style={{ fontSize: 12, color: '#0284C7', background: 'none', border: 'none', cursor: 'pointer' }}>
           + Agregar proveedor
         </button>
       </div>

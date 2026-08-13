@@ -37,7 +37,7 @@ export default function Dashboard() {
         subtitle="Resumen de solicitudes activas"
         action={
           <button onClick={() => navigate('/requests/new')} style={{
-            background: '#0C447C', color: '#fff', border: 'none', borderRadius: 8,
+            background: '#0284C7', color: '#fff', border: 'none', borderRadius: 8,
             padding: '10px 20px', fontSize: 14, fontWeight: 600, cursor: 'pointer',
           }}>+ Nueva solicitud</button>
         }
@@ -66,10 +66,10 @@ export default function Dashboard() {
             {stats!.byType.map(t => (
               <div key={t.request_type_name} style={{
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                padding: '8px 0', borderBottom: '1px solid #F2F2F0',
+                padding: '8px 0', borderBottom: '1px solid #F9F9FB',
               }}>
                 <span style={{ fontSize: 13, color: '#444' }}>{t.request_type_name}</span>
-                <span style={{ fontSize: 13, fontWeight: 700, color: '#0C447C' }}>{t.count}</span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: '#0284C7' }}>{t.count}</span>
               </div>
             ))}
           </Card>
@@ -81,7 +81,7 @@ export default function Dashboard() {
             {recent.map(r => (
               <div key={r.id} onClick={() => navigate(`/requests/${r.id}`)}
                 style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                  padding: '10px 0', borderBottom: '1px solid #F2F2F0', cursor: 'pointer' }}>
+                  padding: '10px 0', borderBottom: '1px solid #F9F9FB', cursor: 'pointer' }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 13, fontWeight: 600, color: '#111',
                     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>

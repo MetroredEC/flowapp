@@ -13,6 +13,7 @@ export type AppEnv = {
     FRONTEND_URL?: string;
     PUBLIC_API_URL?: string;
     MAIL_SENDER_UPN?: string;
+    TEAMS_WEBHOOK_URL?: string;
     APP_ENV: string;
   };
   Variables: {
@@ -20,6 +21,8 @@ export type AppEnv = {
     userEmail: string;
     userName: string;
     userRoles: string[];
+    traceId: string;
+    requestStartedAt: number;
   };
 };
 
@@ -36,6 +39,14 @@ export interface RequestRow {
   current_level: number;
   total_levels: number;
   campaign_data: string | null;
+  process_version_id: string | null;
+  process_version: number | null;
+  submitted_at: string | null;
+  approved_at: string | null;
+  rejected_at: string | null;
+  cancelled_at: string | null;
+  closed_at: string | null;
+  sla_due_at: string | null;
   created_at: string;
   updated_at: string;
 }

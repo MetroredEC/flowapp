@@ -5,11 +5,24 @@ const API_BASE = String(import.meta.env.VITE_API_URL || '').replace(/\/+$/, '');
 
 type Action = 'approve' | 'reject';
 
+function parseSupplyPayload(raw: unknown): any | null {
+  if (!raw) return null;
+
+  try {
+    if (typeof raw === 'string') return JSON.parse(raw);
+    return raw;
+  } catch {
+    return null;
+  }
+}
+
 export default function MyTasks() {
   const [tasks, setTasks] = useState<BpmTask[]>([]);
   const [selectedId, setSelectedId] = useState<string>('');
   const [detail, setDetail] = useState<BpmTaskDetail | null>(null);
   const [comment, setComment] = useState('');
+  const [receiptQty, setReceiptQty] = useState<Record<string, string>>({});
+  const [evidenceAttachmentId, setEvidenceAttachmentId] = useState('');
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -92,7 +105,7 @@ export default function MyTasks() {
             onClick={() => setShowAll(false)}
             style={{
               border: '1px solid #D8D6CE',
-              background: !showAll ? '#185FA5' : '#fff',
+              background: !showAll ? '#0284C7' : '#fff',
               color: !showAll ? '#fff' : '#333',
               borderRadius: 999,
               padding: '8px 14px',
@@ -106,7 +119,7 @@ export default function MyTasks() {
             onClick={() => setShowAll(true)}
             style={{
               border: '1px solid #D8D6CE',
-              background: showAll ? '#185FA5' : '#fff',
+              background: showAll ? '#0284C7' : '#fff',
               color: showAll ? '#fff' : '#333',
               borderRadius: 999,
               padding: '8px 14px',
@@ -173,10 +186,10 @@ export default function MyTasks() {
                 >
                   <div style={{ fontWeight: 800, color: '#111', marginBottom: 5 }}>{task.title}</div>
                   <div style={{ fontSize: 13, color: '#555', lineHeight: 1.45 }}>
-                    {task.request_title || 'Solicitud sin tÃ­tulo'}
+                    {task.request_title || 'Solicitud sin tÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â­tulo'}
                   </div>
                   <div style={{ fontSize: 12, color: '#888', marginTop: 6 }}>
-                    {task.request_type_name || 'Proceso'} Â· {task.requester_name || 'Solicitante'}
+                    {task.request_type_name || 'Proceso'} ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· {task.requester_name || 'Solicitante'}
                   </div>
                 </button>
               ))}
@@ -201,7 +214,7 @@ export default function MyTasks() {
               <div style={{
                 display: 'inline-block',
                 background: '#EAF2FA',
-                color: '#185FA5',
+                color: '#0284C7',
                 fontSize: 12,
                 fontWeight: 800,
                 padding: '6px 10px',
@@ -216,7 +229,7 @@ export default function MyTasks() {
               </h2>
 
               <p style={{ color: '#666', fontSize: 14, lineHeight: 1.6, marginBottom: 18 }}>
-                {String(detail?.task?.request_description ?? 'Sin descripciÃ³n.')}
+                {String(detail?.task?.request_description ?? 'Sin descripciÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³n.')}
               </p>
 
               <div style={{
@@ -230,6 +243,120 @@ export default function MyTasks() {
                 <Info label="Tarea" value={selectedTask.title} />
                 <Info label="Asignado a" value={selectedTask.assignee_email || '-'} />
               </div>
+
+              {(() => {
+                const payload = parseSupplyPayload((detail as any)?.task?.request_payload_json);
+                if (!payload || payload.kind !== 'SUPPLIES') return null;
+
+                return (
+                  <div style={{
+                    border: '1px solid #DDE3EA',
+                    background: '#F8FAFC',
+                    borderRadius: 12,
+                    padding: 16,
+                    marginBottom: 20,
+                  }}>
+                    <h3 style={{ fontSize: 15, fontWeight: 900, marginBottom: 12, color: '#0284C7' }}>
+                      Datos de suministros
+                    </h3>
+
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: '1fr 1fr',
+                      gap: 12,
+                      marginBottom: 16,
+                    }}>
+                      <Info label="Centro" value={String(payload.center_location_id ?? '-')} />
+                      <Info label="Fecha requerida" value={String(payload.required_date ?? '-')} />
+                    </div>
+
+                    <table style={{ width: '100%', borderCollapse: 'collapse', background: '#fff' }}>
+                      <thead>
+                        <tr>
+                          <th style={thStyle}>Producto</th>
+                          <th style={thStyle}>Cantidad</th>
+                          <th style={thStyle}>Notas</th>
+                          <th style={thStyle}>Recibido real</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(payload.lines ?? []).map((line: any, idx: number) => (
+                          <tr key={idx}>
+                            <td style={tdStyle}>{line.item_label || line.item_id}</td>
+                            <td style={tdStyle}>{line.quantity_requested}</td>
+                            <td style={tdStyle}>{line.notes || '-'}</td>
+                            <td style={tdStyle}>
+                              {String((detail as any)?.task?.title ?? '').toLowerCase().includes('recep') ? (
+                                <input
+                                  type="number"
+                                  min="0"
+                                  step="0.01"
+                                  value={receiptQty[line.item_id] ?? String(line.quantity_requested ?? '')}
+                                  onChange={(e) => setReceiptQty(prev => ({ ...prev, [line.item_id]: e.target.value }))}
+                                  style={{
+                                    width: 100,
+                                    border: '1px solid #CBD5E1',
+                                    borderRadius: 8,
+                                    padding: '8px 10px',
+                                    font: 'inherit'
+                                  }}
+                                />
+                              ) : (
+                                '-'
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              })()}
+
+              {(() => {
+                const payload = parseSupplyPayload((detail as any)?.task?.request_payload_json);
+                const isReceipt = payload?.kind === 'SUPPLIES' && String((detail as any)?.task?.title ?? '').toLowerCase().includes('recep');
+
+                if (!isReceipt) return null;
+
+                return (
+                  <div style={{
+                    border: '1px solid #FEC84B',
+                    background: '#FFFAEB',
+                    borderRadius: 12,
+                    padding: 16,
+                    marginBottom: 20,
+                  }}>
+                    <h3 style={{ fontSize: 15, fontWeight: 900, marginBottom: 10, color: '#93370D' }}>
+                      Evidencia obligatoria de recepción
+                    </h3>
+
+                    <p style={{ fontSize: 13, color: '#7A2E0E', marginBottom: 12 }}>
+                      Adjunta primero la foto como archivo de respaldo y luego selecciónala aquí.
+                    </p>
+
+                    <select
+                      value={evidenceAttachmentId}
+                      onChange={(e) => setEvidenceAttachmentId(e.target.value)}
+                      style={{
+                        width: '100%',
+                        border: '1px solid #FEC84B',
+                        borderRadius: 8,
+                        padding: '10px 12px',
+                        font: 'inherit',
+                        background: '#fff'
+                      }}
+                    >
+                      <option value="">Selecciona evidencia adjunta...</option>
+                      {((detail as any)?.attachments ?? []).map((a: any) => (
+                        <option key={a.id} value={a.id}>
+                          {a.filename}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                );
+              })()}
 
               <h3 style={{ fontSize: 15, fontWeight: 800, marginBottom: 10 }}>Adjuntos</h3>
               <div style={{ display: 'grid', gap: 8, marginBottom: 20 }}>
@@ -248,7 +375,7 @@ export default function MyTasks() {
                         borderRadius: 10,
                         padding: 12,
                         fontSize: 13,
-                        color: '#185FA5',
+                        color: '#0284C7',
                         fontWeight: 800,
                         textDecoration: 'none',
                         display: 'flex',
@@ -272,7 +399,7 @@ export default function MyTasks() {
                 value={comment}
                 onChange={e => setComment(e.target.value)}
                 maxLength={1200}
-                placeholder="Escribe un comentario para la decisiÃ³n..."
+                placeholder="Escribe un comentario para la decisiÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³n..."
                 style={{
                   width: '100%',
                   minHeight: 110,
@@ -289,7 +416,7 @@ export default function MyTasks() {
                 <button
                   disabled={saving}
                   onClick={() => complete('approve')}
-                  style={buttonStyle('#1D9E75')}
+                  style={buttonStyle('#10B981')}
                 >
                   Aprobar
                 </button>
@@ -338,3 +465,19 @@ function buttonStyle(background: string): React.CSSProperties {
     cursor: 'pointer',
   };
 }
+
+const thStyle: React.CSSProperties = {
+  textAlign: 'left',
+  padding: '10px 12px',
+  fontSize: 12,
+  color: '#667085',
+  background: '#F8FAFC',
+  borderBottom: '1px solid #EAECF0',
+};
+
+const tdStyle: React.CSSProperties = {
+  padding: '10px 12px',
+  fontSize: 13,
+  color: '#101828',
+  borderBottom: '1px solid #EAECF0',
+};

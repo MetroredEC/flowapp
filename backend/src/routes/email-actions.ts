@@ -2,6 +2,7 @@ import { Context, Hono } from 'hono';
 import { AppEnv, ApprovalStepRow, RequestRow } from '../types';
 import { verifyMagicToken, consumeMagicToken, TokenError } from '../auth/tokens';
 import { processApproval } from '../utils/approvals';
+import { logEvent } from '../utils/syslog';
 
 const router = new Hono<AppEnv>();
 
@@ -166,8 +167,13 @@ async function completeDecision(c: Context<AppEnv>, action: Decision, token: str
 
     return c.html(page('success', 'Aprobacion registrada', msg, frontendUrl(c.env), requestId));
   } catch (err) {
-    console.error('EMAIL_DECISION_FAILED', err instanceof Error ? err.message : String(err));
-    return c.html(page('error', 'No se pudo registrar', err instanceof Error ? err.message : 'Ocurrio un error al registrar la decision.', frontendUrl(c.env), requestId));
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error('EMAIL_DECISION_FAILED', msg);
+    await logEvent(c.env.DB, {
+      category: 'approval', action: 'email_decision_failed', ok: false,
+      ref_type: 'request', ref_id: requestId, detail: { accion: action, error: msg },
+    });
+    return c.html(page('error', 'No se pudo registrar', msg || 'Ocurrio un error al registrar la decision.', frontendUrl(c.env), requestId));
   }
 }
 

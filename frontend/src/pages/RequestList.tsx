@@ -29,7 +29,7 @@ export default function RequestList() {
         subtitle="Todas tus solicitudes y su estado de aprobación"
         action={
           <button onClick={() => navigate('/requests/new')} style={{
-            background: '#0C447C', color: '#fff', border: 'none', borderRadius: 8,
+            background: '#0284C7', color: '#fff', border: 'none', borderRadius: 8,
             padding: '10px 20px', fontSize: 14, fontWeight: 600, cursor: 'pointer',
           }}>+ Nueva</button>
         }
@@ -66,11 +66,11 @@ export default function RequestList() {
               onClick={() => navigate(`/requests/${r.id}`)}
               style={{
                 background: '#fff', borderRadius: 12, padding: '16px 20px',
-                border: '1px solid #E8E8E4', cursor: 'pointer',
+                border: '1px solid #E4E4E7', cursor: 'pointer',
                 transition: 'border-color .15s',
               }}
               onMouseEnter={e => (e.currentTarget.style.borderColor = '#B5D4F4')}
-              onMouseLeave={e => (e.currentTarget.style.borderColor = '#E8E8E4')}
+              onMouseLeave={e => (e.currentTarget.style.borderColor = '#E4E4E7')}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
