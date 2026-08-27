@@ -4,7 +4,8 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { api, EntraUser, Space, WizardField, FormFieldType, FormField, FormFieldInput, FieldConditionOp, FieldConditionGroup, FieldConditionRule } from '../lib/api';
+import { BranchEditor } from './BranchEditor';
+import { api, EntraUser, Space, WizardField, FormFieldType, FormField, FormFieldInput, FieldConditionOp, FieldConditionGroup, FieldConditionRule, FieldBranchConfig } from '../lib/api';
 import { Spinner } from '../components/ui';
 import { alertDialog } from '../components/AppDialog';
 import { useIsMobile } from '../lib/useIsMobile';
@@ -107,6 +108,12 @@ function legacyToWizard(f: FormField): WizardField {
     }
   } catch { visibleIf = undefined; }
 
+  let branch: FieldBranchConfig | undefined;
+  try {
+    const parsed = f.branch_json ? JSON.parse(f.branch_json) as FieldBranchConfig : undefined;
+    if (parsed?.rules?.length) branch = { rules: parsed.rules.filter(r => r?.goto), default: parsed.default ?? null };
+  } catch { branch = undefined; }
+
   return {
     id: f.field_key,
     type: (f.field_type as FormFieldType) || 'text',
@@ -118,6 +125,7 @@ function legacyToWizard(f: FormField): WizardField {
     maxFiles: fileConfig.maxFiles,
     description: fileConfig.description,
     visibleIf,
+    branch,
   };
 }
 
@@ -164,6 +172,20 @@ function wizardToLegacy(fields: WizardField[]): FormFieldInput[] {
       sort_order: out.length,
       // La condicion apunta al id del campo dentro del wizard; al guardar hay
       // que traducirlo a la field_key definitiva, que puede haber cambiado.
+      branch_json: f.branch?.rules?.length
+        ? JSON.stringify({
+            rules: f.branch.rules
+              .filter(rule => rule.goto)
+              .map(rule => ({
+                value: rule.value,
+                // '__end__' no es un campo: se deja tal cual.
+                goto: rule.goto === '__end__' ? rule.goto : (keyById.get(rule.goto) ?? rule.goto),
+              })),
+            default: f.branch.default
+              ? (f.branch.default === '__end__' ? '__end__' : (keyById.get(f.branch.default) ?? f.branch.default))
+              : null,
+          })
+        : null,
       visible_if_json: f.visibleIf?.rules?.length
         ? JSON.stringify({
             match: f.visibleIf.match,
@@ -238,6 +260,12 @@ export default function ProcessWizard() {
   const [checklist, setChecklist] = useState<ExecutionRequirement[]>([]);
   const [deliverables, setDeliverables] = useState<ExecutionRequirement[]>([]);
   const [requireRequesterConfirmation, setRequireRequesterConfirmation] = useState(true);
+  // Cuándo avisar al aprobador. Ver utils/notify-schedule.ts en el backend.
+  const [notifyMode, setNotifyMode] = useState<'immediate' | 'fixed' | 'from_field'>('immediate');
+  const [notifyFieldKey, setNotifyFieldKey] = useState('');
+  const [notifyOffsetDays, setNotifyOffsetDays] = useState(0);
+  const [notifyTime, setNotifyTime] = useState('08:00');
+  const [allowRequesterSchedule, setAllowRequesterSchedule] = useState(false);
 
   // Step 4 — Correo
   const [emailSubject, setEmailSubject] = useState(DEFAULT_SUBJECT);
@@ -281,6 +309,11 @@ export default function ProcessWizard() {
         setAssignmentMode(cfg.data.assignment_mode ?? 'auto_load');
         setExecutionSlaDays(cfg.data.execution_sla_days || cfg.data.default_sla_days || 5);
         setRequireRequesterConfirmation(cfg.data.require_requester_confirmation !== 0);
+        setNotifyMode((cfg.data.notify_mode as typeof notifyMode) || 'immediate');
+        setNotifyFieldKey(cfg.data.notify_field_key ?? '');
+        setNotifyOffsetDays(Number(cfg.data.notify_offset_days ?? 0) || 0);
+        setNotifyTime(cfg.data.notify_time || '08:00');
+        setAllowRequesterSchedule(cfg.data.allow_requester_schedule === 1);
         if (cfg.data.fixed_assignee_email) {
           setFixedAssignee({
             id: cfg.data.fixed_assignee_id ?? cfg.data.fixed_assignee_email,
@@ -383,6 +416,16 @@ export default function ProcessWizard() {
     }
     setSaving(true);
     try {
+      // wizardToLegacy asigna la field_key definitiva de cada pregunta. La
+      // referencia de la fecha de aviso guarda el id interno del wizard, que en
+      // preguntas nuevas no coincide con esa key: se traduce por posición, que
+      // es 1:1 porque la conversión emite una salida por cada campo de entrada.
+      const legacyFields = wizardToLegacy(fields);
+      const notifyIndex = fields.findIndex(f => f.id === notifyFieldKey);
+      const resolvedNotifyKey = notifyIndex >= 0
+        ? (legacyFields[notifyIndex]?.field_key ?? notifyFieldKey)
+        : notifyFieldKey;
+
       await api.saveFullProcess({
         id: editId || undefined,
         name: name.trim(), description: desc.trim() || undefined,
@@ -393,7 +436,7 @@ export default function ProcessWizard() {
           approver_name: l.approver_name,
           approver_email: l.approver_email,
         })),
-        fields: wizardToLegacy(fields), form_schema_json: JSON.stringify(fields),
+        fields: legacyFields, form_schema_json: JSON.stringify(fields),
         email_subject: emailSubject, email_body: emailBody,
         color, icon, category: category || undefined, default_sla_days: slaDays,
         workspace_id: workspaceId || undefined,
@@ -405,6 +448,11 @@ export default function ProcessWizard() {
         checklist_json: JSON.stringify(checklist),
         deliverables_json: JSON.stringify(deliverables),
         require_requester_confirmation: requireRequesterConfirmation ? 1 : 0,
+        notify_mode: notifyMode,
+        notify_field_key: notifyMode === 'from_field' ? resolvedNotifyKey : '',
+        notify_offset_days: notifyMode === 'immediate' ? 0 : notifyOffsetDays,
+        notify_time: notifyMode === 'immediate' ? '' : notifyTime,
+        allow_requester_schedule: allowRequesterSchedule ? 1 : 0,
       });
       setDone(true);
     } catch (error) {
@@ -565,6 +613,9 @@ export default function ProcessWizard() {
             deliverables={deliverables} setDeliverables={setDeliverables}
             requireRequesterConfirmation={requireRequesterConfirmation}
             setRequireRequesterConfirmation={setRequireRequesterConfirmation}
+            notify={{ mode: notifyMode, fieldKey: notifyFieldKey, offsetDays: notifyOffsetDays, time: notifyTime, allowRequester: allowRequesterSchedule }}
+            setNotify={{ mode: setNotifyMode, fieldKey: setNotifyFieldKey, offsetDays: setNotifyOffsetDays, time: setNotifyTime, allowRequester: setAllowRequesterSchedule }}
+            dateFields={fields.filter(f => f.type === 'date')}
             color={color}
           />
         )}
@@ -842,6 +893,7 @@ function StepFormCanvas({ processName, formTitle, setFormTitle, formSubtitle, se
               selected={selectedField === f.id}
               color={color}
               previous={fields.slice(0, idx).filter(prev => prev.type !== 'section')}
+              following={fields.slice(idx + 1).filter(item => item.type !== 'section')}
               onSelect={() => setSelectedField(selectedField === f.id ? null : f.id)}
               onChange={p => updateField(f.id, p)}
               onRemove={() => removeField(f.id)}
@@ -1067,10 +1119,12 @@ const condInput: React.CSSProperties = {
   fontSize: 12, fontFamily: 'inherit', background: '#fff', color: '#3F3F46', outline: 'none',
 };
 
-function FieldCard({ field: f, index, total, selected, color, previous, onSelect, onChange, onRemove, onMove }: {
+function FieldCard({ field: f, index, total, selected, color, previous, following, onSelect, onChange, onRemove, onMove }: {
   field: WizardField; index: number; total: number; selected: boolean; color: string;
   /** Preguntas anteriores: solo de ellas puede depender esta. */
   previous: WizardField[];
+  /** Preguntas posteriores: los únicos destinos válidos de un salto. */
+  following: WizardField[];
   onSelect: () => void; onChange: (p: Partial<WizardField>) => void;
   onRemove: () => void; onMove: (dir: -1 | 1) => void;
 }) {
@@ -1189,6 +1243,7 @@ function FieldCard({ field: f, index, total, selected, color, previous, onSelect
 
           {/* Required toggle */}
           <ConditionEditor field={f} previous={previous} color={color} onChange={onChange} />
+          <BranchEditor field={f} following={following} color={color} onChange={onChange} />
 
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', gap: 8 }}>
@@ -1525,7 +1580,7 @@ function StepExecution({
   spaces, workspaceId, setWorkspaceId, assignmentMode, setAssignmentMode,
   fixedAssignee, setFixedAssignee, executionSlaDays, setExecutionSlaDays,
   checklist, setChecklist, deliverables, setDeliverables,
-  requireRequesterConfirmation, setRequireRequesterConfirmation, color,
+  requireRequesterConfirmation, setRequireRequesterConfirmation, notify, setNotify, dateFields, color,
 }: {
   spaces: Space[]; workspaceId: string; setWorkspaceId: (value: string) => void;
   assignmentMode: 'auto_load' | 'manual' | 'fixed_user';
@@ -1535,6 +1590,12 @@ function StepExecution({
   checklist: ExecutionRequirement[]; setChecklist: React.Dispatch<React.SetStateAction<ExecutionRequirement[]>>;
   deliverables: ExecutionRequirement[]; setDeliverables: React.Dispatch<React.SetStateAction<ExecutionRequirement[]>>;
   requireRequesterConfirmation: boolean; setRequireRequesterConfirmation: (value: boolean) => void;
+  notify: { mode: 'immediate' | 'fixed' | 'from_field'; fieldKey: string; offsetDays: number; time: string; allowRequester: boolean };
+  setNotify: {
+    mode: (v: 'immediate' | 'fixed' | 'from_field') => void; fieldKey: (v: string) => void;
+    offsetDays: (v: number) => void; time: (v: string) => void; allowRequester: (v: boolean) => void;
+  };
+  dateFields: WizardField[];
   color: string;
 }) {
   const [query, setQuery] = useState('');
@@ -1624,6 +1685,92 @@ function StepExecution({
           </div>
           <div style={{ marginTop: 18, fontSize: 11.5, color: '#71717A', lineHeight: 1.55 }}>
             El SLA empieza cuando finaliza la aprobación. La fecha aparecerá automáticamente en Mi día y Trabajo.
+          </div>
+        </div>
+
+        <div style={studioCard}>
+          <div style={studioTitle}>Cuándo avisar al aprobador</div>
+          <div style={{ fontSize: 11.5, color: '#71717A', marginTop: -7, marginBottom: 12, lineHeight: 1.5 }}>
+            Hay procesos que se piden con antelación. Avisar antes de tiempo hace
+            que el aprobador lo vea cuando aún no puede decidir.
+          </div>
+
+          <div style={{ display: 'grid', gap: 8 }}>
+            {[
+              { value: 'immediate', title: 'Al enviar', text: 'Como hasta ahora: el aviso sale de inmediato.' },
+              { value: 'fixed', title: 'Unos días después', text: 'Se cuenta desde el día del envío.' },
+              { value: 'from_field', title: 'Según una fecha del formulario', text: 'Se calcula con lo que responda el solicitante.' },
+            ].map(option => (
+              <button key={option.value} onClick={() => setNotify.mode(option.value as typeof notify.mode)} style={{
+                textAlign: 'left', border: `1.5px solid ${notify.mode === option.value ? color : '#E4E4E7'}`,
+                background: notify.mode === option.value ? color + '0D' : '#fff', borderRadius: 10,
+                padding: '10px 12px', cursor: 'pointer', fontFamily: 'inherit',
+              }}>
+                <div style={{ fontSize: 13, fontWeight: 750, color: '#18181B' }}>{option.title}</div>
+                <div style={{ fontSize: 11.5, color: '#71717A', marginTop: 2 }}>{option.text}</div>
+              </button>
+            ))}
+          </div>
+
+          {notify.mode === 'from_field' && (
+            <div style={{ marginTop: 12 }}>
+              {dateFields.length === 0 ? (
+                <div style={{ fontSize: 11.5, color: '#B45309', background: '#FEF3C7', padding: '9px 11px', borderRadius: 8 }}>
+                  Este formulario no tiene ninguna pregunta de tipo fecha. Añade una
+                  en el paso Formulario para poder calcular el aviso a partir de ella.
+                </div>
+              ) : (
+                <label style={{ display: 'grid', gap: 6, fontSize: 12, color: '#3F3F46' }}>
+                  Fecha de referencia
+                  <select value={notify.fieldKey} onChange={e => setNotify.fieldKey(e.target.value)} style={inp}>
+                    <option value="">Elige una pregunta de fecha…</option>
+                    {dateFields.map(item => (
+                      <option key={item.id} value={item.id}>{item.label || 'Pregunta sin título'}</option>
+                    ))}
+                  </select>
+                </label>
+              )}
+            </div>
+          )}
+
+          {notify.mode !== 'immediate' && (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 12 }}>
+              <label style={{ display: 'grid', gap: 6, fontSize: 12, color: '#3F3F46' }}>
+                {notify.mode === 'fixed' ? 'Días después del envío' : 'Días respecto a esa fecha'}
+                <input type="number" min={-365} max={365} value={notify.offsetDays}
+                  onChange={e => setNotify.offsetDays(Number(e.target.value))} style={inp} />
+              </label>
+              <label style={{ display: 'grid', gap: 6, fontSize: 12, color: '#3F3F46' }}>
+                Hora del aviso
+                <input type="time" value={notify.time} onChange={e => setNotify.time(e.target.value)} style={inp} />
+              </label>
+            </div>
+          )}
+
+          {notify.mode === 'from_field' && (
+            <div style={{ fontSize: 10.5, color: '#A1A1AA', marginTop: 8 }}>
+              Usa números negativos para avisar antes de esa fecha. Por ejemplo, −3
+              avisa tres días antes.
+            </div>
+          )}
+
+          <div style={{ marginTop: 16, padding: 14, borderRadius: 10, background: '#F8FAFC', border: '1px solid #E2E8F0' }}>
+            <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', cursor: 'pointer' }}>
+              <input type="checkbox" checked={notify.allowRequester}
+                onChange={e => setNotify.allowRequester(e.target.checked)} style={{ marginTop: 2 }} />
+              <span>
+                <strong style={{ display: 'block', fontSize: 12.5, color: '#18181B' }}>
+                  Dejar que el solicitante elija la fecha
+                </strong>
+                <span style={{ fontSize: 11.5, color: '#71717A' }}>
+                  Puede convivir con la regla anterior: si el solicitante elige una fecha, esa manda.
+                </span>
+              </span>
+            </label>
+          </div>
+
+          <div style={{ marginTop: 14, fontSize: 11, color: '#71717A', lineHeight: 1.5 }}>
+            Una fecha ya pasada no se programa: en ese caso el aviso sale de inmediato.
           </div>
         </div>
       </div>

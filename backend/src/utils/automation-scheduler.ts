@@ -19,6 +19,11 @@ import { runAutomations } from './automations';
 import { sendTeamsCard, appUrl } from './teams';
 import { getAppToken, sendMail } from './graph';
 import { logEvent } from './syslog';
+import { notifyApprover } from './approvals';
+import { recordWorkEvent } from './work-events';
+
+/** notifyApprover espera el entorno completo del worker. */
+type ApproverEnv = Parameters<typeof notifyApprover>[2];
 
 type DB = D1Database;
 
@@ -48,9 +53,63 @@ function operativeDay(): string {
 
 export async function runScheduledAutomations(env: SchedulerEnv): Promise<void> {
   const day = operativeDay();
+  await releaseScheduledNotifications(env);
   await sweepTasks(env.DB, day);
   await sweepApprovals(env.DB, day);
   await drainOutbox(env);
+}
+
+/** Tope por corrida, para no gastar el tiempo del worker en un solo barrido. */
+const MAX_SCHEDULED_PER_SWEEP = 20;
+
+/**
+ * Libera los avisos que ya llegaron a su fecha.
+ *
+ * Una solicitud programada se envió y quedó registrada, pero su aprobador no
+ * la ha visto todavía. Aquí es donde por fin se le avisa.
+ *
+ * `notified_at` se marca ANTES de enviar: si el envío falla, la solicitud no
+ * queda en un bucle de reintentos avisando cada quince minutos. El fallo se
+ * registra para poder verlo, y el aprobador la sigue teniendo en su lista.
+ */
+async function releaseScheduledNotifications(env: SchedulerEnv): Promise<void> {
+  const due = await env.DB.prepare(`
+    SELECT r.id, r.current_level
+    FROM requests r
+    WHERE r.scheduled_notify_at IS NOT NULL
+      AND r.notified_at IS NULL
+      AND r.status = 'in_progress'
+      AND r.scheduled_notify_at <= ?
+    ORDER BY r.scheduled_notify_at ASC
+    LIMIT ${MAX_SCHEDULED_PER_SWEEP}
+  `).bind(new Date().toISOString()).all();
+
+  for (const row of due.results as Record<string, unknown>[]) {
+    const requestId = String(row.id);
+    const level = Number(row.current_level ?? 1) || 1;
+
+    await env.DB.prepare("UPDATE requests SET notified_at = datetime('now') WHERE id = ?")
+      .bind(requestId).run();
+
+    try {
+      await notifyApprover(requestId, level, env as unknown as ApproverEnv);
+      await recordWorkEvent(env.DB, {
+        requestId, eventType: 'request_submitted',
+        title: 'Aviso programado enviado al aprobador',
+        actorName: 'FlowApp', detail: { level },
+      });
+      await logEvent(env.DB, {
+        category: 'request', action: 'scheduled_notify_sent',
+        source: 'cron', ref_type: 'request', ref_id: requestId, detail: { level },
+      });
+    } catch (error) {
+      await logEvent(env.DB, {
+        category: 'request', action: 'scheduled_notify_failed', ok: false, severity: 'error',
+        source: 'cron', ref_type: 'request', ref_id: requestId,
+        detail: { level, error: error instanceof Error ? error.message : String(error) },
+      });
+    }
+  }
 }
 
 // ─── 1. Trabajo abierto ───────────────────────────────────────────────────────

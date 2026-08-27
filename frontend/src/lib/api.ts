@@ -228,8 +228,9 @@ export const api = {
     request<{ data: RequestDetail }>('GET', `/api/requests/${id}`),
   createRequest: (body: CreateRequestBody) =>
     request<{ data: { id: string } }>('POST', '/api/requests', body),
-  submitRequest: (id: string) =>
-    request<{ data: { submitted: boolean } }>('PATCH', `/api/requests/${id}/submit`),
+  submitRequest: (id: string, notifyAt?: string | null) =>
+    request<{ data: { submitted: boolean; scheduled_notify_at?: string | null } }>(
+      'PATCH', `/api/requests/${id}/submit`, { notify_at: notifyAt ?? null }),
   cancelRequest: (id: string, reason?: string) =>
     request<{ data: unknown }>('PATCH', `/api/requests/${id}/cancel`, { reason }),
 
@@ -879,6 +880,8 @@ export interface RequestType {
   required_fields?: number;
   document_fields?: number;
   approval_levels?: number;
+  /** El proceso permite que el solicitante elija cuando avisar al aprobador. */
+  allow_requester_schedule?: number | null;
 }
 export interface FlowConfig {
   id: string; level: number; label: string;
@@ -927,6 +930,21 @@ export interface WizardField {
   maxFiles?: number;
   /** Condicion que convierte el formulario en arbol: se muestra solo si se cumple. */
   visibleIf?: FieldConditionGroup;
+  /** Saltos por respuesta: a donde va el formulario despues de esta pregunta. */
+  branch?: FieldBranchConfig;
+}
+
+export interface FieldBranchRule {
+  /** Respuesta que dispara el salto. */
+  value: string;
+  /** id del campo destino dentro del wizard, o '__end__' para terminar. */
+  goto: string;
+}
+
+export interface FieldBranchConfig {
+  rules: FieldBranchRule[];
+  /** Destino cuando ninguna regla coincide. Vacio = sigue la secuencia. */
+  default?: string | null;
 }
 
 export type FieldConditionOp = 'eq' | 'neq' | 'contains' | 'is_empty' | 'is_not_empty';
@@ -963,6 +981,11 @@ export interface ProcessConfig {
   checklist_json: string;
   deliverables_json: string;
   require_requester_confirmation: number;
+  notify_mode?: string | null;
+  notify_field_key?: string | null;
+  notify_offset_days?: number | null;
+  notify_time?: string | null;
+  allow_requester_schedule?: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -977,6 +1000,8 @@ export interface FormField {
   required: number;
   /** Condicion de visibilidad serializada. Null o vacio = siempre visible. */
   visible_if_json?: string | null;
+  /** Reglas de salto tras responder. Null = sigue la secuencia normal. */
+  branch_json?: string | null;
   options_json: string | null;
   sort_order: number;
 }
@@ -990,6 +1015,7 @@ export interface FormFieldInput {
   options_json?: string;
   sort_order?: number;
   visible_if_json?: string | null;
+  branch_json?: string | null;
 }
 
 // ─── Process Builder ─────────────────────────────────────────────────────────
@@ -1046,6 +1072,11 @@ export interface FullProcessBody extends CreateProcessBody {
   checklist_json: string;
   deliverables_json: string;
   require_requester_confirmation: number;
+  notify_mode?: string | null;
+  notify_field_key?: string | null;
+  notify_offset_days?: number | null;
+  notify_time?: string | null;
+  allow_requester_schedule?: number | null;
 }
 
 // ─── Tickets ──────────────────────────────────────────────────────────────────

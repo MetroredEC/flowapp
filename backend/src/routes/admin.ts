@@ -33,6 +33,7 @@ router.get('/request-types', async (c) => {
   const rows = await c.env.DB.prepare(`
     SELECT rt.id, rt.name, rt.description, rt.is_active, rt.created_at,
            pc.category, pc.color, pc.icon, pc.default_sla_days,
+           pc.allow_requester_schedule,
            (SELECT COUNT(*) FROM request_type_fields f
              WHERE f.request_type_id = rt.id AND f.required = 1 AND f.field_type <> 'section')
              AS required_fields,
@@ -254,10 +255,14 @@ router.post('/processes/full', async (c) => {
       required?: number; options_json?: string; sort_order?: number;
       /** Condicion de visibilidad: {"field","op","value"}. Null = siempre visible. */
       visible_if_json?: string | null;
+      /** Saltos por respuesta: {"rules":[...],"default":...}. Null = secuencia normal. */
+      branch_json?: string | null;
     }>;
     form_schema_json: string; email_subject: string; email_body: string;
     color: string; icon: string; category?: string; default_sla_days?: number;
     workspace_id?: string;
+    notify_mode?: string; notify_field_key?: string; notify_offset_days?: number;
+    notify_time?: string; allow_requester_schedule?: number;
     assignment_mode?: 'auto_load' | 'manual' | 'fixed_user';
     fixed_assignee_id?: string; fixed_assignee_name?: string; fixed_assignee_email?: string;
     execution_sla_days?: number;
@@ -363,6 +368,11 @@ router.post('/processes/full', async (c) => {
     execution_sla_days: executionSlaDays,
     checklist, deliverables,
     require_requester_confirmation: body.require_requester_confirmation === 0 ? 0 : 1,
+    notify_mode: body.notify_mode || 'immediate',
+    notify_field_key: body.notify_field_key?.trim() || null,
+    notify_offset_days: Number(body.notify_offset_days ?? 0) || 0,
+    notify_time: body.notify_time || null,
+    allow_requester_schedule: body.allow_requester_schedule ? 1 : 0,
   });
 
   const statements: D1PreparedStatement[] = [];
@@ -396,7 +406,7 @@ router.post('/processes/full', async (c) => {
   for (const [index, field] of body.fields.entries()) {
     statements.push(c.env.DB.prepare(`
       INSERT INTO request_type_fields
-        (id, request_type_id, field_key, label, field_type, placeholder, required, options_json, sort_order, visible_if_json)
+        (id, request_type_id, field_key, label, field_type, placeholder, required, options_json, sort_order, visible_if_json, branch_json)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
       crypto.randomUUID().slice(0, 8), typeId, field.field_key.trim(), field.label.trim(),
@@ -410,8 +420,9 @@ router.post('/processes/full', async (c) => {
     INSERT INTO process_configs
       (id, form_schema_json, email_subject, email_body, color, icon, category, default_sla_days,
        workspace_id, assignment_mode, fixed_assignee_id, fixed_assignee_name, fixed_assignee_email,
-       execution_sla_days, checklist_json, deliverables_json, require_requester_confirmation, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+       execution_sla_days, checklist_json, deliverables_json, require_requester_confirmation,
+       notify_mode, notify_field_key, notify_offset_days, notify_time, allow_requester_schedule, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
     ON CONFLICT(id) DO UPDATE SET
       form_schema_json = excluded.form_schema_json,
       email_subject = excluded.email_subject,
@@ -429,6 +440,11 @@ router.post('/processes/full', async (c) => {
       checklist_json = excluded.checklist_json,
       deliverables_json = excluded.deliverables_json,
       require_requester_confirmation = excluded.require_requester_confirmation,
+      notify_mode = excluded.notify_mode,
+      notify_field_key = excluded.notify_field_key,
+      notify_offset_days = excluded.notify_offset_days,
+      notify_time = excluded.notify_time,
+      allow_requester_schedule = excluded.allow_requester_schedule,
       updated_at = datetime('now')
   `).bind(
     typeId, body.form_schema_json, body.email_subject.trim(), body.email_body.trim(),
@@ -437,6 +453,9 @@ router.post('/processes/full', async (c) => {
     body.fixed_assignee_id?.trim() || null, body.fixed_assignee_name?.trim() || null,
     body.fixed_assignee_email?.trim() || null, executionSlaDays,
     JSON.stringify(checklist), JSON.stringify(deliverables), body.require_requester_confirmation === 0 ? 0 : 1,
+    body.notify_mode || 'immediate', body.notify_field_key?.trim() || null,
+    Number(body.notify_offset_days ?? 0) || 0, body.notify_time || null,
+    body.allow_requester_schedule ? 1 : 0,
   ));
   statements.push(c.env.DB.prepare(`
     INSERT INTO process_versions
@@ -697,7 +716,7 @@ router.delete('/processes/:id', async (c) => {
 router.get('/form-fields/:typeId', async (c) => {
   const rows = await c.env.DB.prepare(`
     SELECT id, request_type_id, field_key, label, field_type,
-           placeholder, required, options_json, sort_order, visible_if_json
+           placeholder, required, options_json, sort_order, visible_if_json, branch_json
     FROM request_type_fields
     WHERE request_type_id = ?
     ORDER BY sort_order, created_at
@@ -711,7 +730,7 @@ router.put('/form-fields/:typeId', async (c) => {
     field_key: string; label: string;
     field_type: string; placeholder?: string;
     required?: number; options_json?: string; sort_order?: number;
-    visible_if_json?: string | null;
+    visible_if_json?: string | null; branch_json?: string | null;
   }>>();
 
   if (!Array.isArray(fields)) return c.json({ error: 'Se esperaba un array' }, 400);
@@ -721,8 +740,8 @@ router.put('/form-fields/:typeId', async (c) => {
     ...fields.map((f, i) =>
       c.env.DB.prepare(`
         INSERT INTO request_type_fields
-          (id, request_type_id, field_key, label, field_type, placeholder, required, options_json, sort_order, visible_if_json)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          (id, request_type_id, field_key, label, field_type, placeholder, required, options_json, sort_order, visible_if_json, branch_json)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).bind(
         crypto.randomUUID().slice(0, 8), typeId,
         f.field_key, f.label, f.field_type,
@@ -730,7 +749,8 @@ router.put('/form-fields/:typeId', async (c) => {
         f.required ?? 0,
         f.options_json ?? null,
         f.sort_order ?? i,
-        f.visible_if_json ?? null
+        f.visible_if_json ?? null,
+        f.branch_json ?? null
       )
     ),
   ];
@@ -890,7 +910,7 @@ interface VersionSnapshot {
   name?: string;
   description?: string | null;
   levels?: { label: string; approver_type: string; approver_value: string; approver_name?: string | null; approver_email?: string | null }[];
-  fields?: { field_key: string; label: string; field_type: string; placeholder?: string | null; required?: boolean | number; options_json?: string | null; sort_order?: number; visible_if_json?: string | null }[];
+  fields?: { field_key: string; label: string; field_type: string; placeholder?: string | null; required?: boolean | number; options_json?: string | null; sort_order?: number; visible_if_json?: string | null; branch_json?: string | null }[];
   form_schema_json?: string;
   email_subject?: string;
   email_body?: string;
@@ -907,6 +927,11 @@ interface VersionSnapshot {
   checklist?: { label: string; required?: boolean }[];
   deliverables?: { label: string; required?: boolean }[];
   require_requester_confirmation?: number;
+  notify_mode?: string | null;
+  notify_field_key?: string | null;
+  notify_offset_days?: number | null;
+  notify_time?: string | null;
+  allow_requester_schedule?: number | null;
 }
 
 // Historial con el impacto real de cada versión: cuántas solicitudes nacieron
@@ -1019,13 +1044,13 @@ router.post('/processes/:id/versions/:versionId/restore', async (c) => {
   snapshot.fields.forEach((field, index) => {
     statements.push(c.env.DB.prepare(`
       INSERT INTO request_type_fields
-        (id, request_type_id, field_key, label, field_type, placeholder, required, options_json, sort_order, visible_if_json)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        (id, request_type_id, field_key, label, field_type, placeholder, required, options_json, sort_order, visible_if_json, branch_json)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
       crypto.randomUUID().slice(0, 8), processId, field.field_key, field.label,
       field.field_type, field.placeholder ?? null, field.required ? 1 : 0,
       field.options_json ?? null, field.sort_order ?? index,
-      field.visible_if_json ?? null,
+      field.visible_if_json ?? null, field.branch_json ?? null,
     ));
   });
 
@@ -1033,8 +1058,9 @@ router.post('/processes/:id/versions/:versionId/restore', async (c) => {
     INSERT INTO process_configs
       (id, form_schema_json, email_subject, email_body, color, icon, category, default_sla_days,
        workspace_id, assignment_mode, fixed_assignee_id, fixed_assignee_name, fixed_assignee_email,
-       execution_sla_days, checklist_json, deliverables_json, require_requester_confirmation, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+       execution_sla_days, checklist_json, deliverables_json, require_requester_confirmation,
+       notify_mode, notify_field_key, notify_offset_days, notify_time, allow_requester_schedule, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
     ON CONFLICT(id) DO UPDATE SET
       form_schema_json = excluded.form_schema_json,
       email_subject = excluded.email_subject,
@@ -1052,6 +1078,11 @@ router.post('/processes/:id/versions/:versionId/restore', async (c) => {
       checklist_json = excluded.checklist_json,
       deliverables_json = excluded.deliverables_json,
       require_requester_confirmation = excluded.require_requester_confirmation,
+      notify_mode = excluded.notify_mode,
+      notify_field_key = excluded.notify_field_key,
+      notify_offset_days = excluded.notify_offset_days,
+      notify_time = excluded.notify_time,
+      allow_requester_schedule = excluded.allow_requester_schedule,
       updated_at = datetime('now')
   `).bind(
     processId, snapshot.form_schema_json ?? '[]',
@@ -1066,6 +1097,11 @@ router.post('/processes/:id/versions/:versionId/restore', async (c) => {
     keep(snapshot.execution_sla_days, live?.execution_sla_days, null),
     checklistJson, deliverablesJson,
     keep(snapshot.require_requester_confirmation, live?.require_requester_confirmation, 1),
+    keep(snapshot.notify_mode, live?.notify_mode, 'immediate'),
+    keep(snapshot.notify_field_key, live?.notify_field_key, null),
+    keep(snapshot.notify_offset_days, live?.notify_offset_days, 0),
+    keep(snapshot.notify_time, live?.notify_time, null),
+    keep(snapshot.allow_requester_schedule, live?.allow_requester_schedule, 0),
   ));
 
   statements.push(c.env.DB.prepare(`

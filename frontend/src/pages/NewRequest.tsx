@@ -16,7 +16,7 @@ import { useMsal } from '@azure/msal-react';
 import { api, type RequestType, type FormField, type RequesterRow } from '../lib/api';
 import { alertDialog } from '../components/AppDialog';
 import { useIsMobile } from '../lib/useIsMobile';
-import { fieldApplies, validateFields, type FieldValue } from './request/conditions';
+import { buildPath, sectionOwners, validateFields, type FieldValue } from './request/conditions';
 import { F, FLOW_CSS, ICON_PATHS, areaColor, areaLabel, inputStyle } from './request/flowTheme';
 import { QuestionField, optionShortcut } from './request/Fields';
 
@@ -46,26 +46,28 @@ function sectionDescription(field: FormField): string {
  * Cada `section` abre un paso. Si un paso trae muchos campos, se parte en
  * tandas de tres para sostener el ritmo de una pantalla, pocas decisiones.
  */
-function buildSteps(fields: FormField[]): FormStep[] {
+function buildSteps(path: FormField[], owners: Map<string, FormField>): FormStep[] {
   const steps: FormStep[] = [];
+  let currentOwner: string | null = null;
   let current: FormStep | null = null;
 
-  for (const field of fields) {
-    if (field.field_type === 'section') {
-      current = { title: field.label, description: sectionDescription(field), fields: [] };
+  for (const field of path) {
+    const owner = owners.get(field.field_key) ?? null;
+    const ownerKey = owner?.field_key ?? '';
+    if (!current || ownerKey !== currentOwner) {
+      current = {
+        title: owner?.label || 'Cuéntanos los detalles',
+        description: owner ? sectionDescription(owner) : undefined,
+        fields: [],
+      };
       steps.push(current);
-      continue;
-    }
-    if (!current) {
-      current = { title: 'Cuéntanos los detalles', fields: [] };
-      steps.push(current);
+      currentOwner = ownerKey;
     }
     current.fields.push(field);
   }
 
-  const withFields = steps.filter(step => step.fields.length > 0);
   const chunked: FormStep[] = [];
-  for (const step of withFields) {
+  for (const step of steps) {
     if (step.fields.length <= 3) { chunked.push(step); continue; }
     for (let index = 0; index < step.fields.length; index += 3) {
       chunked.push({
@@ -111,6 +113,8 @@ export default function NewRequest() {
   const [saving, setSaving] = useState(false);
   const [createdId, setCreatedId] = useState('');
   const [shrinkNote, setShrinkNote] = useState('');
+  // Fecha en que el solicitante quiere que se avise, si el proceso lo permite.
+  const [notifyAt, setNotifyAt] = useState('');
 
   useEffect(() => {
     Promise.all([
@@ -139,11 +143,11 @@ export default function NewRequest() {
   const selected = types.find(type => type.id === requestTypeId) ?? null;
 
   // El recorrido se recalcula con cada respuesta: lo que deja de aplicar
-  // desaparece y, si un paso se queda sin preguntas, deja de existir.
-  const visibleFields = useMemo(
-    () => formFields.filter(field => fieldApplies(field, fieldValues)),
-    [formFields, fieldValues]);
-  const steps = useMemo(() => buildSteps(visibleFields), [visibleFields]);
+  // desaparece, los saltos reordenan lo que viene, y si un paso se queda sin
+  // preguntas deja de existir.
+  const path = useMemo(() => buildPath(formFields, fieldValues), [formFields, fieldValues]);
+  const owners = useMemo(() => sectionOwners(formFields), [formFields]);
+  const steps = useMemo(() => buildSteps(path, owners), [path, owners]);
   const totalSteps = steps.length + 1;
 
   const remainingQuestions = useMemo(
@@ -154,7 +158,7 @@ export default function NewRequest() {
   // hecha visible: el formulario se acortó por lo que acabas de elegir.
   const previousCount = useRef<number | null>(null);
   useEffect(() => {
-    const count = visibleFields.filter(field => field.field_type !== 'section').length;
+    const count = path.length;
     const before = previousCount.current;
     previousCount.current = count;
     if (before === null || phase !== 'form' || count >= before) return;
@@ -162,7 +166,7 @@ export default function NewRequest() {
     setShrinkNote(`${diff} pregunta${diff === 1 ? '' : 's'} menos`);
     const timer = setTimeout(() => setShrinkNote(''), 2200);
     return () => clearTimeout(timer);
-  }, [visibleFields, phase]);
+  }, [path, phase]);
 
   useEffect(() => {
     if (stepIndex > steps.length) setStepIndex(steps.length);
@@ -229,7 +233,9 @@ export default function NewRequest() {
   async function persist(mode: 'draft' | 'submit') {
     setSaving(true); setError('');
     try {
-      const applicable = formFields.filter(field => fieldApplies(field, fieldValues));
+      // Lo que cuenta es el recorrido real, no solo la visibilidad: una
+      // pregunta que un salto dejó atrás no se pregunta y no se guarda.
+      const applicable = buildPath(formFields, fieldValues);
       const invalid = validateFields(applicable, fieldValues, fieldFiles);
       if (mode === 'submit' && invalid) throw new Error(invalid);
 
@@ -260,7 +266,7 @@ export default function NewRequest() {
 
       setCreatedId(created.data.id);
       if (mode === 'submit') {
-        await api.submitRequest(created.data.id);
+        await api.submitRequest(created.data.id, notifyAt || null);
         setDirection('fwd');
         setPhase('done');
       } else {
@@ -541,6 +547,33 @@ export default function NewRequest() {
                     </div>
                   </ReviewBlock>
                 ))}
+
+                {selected.allow_requester_schedule === 1 && (
+                  <div style={{
+                    border: `1px solid ${F.line}`, borderRadius: 12, padding: 15,
+                    background: F.sunken,
+                  }}>
+                    <div style={{ fontSize: 14, fontWeight: 750, color: F.ink, marginBottom: 4 }}>
+                      ¿Cuándo debe empezar a revisarse?
+                    </div>
+                    <div style={{ fontSize: 12.5, color: F.ink3, marginBottom: 10, lineHeight: 1.5 }}>
+                      Si lo necesitas más adelante, elige la fecha y avisaremos a quien
+                      aprueba ese día. Déjalo vacío para que se revise ya.
+                    </div>
+                    <input
+                      type="date" className="fw-input"
+                      value={notifyAt} min={new Date().toISOString().slice(0, 10)}
+                      onChange={e => setNotifyAt(e.target.value)}
+                      style={{ ...inputStyle, maxWidth: 220 }}
+                    />
+                    {notifyAt && (
+                      <div style={{ fontSize: 11.5, color: F.warn, marginTop: 8 }}>
+                        Se enviará ahora y quedará en espera. El aprobador la verá el{' '}
+                        {new Date(notifyAt + 'T12:00:00').toLocaleDateString('es-EC', { day: 'numeric', month: 'long' })}.
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 <div>
                   <div style={fieldLabel}>Adjuntos adicionales (opcional)</div>

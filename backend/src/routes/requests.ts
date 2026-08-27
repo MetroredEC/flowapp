@@ -5,6 +5,7 @@ import { startProcessByKey } from '../utils/bpm-engine';
 import { completeTaskFromRequest } from '../utils/workspace-bridge';
 import { logEvent } from '../utils/syslog';
 import { addBusinessDays, parseEventDetail, recordWorkEvent } from '../utils/work-events';
+import { resolveNotifyAt, type NotifyRule } from '../utils/notify-schedule';
 
 const router = new Hono<AppEnv>();
 
@@ -172,11 +173,19 @@ router.post('/:id/attachments', async (c) => {
 router.patch('/:id/submit', async (c) => {
   const id = c.req.param('id');
   const userId = c.get('userId');
-  const req = await c.env.DB.prepare('SELECT requester_id, status, process_version_id FROM requests WHERE id = ?')
-    .bind(id).first<{ requester_id: string; status: string; process_version_id: string | null }>();
+  const req = await c.env.DB.prepare(
+    'SELECT requester_id, status, process_version_id, request_type_id, campaign_data FROM requests WHERE id = ?'
+  ).bind(id).first<{
+    requester_id: string; status: string; process_version_id: string | null;
+    request_type_id: string; campaign_data: string | null;
+  }>();
   if (!req) return c.json({ error: 'not_found' }, 404);
   if (req.requester_id !== userId) return c.json({ error: 'forbidden' }, 403);
   if (req.status !== 'draft') return c.json({ error: 'Solo se pueden enviar solicitudes en borrador' }, 400);
+
+  // El solicitante puede pedir que el aviso salga en una fecha concreta, si el
+  // proceso lo permite. El cuerpo es opcional: enviar sin cuerpo sigue valiendo.
+  const body = await c.req.json<{ notify_at?: string }>().catch(() => ({ notify_at: undefined }));
 
   const sla = req.process_version_id
     ? await c.env.DB.prepare(`
@@ -187,14 +196,64 @@ router.patch('/:id/submit', async (c) => {
     : null;
   const slaDays = Math.max(1, Number(sla?.days ?? 5));
   const slaDueAt = addBusinessDays(new Date(), slaDays);
-  await c.env.DB.prepare(`
-    UPDATE requests SET status='in_progress', current_level=1,
-      submitted_at=datetime('now'), sla_due_at=?, updated_at=datetime('now')
-    WHERE id=?
-  `).bind(slaDueAt, id).run();
+
+  // Si la migración de programación aún no se aplicó, estas columnas no
+  // existen. Enviar una solicitud es la operación más crítica del producto y no
+  // puede depender de una función opcional: sin regla, se avisa de inmediato.
+  let notifyRule: NotifyRule | null = null;
+  try {
+    notifyRule = await c.env.DB.prepare(`
+      SELECT notify_mode, notify_field_key, notify_offset_days, notify_time, allow_requester_schedule
+      FROM process_configs WHERE id = ?
+    `).bind(req.request_type_id).first<NotifyRule>();
+  } catch (error) {
+    console.error('NOTIFY_RULE_UNAVAILABLE', error instanceof Error ? error.message : String(error));
+  }
+
+  let answers: Record<string, unknown> | null = null;
+  try {
+    const parsed = req.campaign_data ? JSON.parse(req.campaign_data) as { fields?: Record<string, unknown> } : null;
+    answers = parsed?.fields ?? null;
+  } catch { answers = null; }
+
+  const notifyAt = resolveNotifyAt(notifyRule ?? null, answers, body.notify_at ?? null);
+
+  try {
+    await c.env.DB.prepare(`
+      UPDATE requests SET status='in_progress', current_level=1,
+        submitted_at=datetime('now'), sla_due_at=?, scheduled_notify_at=?, updated_at=datetime('now')
+      WHERE id=?
+    `).bind(slaDueAt, notifyAt, id).run();
+  } catch {
+    // Misma razón: sin la columna de programación, el envío sigue funcionando.
+    await c.env.DB.prepare(`
+      UPDATE requests SET status='in_progress', current_level=1,
+        submitted_at=datetime('now'), sla_due_at=?, updated_at=datetime('now')
+      WHERE id=?
+    `).bind(slaDueAt, id).run();
+  }
+
+  // Programada: el aviso lo enviará el barrido cuando llegue la fecha. La
+  // solicitud queda registrada igual, solo que su aprobador aún no la ve.
+  if (notifyAt) {
+    await writeAudit(c.env.DB, 'requests', id, 'request_submitted_scheduled', userId, c.get('userName'), { notify_at: notifyAt });
+    await logEvent(c.env.DB, {
+      category: 'request', action: 'submitted_scheduled', ref_type: 'request', ref_id: id,
+      actor: c.get('userEmail'), detail: { notify_at: notifyAt },
+    });
+    await recordWorkEvent(c.env.DB, {
+      requestId: id, eventType: 'request_submitted', title: 'Solicitud enviada, aviso programado',
+      actorId: userId, actorName: c.get('userName'), actorEmail: c.get('userEmail'),
+      detail: { sla_days: slaDays, sla_due_at: slaDueAt, notify_at: notifyAt },
+    });
+    return c.json({ data: { submitted: true, scheduled_notify_at: notifyAt } });
+  }
 
   try {
     await notifyApprover(id, 1, c.env);
+    try {
+      await c.env.DB.prepare("UPDATE requests SET notified_at = datetime('now') WHERE id = ?").bind(id).run();
+    } catch { /* columna aún no migrada: no afecta al aviso ya enviado */ }
     await writeAudit(c.env.DB, 'requests', id, 'request_submitted', userId, c.get('userName'));
     await logEvent(c.env.DB, {
       category: 'request', action: 'submitted', ref_type: 'request', ref_id: id,
