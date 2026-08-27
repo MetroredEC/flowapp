@@ -925,7 +925,11 @@ export interface WizardField {
   description?: string;      // for section
   accept?: string;           // for file
   maxFiles?: number;
+  /** Condicion que convierte el formulario en arbol: se muestra solo si se cumple. */
+  visibleIf?: { field: string; op: FieldConditionOp; value?: string };
 }
+
+export type FieldConditionOp = 'eq' | 'neq' | 'contains' | 'is_empty' | 'is_not_empty';
 
 export interface ProcessConfig {
   id: string;
@@ -959,6 +963,8 @@ export interface FormField {
   field_type: FormFieldType;
   placeholder: string | null;
   required: number;
+  /** Condicion de visibilidad serializada. Null o vacio = siempre visible. */
+  visible_if_json?: string | null;
   options_json: string | null;
   sort_order: number;
 }
@@ -971,6 +977,7 @@ export interface FormFieldInput {
   required?: number;
   options_json?: string;
   sort_order?: number;
+  visible_if_json?: string | null;
 }
 
 // ─── Process Builder ─────────────────────────────────────────────────────────

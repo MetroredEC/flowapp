@@ -4,7 +4,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { api, EntraUser, Space, WizardField, FormFieldType, FormField, FormFieldInput } from '../lib/api';
+import { api, EntraUser, Space, WizardField, FormFieldType, FormField, FormFieldInput, FieldConditionOp } from '../lib/api';
 import { Spinner } from '../components/ui';
 import { alertDialog } from '../components/AppDialog';
 import { useIsMobile } from '../lib/useIsMobile';
@@ -90,6 +90,12 @@ function legacyToWizard(f: FormField): WizardField {
     if (Array.isArray(parsed)) options = parsed.map(String);
     else if (parsed && typeof parsed === 'object') fileConfig = parsed as typeof fileConfig;
   } catch { options = undefined; }
+  let visibleIf: WizardField['visibleIf'];
+  try {
+    const rule = f.visible_if_json ? JSON.parse(f.visible_if_json) as WizardField['visibleIf'] : undefined;
+    if (rule?.field) visibleIf = rule;
+  } catch { visibleIf = undefined; }
+
   return {
     id: f.field_key,
     type: (f.field_type as FormFieldType) || 'text',
@@ -100,6 +106,7 @@ function legacyToWizard(f: FormField): WizardField {
     accept: fileConfig.accept,
     maxFiles: fileConfig.maxFiles,
     description: fileConfig.description,
+    visibleIf,
   };
 }
 
@@ -110,6 +117,21 @@ const slugify = (s: string) => s.toLowerCase()
 function wizardToLegacy(fields: WizardField[]): FormFieldInput[] {
   const used = new Set<string>();
   const out: FormFieldInput[] = [];
+
+  // Primera pasada: la key definitiva de cada campo. Se necesita completa antes
+  // de escribir las condiciones, porque una pregunta puede depender de otra que
+  // aparece despues en la lista.
+  const keyById = new Map<string, string>();
+  const reserved = new Set<string>();
+  for (const f of fields) {
+    const isGenerated = /^f\d+_/.test(f.id);
+    const base = isGenerated ? (slugify(f.label) || f.id) : f.id;
+    let candidate = base; let n = 2;
+    while (reserved.has(candidate)) candidate = `${base}_${n++}`;
+    reserved.add(candidate);
+    keyById.set(f.id, candidate);
+  }
+
   for (const f of fields) {
     // Conservar la key original si viene del formulario existente; si es id generado, derivar de la etiqueta
     const isGenerated = /^f\d+_/.test(f.id);
@@ -129,6 +151,15 @@ function wizardToLegacy(fields: WizardField[]): FormFieldInput[] {
           ? JSON.stringify({ accept: f.accept, maxFiles: f.maxFiles, description: f.description })
           : undefined,
       sort_order: out.length,
+      // La condicion apunta al id del campo dentro del wizard; al guardar hay
+      // que traducirlo a la field_key definitiva, que puede haber cambiado.
+      visible_if_json: f.visibleIf?.field
+        ? JSON.stringify({
+            field: keyById.get(f.visibleIf.field) ?? f.visibleIf.field,
+            op: f.visibleIf.op,
+            value: f.visibleIf.value ?? '',
+          })
+        : null,
     });
   }
   return out;
@@ -796,6 +827,7 @@ function StepFormCanvas({ processName, formTitle, setFormTitle, formSubtitle, se
               total={fields.length}
               selected={selectedField === f.id}
               color={color}
+              previous={fields.slice(0, idx).filter(prev => prev.type !== 'section')}
               onSelect={() => setSelectedField(selectedField === f.id ? null : f.id)}
               onChange={p => updateField(f.id, p)}
               onRemove={() => removeField(f.id)}
@@ -852,8 +884,122 @@ function StepFormCanvas({ processName, formTitle, setFormTitle, formSubtitle, se
 }
 
 // ─── Field Card ───────────────────────────────────────────────────────────────
-function FieldCard({ field: f, index, total, selected, color, onSelect, onChange, onRemove, onMove }: {
+// ─────────────────────────────────────────────────────────────────────────────
+//  CONDICIÓN DE VISIBILIDAD — convierte el formulario en un árbol
+// ─────────────────────────────────────────────────────────────────────────────
+// Una pregunta solo puede depender de otra ANTERIOR. Si pudiera depender de una
+// posterior, el formulario tendría que preguntar algo para decidir si preguntar
+// lo que va antes, y el recorrido no podría resolverse en orden.
+function ConditionEditor({ field, previous, color, onChange }: {
+  field: WizardField;
+  previous: WizardField[];
+  color: string;
+  onChange: (patch: Partial<WizardField>) => void;
+}) {
+  const rule = field.visibleIf;
+  const parent = previous.find(item => item.id === rule?.field);
+  const needsValue = !rule || !['is_empty', 'is_not_empty'].includes(rule.op);
+
+  if (previous.length === 0) {
+    return (
+      <div style={{ fontSize: 11.5, color: '#A1A1AA', marginBottom: 14 }}>
+        Esta es la primera pregunta, así que siempre se muestra.
+      </div>
+    );
+  }
+
+  if (!rule) {
+    return (
+      <button
+        onClick={() => onChange({ visibleIf: { field: previous[previous.length - 1].id, op: 'eq', value: '' } })}
+        style={{
+          border: `1.5px dashed ${color}55`, background: color + '08', color,
+          borderRadius: 9, padding: '9px 12px', fontSize: 12, fontWeight: 700,
+          cursor: 'pointer', fontFamily: 'inherit', marginBottom: 14, width: '100%',
+        }}
+      >
+        + Mostrar solo si… (crea una rama)
+      </button>
+    );
+  }
+
+  return (
+    <div style={{
+      border: `1px solid ${color}40`, background: color + '06',
+      borderRadius: 10, padding: 12, marginBottom: 14,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 9 }}>
+        <span style={{ fontSize: 11, fontWeight: 800, color, textTransform: 'uppercase', letterSpacing: .5, flex: 1 }}>
+          Mostrar solo si
+        </span>
+        <button onClick={() => onChange({ visibleIf: undefined })}
+          style={{ border: 'none', background: 'none', color: '#A1A1AA', fontSize: 11.5, fontWeight: 700, cursor: 'pointer' }}>
+          Mostrar siempre
+        </button>
+      </div>
+
+      <div style={{ display: 'grid', gap: 7 }}>
+        <select
+          value={rule.field}
+          onChange={e => onChange({ visibleIf: { ...rule, field: e.target.value, value: '' } })}
+          style={condInput}
+        >
+          {previous.map(item => (
+            <option key={item.id} value={item.id}>{item.label || 'Pregunta sin título'}</option>
+          ))}
+        </select>
+
+        <select
+          value={rule.op}
+          onChange={e => onChange({ visibleIf: { ...rule, op: e.target.value as FieldConditionOp } })}
+          style={condInput}
+        >
+          <option value="eq">es igual a</option>
+          <option value="neq">no es igual a</option>
+          <option value="contains">contiene</option>
+          <option value="is_empty">está vacía</option>
+          <option value="is_not_empty">tiene respuesta</option>
+        </select>
+
+        {needsValue && (
+          parent?.options?.length ? (
+            <select
+              value={rule.value ?? ''}
+              onChange={e => onChange({ visibleIf: { ...rule, value: e.target.value } })}
+              style={condInput}
+            >
+              <option value="">Elige una respuesta…</option>
+              {parent.options.map(option => <option key={option} value={option}>{option}</option>)}
+            </select>
+          ) : (
+            <input
+              value={rule.value ?? ''}
+              onChange={e => onChange({ visibleIf: { ...rule, value: e.target.value } })}
+              placeholder="Respuesta que activa esta pregunta"
+              style={condInput}
+            />
+          )
+        )}
+      </div>
+
+      {needsValue && !String(rule.value ?? '').trim() && (
+        <div style={{ fontSize: 10.5, color: '#B45309', marginTop: 7 }}>
+          Sin respuesta indicada, esta pregunta no se mostrará nunca.
+        </div>
+      )}
+    </div>
+  );
+}
+
+const condInput: React.CSSProperties = {
+  border: '1px solid #E4E4E7', borderRadius: 8, padding: '8px 10px',
+  fontSize: 12, fontFamily: 'inherit', background: '#fff', color: '#3F3F46', outline: 'none',
+};
+
+function FieldCard({ field: f, index, total, selected, color, previous, onSelect, onChange, onRemove, onMove }: {
   field: WizardField; index: number; total: number; selected: boolean; color: string;
+  /** Preguntas anteriores: solo de ellas puede depender esta. */
+  previous: WizardField[];
   onSelect: () => void; onChange: (p: Partial<WizardField>) => void;
   onRemove: () => void; onMove: (dir: -1 | 1) => void;
 }) {
@@ -971,6 +1117,8 @@ function FieldCard({ field: f, index, total, selected, color, onSelect, onChange
           )}
 
           {/* Required toggle */}
+          <ConditionEditor field={f} previous={previous} color={color} onChange={onChange} />
+
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', gap: 8 }}>
               <button onClick={() => onMove(-1)} disabled={index === 0}

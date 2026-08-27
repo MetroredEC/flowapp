@@ -18,6 +18,63 @@ import { alertDialog } from '../components/AppDialog';
 type FieldValue = string | boolean | string[];
 type Phase = 'intent' | 'process' | 'form' | 'review';
 
+/** Condicion de visibilidad guardada por el administrador en cada pregunta. */
+interface VisibleIf { field: string; op?: string; value?: string }
+
+/** Texto comparable de cualquier respuesta, para evaluar la condicion. */
+function asText(value: FieldValue | undefined): string {
+  if (Array.isArray(value)) return value.join(',');
+  if (value === true) return 'true';
+  if (value === false) return 'false';
+  return String(value ?? '');
+}
+
+/**
+ * Decide si una pregunta aplica segun lo ya respondido.
+ *
+ * Ante una condicion ilegible se muestra la pregunta: es preferible pedir un
+ * dato de mas que ocultar en silencio algo que el proceso necesitaba.
+ */
+function fieldApplies(field: FormField, values: Record<string, FieldValue>): boolean {
+  if (!field.visible_if_json) return true;
+  let rule: VisibleIf | null = null;
+  try { rule = JSON.parse(field.visible_if_json) as VisibleIf; } catch { return true; }
+  if (!rule?.field) return true;
+
+  const actual = values[rule.field];
+  const expected = rule.value ?? '';
+  const text = asText(actual);
+
+  switch (rule.op) {
+    case 'neq':          return text !== expected;
+    case 'contains':     return text.toLocaleLowerCase('es').includes(expected.toLocaleLowerCase('es'));
+    case 'is_empty':     return !text.trim();
+    case 'is_not_empty': return Boolean(text.trim());
+    default:
+      // En seleccion multiple basta con que la opcion este marcada.
+      return Array.isArray(actual) ? actual.includes(expected) : text === expected;
+  }
+}
+
+// Animaciones del recorrido. Se respeta prefers-reduced-motion: quien pidio
+// menos movimiento en su sistema ve los mismos pasos, sin desplazamientos.
+const MOTION_CSS = `
+@keyframes flowStepIn { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes flowFadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes flowPopIn  { from { opacity: 0; transform: scale(.97); } to { opacity: 1; transform: none; } }
+.flow-step { animation: flowStepIn .32s cubic-bezier(.22,.8,.3,1) both; }
+.flow-item { animation: flowPopIn .28s cubic-bezier(.22,.8,.3,1) both; }
+.flow-fade { animation: flowFadeIn .3s ease both; }
+.flow-card { transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease; }
+.flow-card:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(15,23,42,.10); border-color: #9CC9F0; }
+.flow-bar { transition: width .45s cubic-bezier(.22,.8,.3,1); }
+@media (prefers-reduced-motion: reduce) {
+  .flow-step, .flow-item, .flow-fade { animation: none !important; }
+  .flow-card:hover { transform: none; }
+  .flow-bar { transition: none; }
+}
+`;
+
 interface FormStep {
   title: string;
   description?: string;
@@ -147,11 +204,23 @@ export default function NewRequest() {
   }, [requestTypeId]);
 
   const selected = types.find(type => type.id === requestTypeId) ?? null;
-  const steps = useMemo(() => buildSteps(formFields), [formFields]);
+
+  // El recorrido se recalcula con cada respuesta: las preguntas que dejan de
+  // aplicar desaparecen y, si un paso se queda sin preguntas, deja de existir.
+  // Por eso el formulario se acorta solo segun el caso de cada persona.
+  const visibleFields = useMemo(
+    () => formFields.filter(field => fieldApplies(field, fieldValues)),
+    [formFields, fieldValues]);
+  const steps = useMemo(() => buildSteps(visibleFields), [visibleFields]);
 
   // El paso 0 siempre es el resumen en palabras del solicitante; después vienen
   // los pasos del formulario del proceso.
   const totalSteps = steps.length + 1;
+
+  // Si una respuesta elimina pasos, el indice puede quedar fuera de rango.
+  useEffect(() => {
+    if (stepIndex > steps.length) setStepIndex(steps.length);
+  }, [steps.length, stepIndex]);
 
   const categories = useMemo(() => {
     const map = new Map<string, RequestType[]>();
@@ -203,14 +272,22 @@ export default function NewRequest() {
     setSaving(true);
     setError('');
     try {
-      const invalid = validateFields(formFields, fieldValues, fieldFiles);
+      const applicable = formFields.filter(field => fieldApplies(field, fieldValues));
+      const invalid = validateFields(applicable, fieldValues, fieldFiles);
       if (mode === 'submit' && invalid) throw new Error(invalid);
 
-      const campaign_data = formFields.length > 0
+      // Solo se guardan las respuestas de las preguntas que aplicaban. Enviar
+      // lo contestado en una rama descartada dejaria datos que contradicen el
+      // camino que la solicitud siguio de verdad.
+      const applicableKeys = new Set(applicable.map(field => field.field_key));
+      const campaign_data = applicable.length > 0
         ? {
-            fields: fieldValues,
+            fields: Object.fromEntries(
+              Object.entries(fieldValues).filter(([key]) => applicableKeys.has(key))),
             file_fields: Object.fromEntries(
-              Object.entries(fieldFiles).map(([key, value]) => [key, value.map(file => file.name)])),
+              Object.entries(fieldFiles)
+                .filter(([key]) => applicableKeys.has(key))
+                .map(([key, value]) => [key, value.map(file => file.name)])),
           }
         : undefined;
 
@@ -221,7 +298,10 @@ export default function NewRequest() {
         campaign_data,
       });
 
-      for (const file of [...files, ...Object.values(fieldFiles).flat()]) {
+      const applicableFiles = Object.entries(fieldFiles)
+        .filter(([key]) => applicableKeys.has(key))
+        .flatMap(([, value]) => value);
+      for (const file of [...files, ...applicableFiles]) {
         await api.uploadFile(created.data.id, file);
       }
 
@@ -266,6 +346,8 @@ export default function NewRequest() {
 
   return (
     <div style={{ padding: '32px 20px 64px', maxWidth: 760, margin: '0 auto' }}>
+      <style>{MOTION_CSS}</style>
+
       {phase === 'intent' && (
         <IntentStep
           categories={categories}
@@ -299,7 +381,7 @@ export default function NewRequest() {
 
           {phase === 'form' && (
             loadingFields ? (
-              <div style={{ padding: 40, color: '#667085' }}>Cargando el formulario…</div>
+              <div className="flow-fade" style={{ padding: 40, color: '#667085' }}>Cargando el formulario…</div>
             ) : stepIndex === 0 ? (
               <StepCard
                 title="¿Qué necesitas?"
@@ -331,20 +413,22 @@ export default function NewRequest() {
                 description={steps[stepIndex - 1].description}
               >
                 <div style={{ display: 'grid', gap: 22 }}>
-                  {steps[stepIndex - 1].fields.map(field => (
-                    field.field_type === 'file' ? (
+                  {steps[stepIndex - 1].fields.map((field, index) => (
+                    <div key={field.id} className="flow-item" style={{ animationDelay: `${index * 55}ms` }}>
+                    {field.field_type === 'file' ? (
                       <FileField
-                        key={field.id} field={field}
+                        field={field}
                         files={fieldFiles[field.field_key] ?? []}
                         onChange={next => setFieldFiles(prev => ({ ...prev, [field.field_key]: next }))}
                       />
                     ) : (
                       <DynamicField
-                        key={field.id} field={field}
+                        field={field}
                         value={fieldValues[field.field_key]}
                         onChange={value => setFieldValues(prev => ({ ...prev, [field.field_key]: value }))}
                       />
-                    )
+                    )}
+                    </div>
                   ))}
                 </div>
               </StepCard>
@@ -422,8 +506,9 @@ function IntentStep({ categories, matches, query, onQuery, onPickCategory, onPic
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: 12 }}>
-          {categories.map(([name, list]) => (
-            <button key={name} onClick={() => onPickCategory(name)} style={cardButton}>
+          {categories.map(([name, list], index) => (
+            <button key={name} onClick={() => onPickCategory(name)} className="flow-card flow-item"
+              style={{ ...cardButton, animationDelay: `${index * 45}ms` }}>
               <div style={{ fontSize: 15, fontWeight: 800, color: '#101828' }}>{categoryLabel(name)}</div>
               <div style={{ fontSize: 12.5, color: '#667085', marginTop: 4 }}>
                 {list.length} {list.length === 1 ? 'proceso disponible' : 'procesos disponibles'}
@@ -472,7 +557,7 @@ function ProcessCard({ type, onPick }: { type: RequestType; onPick: () => void }
   ].filter(Boolean) as string[];
 
   return (
-    <button onClick={onPick} style={{ ...cardButton, textAlign: 'left', width: '100%' }}>
+    <button onClick={onPick} className="flow-card flow-item" style={{ ...cardButton, textAlign: 'left', width: '100%' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 9, flexWrap: 'wrap' }}>
         <span style={{ width: 9, height: 9, borderRadius: 99, background: type.color || '#0284C7' }} />
         <span style={{ fontSize: 15, fontWeight: 800, color: '#101828' }}>{type.name}</span>
@@ -585,7 +670,7 @@ function Header({ processName, current, total, onExit }: {
         <button onClick={onExit} style={linkButton}>Cambiar de proceso</button>
       </div>
       <div style={{ height: 5, borderRadius: 99, background: '#EAECF0', overflow: 'hidden' }}>
-        <div style={{ width: `${progress}%`, height: '100%', background: 'linear-gradient(90deg,#0284C7,#14B8A6)', transition: 'width .25s' }} />
+        <div className="flow-bar" style={{ width: `${progress}%`, height: '100%', background: 'linear-gradient(90deg,#0284C7,#14B8A6)' }} />
       </div>
     </div>
   );
@@ -595,7 +680,7 @@ function StepCard({ title, description, children }: {
   title: string; description?: string; children: React.ReactNode;
 }) {
   return (
-    <section style={{ ...panel, padding: 26 }}>
+    <section className="flow-step" style={{ ...panel, padding: 26 }}>
       <h2 style={{ fontSize: 20, fontWeight: 820, color: '#101828', margin: '0 0 4px' }}>{title}</h2>
       {description && <p style={{ fontSize: 13.5, color: '#667085', margin: '0 0 20px', lineHeight: 1.5 }}>{description}</p>}
       {!description && <div style={{ height: 16 }} />}

@@ -252,6 +252,8 @@ router.post('/processes/full', async (c) => {
     fields: Array<{
       field_key: string; label: string; field_type: string; placeholder?: string;
       required?: number; options_json?: string; sort_order?: number;
+      /** Condicion de visibilidad: {"field","op","value"}. Null = siempre visible. */
+      visible_if_json?: string | null;
     }>;
     form_schema_json: string; email_subject: string; email_body: string;
     color: string; icon: string; category?: string; default_sla_days?: number;
@@ -394,12 +396,13 @@ router.post('/processes/full', async (c) => {
   for (const [index, field] of body.fields.entries()) {
     statements.push(c.env.DB.prepare(`
       INSERT INTO request_type_fields
-        (id, request_type_id, field_key, label, field_type, placeholder, required, options_json, sort_order)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        (id, request_type_id, field_key, label, field_type, placeholder, required, options_json, sort_order, visible_if_json)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
       crypto.randomUUID().slice(0, 8), typeId, field.field_key.trim(), field.label.trim(),
       field.field_type, field.placeholder?.trim() || null, field.required ? 1 : 0,
       field.options_json || null, field.sort_order ?? index,
+      field.visible_if_json || null,
     ));
   }
 
@@ -694,7 +697,7 @@ router.delete('/processes/:id', async (c) => {
 router.get('/form-fields/:typeId', async (c) => {
   const rows = await c.env.DB.prepare(`
     SELECT id, request_type_id, field_key, label, field_type,
-           placeholder, required, options_json, sort_order
+           placeholder, required, options_json, sort_order, visible_if_json
     FROM request_type_fields
     WHERE request_type_id = ?
     ORDER BY sort_order, created_at
@@ -708,6 +711,7 @@ router.put('/form-fields/:typeId', async (c) => {
     field_key: string; label: string;
     field_type: string; placeholder?: string;
     required?: number; options_json?: string; sort_order?: number;
+    visible_if_json?: string | null;
   }>>();
 
   if (!Array.isArray(fields)) return c.json({ error: 'Se esperaba un array' }, 400);
@@ -717,15 +721,16 @@ router.put('/form-fields/:typeId', async (c) => {
     ...fields.map((f, i) =>
       c.env.DB.prepare(`
         INSERT INTO request_type_fields
-          (id, request_type_id, field_key, label, field_type, placeholder, required, options_json, sort_order)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          (id, request_type_id, field_key, label, field_type, placeholder, required, options_json, sort_order, visible_if_json)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).bind(
         crypto.randomUUID().slice(0, 8), typeId,
         f.field_key, f.label, f.field_type,
         f.placeholder ?? null,
         f.required ?? 0,
         f.options_json ?? null,
-        f.sort_order ?? i
+        f.sort_order ?? i,
+        f.visible_if_json ?? null
       )
     ),
   ];
@@ -885,7 +890,7 @@ interface VersionSnapshot {
   name?: string;
   description?: string | null;
   levels?: { label: string; approver_type: string; approver_value: string; approver_name?: string | null; approver_email?: string | null }[];
-  fields?: { field_key: string; label: string; field_type: string; placeholder?: string | null; required?: boolean | number; options_json?: string | null; sort_order?: number }[];
+  fields?: { field_key: string; label: string; field_type: string; placeholder?: string | null; required?: boolean | number; options_json?: string | null; sort_order?: number; visible_if_json?: string | null }[];
   form_schema_json?: string;
   email_subject?: string;
   email_body?: string;
@@ -1014,12 +1019,13 @@ router.post('/processes/:id/versions/:versionId/restore', async (c) => {
   snapshot.fields.forEach((field, index) => {
     statements.push(c.env.DB.prepare(`
       INSERT INTO request_type_fields
-        (id, request_type_id, field_key, label, field_type, placeholder, required, options_json, sort_order)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        (id, request_type_id, field_key, label, field_type, placeholder, required, options_json, sort_order, visible_if_json)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
       crypto.randomUUID().slice(0, 8), processId, field.field_key, field.label,
       field.field_type, field.placeholder ?? null, field.required ? 1 : 0,
       field.options_json ?? null, field.sort_order ?? index,
+      field.visible_if_json ?? null,
     ));
   });
 
