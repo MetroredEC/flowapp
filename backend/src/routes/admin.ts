@@ -407,12 +407,12 @@ router.post('/processes/full', async (c) => {
     statements.push(c.env.DB.prepare(`
       INSERT INTO request_type_fields
         (id, request_type_id, field_key, label, field_type, placeholder, required, options_json, sort_order, visible_if_json, branch_json)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
       crypto.randomUUID().slice(0, 8), typeId, field.field_key.trim(), field.label.trim(),
       field.field_type, field.placeholder?.trim() || null, field.required ? 1 : 0,
       field.options_json || null, field.sort_order ?? index,
-      field.visible_if_json || null,
+      field.visible_if_json || null, field.branch_json || null,
     ));
   }
 

@@ -505,6 +505,7 @@ export default function NewRequest() {
                             value={fieldValues[field.field_key]}
                             files={fieldFiles[field.field_key] ?? []}
                             autoFocus={index === 0}
+                            shortcuts={steps[stepIndex - 1].fields.length === 1}
                             onChange={value => setFieldValues(prev => ({ ...prev, [field.field_key]: value }))}
                             onFiles={list => setFieldFiles(prev => ({ ...prev, [field.field_key]: list }))}
                           />

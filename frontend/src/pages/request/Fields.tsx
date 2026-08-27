@@ -39,8 +39,12 @@ function Label({ field, hint }: { field: FormField; hint?: string }) {
 }
 
 /** Tarjeta de opción. El número es también su atajo de teclado. */
-function OptionCard({ label, index, selected, multiple, onPick }: {
-  label: string; index: number; selected: boolean; multiple: boolean; onPick: () => void;
+function OptionCard({ label, index, selected, multiple, numbered, onPick }: {
+  label: string; index: number; selected: boolean; multiple: boolean;
+  /** Solo se numera cuando TODAS las opciones caben en 1-9: mezclar
+   *  numeradas y sin numerar se ve como si algo estuviera roto. */
+  numbered: boolean;
+  onPick: () => void;
 }) {
   return (
     <button
@@ -62,26 +66,31 @@ function OptionCard({ label, index, selected, multiple, onPick }: {
         background: selected ? F.brand : F.surface,
         color: selected ? '#fff' : F.ink3, fontSize: 11.5, fontWeight: 800,
       }}>
-        {selected ? <span className="fw-check">✓</span> : index < 9 ? index + 1 : ''}
+        {selected ? <span className="fw-check">✓</span> : numbered ? index + 1 : ''}
       </span>
       <span style={{ fontSize: 15, color: F.ink, fontWeight: selected ? 700 : 550 }}>{label}</span>
     </button>
   );
 }
 
-export function QuestionField({ field, value, files, onChange, onFiles, autoFocus }: {
+export function QuestionField({ field, value, files, onChange, onFiles, autoFocus, shortcuts }: {
   field: FormField;
   value: FieldValue;
   files: File[];
   onChange: (value: FieldValue) => void;
   onFiles: (files: File[]) => void;
   autoFocus?: boolean;
+  /** Los atajos solo actúan sobre una pregunta a la vez; si la pantalla trae
+   *  varias, no se anuncian: prometer una tecla que no responde es peor que
+   *  no ofrecerla. */
+  shortcuts?: boolean;
 }) {
   // Opción única y múltiple: tarjetas.
   if (field.field_type === 'radio' || field.field_type === 'select' || field.field_type === 'checkbox_group') {
     const options = parseOptions(field);
     const multiple = field.field_type === 'checkbox_group';
     const selected = Array.isArray(value) ? value : [];
+    const numbered = Boolean(shortcuts) && options.length <= 9;
 
     return (
       <div>
@@ -89,7 +98,7 @@ export function QuestionField({ field, value, files, onChange, onFiles, autoFocu
         <div style={{ display: 'grid', gap: 9 }} role={multiple ? 'group' : 'radiogroup'}>
           {options.map((option, index) => (
             <OptionCard
-              key={option} label={option} index={index} multiple={multiple}
+              key={option} label={option} index={index} multiple={multiple} numbered={numbered}
               selected={multiple ? selected.includes(option) : value === option}
               onPick={() => {
                 if (!multiple) { onChange(option); return; }
@@ -103,9 +112,9 @@ export function QuestionField({ field, value, files, onChange, onFiles, autoFocu
             <div style={{ fontSize: 13, color: F.ink3 }}>Esta pregunta no tiene opciones configuradas.</div>
           )}
         </div>
-        {options.length > 1 && (
+        {numbered && options.length > 1 && (
           <div style={{ fontSize: 11.5, color: F.ink3, marginTop: 10 }}>
-            Puedes usar las teclas 1 a {Math.min(options.length, 9)} para elegir.
+            Puedes usar las teclas 1 a {options.length} para elegir.
           </div>
         )}
       </div>
@@ -118,8 +127,8 @@ export function QuestionField({ field, value, files, onChange, onFiles, autoFocu
       <div>
         <Label field={field} />
         <div style={{ display: 'grid', gap: 9 }}>
-          <OptionCard label="Sí" index={0} multiple={false} selected={value === true} onPick={() => onChange(true)} />
-          <OptionCard label="No" index={1} multiple={false} selected={value === false} onPick={() => onChange(false)} />
+          <OptionCard label="Sí" index={0} multiple={false} numbered={false} selected={value === true} onPick={() => onChange(true)} />
+          <OptionCard label="No" index={1} multiple={false} numbered={false} selected={value === false} onPick={() => onChange(false)} />
         </div>
       </div>
     );
