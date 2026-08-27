@@ -18,8 +18,15 @@ import { alertDialog } from '../components/AppDialog';
 type FieldValue = string | boolean | string[];
 type Phase = 'intent' | 'process' | 'form' | 'review';
 
-/** Condicion de visibilidad guardada por el administrador en cada pregunta. */
-interface VisibleIf { field: string; op?: string; value?: string }
+/** Una comparacion suelta contra la respuesta de otra pregunta. */
+interface VisibleRule { field: string; op?: string; value?: string }
+
+/**
+ * Condicion completa. Se acepta tambien el formato antiguo de una sola regla
+ * suelta: las condiciones guardadas antes del soporte de Y/O siguen valiendo
+ * sin necesidad de reescribirlas.
+ */
+interface VisibleIf { match?: 'all' | 'any'; rules?: VisibleRule[] }
 
 /** Texto comparable de cualquier respuesta, para evaluar la condicion. */
 function asText(value: FieldValue | undefined): string {
@@ -35,12 +42,7 @@ function asText(value: FieldValue | undefined): string {
  * Ante una condicion ilegible se muestra la pregunta: es preferible pedir un
  * dato de mas que ocultar en silencio algo que el proceso necesitaba.
  */
-function fieldApplies(field: FormField, values: Record<string, FieldValue>): boolean {
-  if (!field.visible_if_json) return true;
-  let rule: VisibleIf | null = null;
-  try { rule = JSON.parse(field.visible_if_json) as VisibleIf; } catch { return true; }
-  if (!rule?.field) return true;
-
+function ruleHolds(rule: VisibleRule, values: Record<string, FieldValue>): boolean {
   const actual = values[rule.field];
   const expected = rule.value ?? '';
   const text = asText(actual);
@@ -54,6 +56,24 @@ function fieldApplies(field: FormField, values: Record<string, FieldValue>): boo
       // En seleccion multiple basta con que la opcion este marcada.
       return Array.isArray(actual) ? actual.includes(expected) : text === expected;
   }
+}
+
+function fieldApplies(field: FormField, values: Record<string, FieldValue>): boolean {
+  if (!field.visible_if_json) return true;
+
+  let parsed: (VisibleIf & VisibleRule) | null = null;
+  try { parsed = JSON.parse(field.visible_if_json) as VisibleIf & VisibleRule; } catch { return true; }
+  if (!parsed) return true;
+
+  // Formato antiguo: una regla suelta sin envoltorio.
+  const rules: VisibleRule[] = Array.isArray(parsed.rules)
+    ? parsed.rules.filter(rule => rule?.field)
+    : parsed.field ? [{ field: parsed.field, op: parsed.op, value: parsed.value }] : [];
+
+  if (rules.length === 0) return true;
+  return parsed.match === 'any'
+    ? rules.some(rule => ruleHolds(rule, values))
+    : rules.every(rule => ruleHolds(rule, values));
 }
 
 // Animaciones del recorrido. Se respeta prefers-reduced-motion: quien pidio

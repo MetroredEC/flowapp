@@ -4,7 +4,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { api, EntraUser, Space, WizardField, FormFieldType, FormField, FormFieldInput, FieldConditionOp } from '../lib/api';
+import { api, EntraUser, Space, WizardField, FormFieldType, FormField, FormFieldInput, FieldConditionOp, FieldConditionGroup, FieldConditionRule } from '../lib/api';
 import { Spinner } from '../components/ui';
 import { alertDialog } from '../components/AppDialog';
 import { useIsMobile } from '../lib/useIsMobile';
@@ -90,10 +90,21 @@ function legacyToWizard(f: FormField): WizardField {
     if (Array.isArray(parsed)) options = parsed.map(String);
     else if (parsed && typeof parsed === 'object') fileConfig = parsed as typeof fileConfig;
   } catch { options = undefined; }
-  let visibleIf: WizardField['visibleIf'];
+  // Se acepta el formato antiguo de una sola regla suelta y se normaliza a
+  // grupo, para no tener que reescribir las condiciones ya guardadas.
+  let visibleIf: FieldConditionGroup | undefined;
   try {
-    const rule = f.visible_if_json ? JSON.parse(f.visible_if_json) as WizardField['visibleIf'] : undefined;
-    if (rule?.field) visibleIf = rule;
+    const parsed = f.visible_if_json
+      ? JSON.parse(f.visible_if_json) as Partial<FieldConditionGroup> & Partial<FieldConditionRule>
+      : undefined;
+    if (parsed) {
+      const rules = Array.isArray(parsed.rules)
+        ? parsed.rules.filter(rule => rule?.field)
+        : parsed.field
+          ? [{ field: parsed.field, op: (parsed.op ?? 'eq') as FieldConditionOp, value: parsed.value }]
+          : [];
+      if (rules.length) visibleIf = { match: parsed.match === 'any' ? 'any' : 'all', rules };
+    }
   } catch { visibleIf = undefined; }
 
   return {
@@ -153,11 +164,14 @@ function wizardToLegacy(fields: WizardField[]): FormFieldInput[] {
       sort_order: out.length,
       // La condicion apunta al id del campo dentro del wizard; al guardar hay
       // que traducirlo a la field_key definitiva, que puede haber cambiado.
-      visible_if_json: f.visibleIf?.field
+      visible_if_json: f.visibleIf?.rules?.length
         ? JSON.stringify({
-            field: keyById.get(f.visibleIf.field) ?? f.visibleIf.field,
-            op: f.visibleIf.op,
-            value: f.visibleIf.value ?? '',
+            match: f.visibleIf.match,
+            rules: f.visibleIf.rules.map(rule => ({
+              field: keyById.get(rule.field) ?? rule.field,
+              op: rule.op,
+              value: rule.value ?? '',
+            })),
           })
         : null,
     });
@@ -896,9 +910,7 @@ function ConditionEditor({ field, previous, color, onChange }: {
   color: string;
   onChange: (patch: Partial<WizardField>) => void;
 }) {
-  const rule = field.visibleIf;
-  const parent = previous.find(item => item.id === rule?.field);
-  const needsValue = !rule || !['is_empty', 'is_not_empty'].includes(rule.op);
+  const group = field.visibleIf;
 
   if (previous.length === 0) {
     return (
@@ -908,10 +920,14 @@ function ConditionEditor({ field, previous, color, onChange }: {
     );
   }
 
-  if (!rule) {
+  const newRule = (): FieldConditionRule => ({
+    field: previous[previous.length - 1].id, op: 'eq', value: '',
+  });
+
+  if (!group?.rules?.length) {
     return (
       <button
-        onClick={() => onChange({ visibleIf: { field: previous[previous.length - 1].id, op: 'eq', value: '' } })}
+        onClick={() => onChange({ visibleIf: { match: 'all', rules: [newRule()] } })}
         style={{
           border: `1.5px dashed ${color}55`, background: color + '08', color,
           borderRadius: 9, padding: '9px 12px', fontSize: 12, fontWeight: 700,
@@ -923,70 +939,125 @@ function ConditionEditor({ field, previous, color, onChange }: {
     );
   }
 
+  const update = (patch: Partial<FieldConditionGroup>) =>
+    onChange({ visibleIf: { ...group, ...patch } });
+
+  const updateRule = (index: number, patch: Partial<FieldConditionRule>) =>
+    update({ rules: group.rules.map((rule, i) => i === index ? { ...rule, ...patch } : rule) });
+
+  const removeRule = (index: number) => {
+    const rules = group.rules.filter((_, i) => i !== index);
+    // Sin reglas la condición no significa nada: se vuelve "mostrar siempre".
+    onChange({ visibleIf: rules.length ? { ...group, rules } : undefined });
+  };
+
   return (
     <div style={{
       border: `1px solid ${color}40`, background: color + '06',
       borderRadius: 10, padding: 12, marginBottom: 14,
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 9 }}>
-        <span style={{ fontSize: 11, fontWeight: 800, color, textTransform: 'uppercase', letterSpacing: .5, flex: 1 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
+        <span style={{ fontSize: 11, fontWeight: 800, color, textTransform: 'uppercase', letterSpacing: .5 }}>
           Mostrar solo si
         </span>
+        {group.rules.length > 1 && (
+          <div style={{ display: 'flex', padding: 2, background: '#fff', border: '1px solid #E4E4E7', borderRadius: 7 }}>
+            {([['all', 'se cumplen todas'], ['any', 'se cumple alguna']] as const).map(([value, label]) => (
+              <button key={value} onClick={() => update({ match: value })} style={{
+                border: 0, borderRadius: 5, padding: '4px 9px', cursor: 'pointer', fontFamily: 'inherit',
+                fontSize: 11, fontWeight: 700,
+                background: group.match === value ? color : 'transparent',
+                color: group.match === value ? '#fff' : '#71717A',
+              }}>{label}</button>
+            ))}
+          </div>
+        )}
+        <div style={{ flex: 1 }} />
         <button onClick={() => onChange({ visibleIf: undefined })}
           style={{ border: 'none', background: 'none', color: '#A1A1AA', fontSize: 11.5, fontWeight: 700, cursor: 'pointer' }}>
           Mostrar siempre
         </button>
       </div>
 
-      <div style={{ display: 'grid', gap: 7 }}>
-        <select
-          value={rule.field}
-          onChange={e => onChange({ visibleIf: { ...rule, field: e.target.value, value: '' } })}
-          style={condInput}
-        >
-          {previous.map(item => (
-            <option key={item.id} value={item.id}>{item.label || 'Pregunta sin título'}</option>
-          ))}
-        </select>
+      <div style={{ display: 'grid', gap: 10 }}>
+        {group.rules.map((rule, index) => {
+          const parent = previous.find(item => item.id === rule.field);
+          const needsValue = !['is_empty', 'is_not_empty'].includes(rule.op);
+          return (
+            <div key={index} style={{ display: 'grid', gap: 6, paddingLeft: index > 0 ? 10 : 0, borderLeft: index > 0 ? `2px solid ${color}30` : undefined }}>
+              {index > 0 && (
+                <span style={{ fontSize: 10, fontWeight: 800, color, textTransform: 'uppercase' }}>
+                  {group.match === 'any' ? 'o bien' : 'y además'}
+                </span>
+              )}
+              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                <select
+                  value={rule.field}
+                  onChange={e => updateRule(index, { field: e.target.value, value: '' })}
+                  style={{ ...condInput, flex: 1 }}
+                >
+                  {previous.map(item => (
+                    <option key={item.id} value={item.id}>{item.label || 'Pregunta sin título'}</option>
+                  ))}
+                </select>
+                <button onClick={() => removeRule(index)}
+                  style={{ border: 'none', background: 'none', color: '#A1A1AA', fontSize: 17, cursor: 'pointer', padding: '0 3px' }}>×</button>
+              </div>
 
-        <select
-          value={rule.op}
-          onChange={e => onChange({ visibleIf: { ...rule, op: e.target.value as FieldConditionOp } })}
-          style={condInput}
-        >
-          <option value="eq">es igual a</option>
-          <option value="neq">no es igual a</option>
-          <option value="contains">contiene</option>
-          <option value="is_empty">está vacía</option>
-          <option value="is_not_empty">tiene respuesta</option>
-        </select>
+              <select
+                value={rule.op}
+                onChange={e => updateRule(index, { op: e.target.value as FieldConditionOp })}
+                style={condInput}
+              >
+                <option value="eq">es igual a</option>
+                <option value="neq">no es igual a</option>
+                <option value="contains">contiene</option>
+                <option value="is_empty">está vacía</option>
+                <option value="is_not_empty">tiene respuesta</option>
+              </select>
 
-        {needsValue && (
-          parent?.options?.length ? (
-            <select
-              value={rule.value ?? ''}
-              onChange={e => onChange({ visibleIf: { ...rule, value: e.target.value } })}
-              style={condInput}
-            >
-              <option value="">Elige una respuesta…</option>
-              {parent.options.map(option => <option key={option} value={option}>{option}</option>)}
-            </select>
-          ) : (
-            <input
-              value={rule.value ?? ''}
-              onChange={e => onChange({ visibleIf: { ...rule, value: e.target.value } })}
-              placeholder="Respuesta que activa esta pregunta"
-              style={condInput}
-            />
-          )
-        )}
+              {needsValue && (
+                parent?.options?.length ? (
+                  <select
+                    value={rule.value ?? ''}
+                    onChange={e => updateRule(index, { value: e.target.value })}
+                    style={condInput}
+                  >
+                    <option value="">Elige una respuesta…</option>
+                    {parent.options.map(option => <option key={option} value={option}>{option}</option>)}
+                  </select>
+                ) : (
+                  <input
+                    value={rule.value ?? ''}
+                    onChange={e => updateRule(index, { value: e.target.value })}
+                    placeholder="Respuesta que activa esta pregunta"
+                    style={condInput}
+                  />
+                )
+              )}
+
+              {needsValue && !String(rule.value ?? '').trim() && (
+                <div style={{ fontSize: 10.5, color: '#B45309' }}>
+                  {group.match === 'any' && group.rules.length > 1
+                    ? 'Esta alternativa no se cumplirá nunca.'
+                    : 'Sin respuesta indicada, esta pregunta no se mostrará nunca.'}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
 
-      {needsValue && !String(rule.value ?? '').trim() && (
-        <div style={{ fontSize: 10.5, color: '#B45309', marginTop: 7 }}>
-          Sin respuesta indicada, esta pregunta no se mostrará nunca.
-        </div>
-      )}
+      <button
+        onClick={() => update({ rules: [...group.rules, newRule()] })}
+        style={{
+          width: '100%', marginTop: 10, border: `1px dashed ${color}55`, background: '#fff',
+          color, borderRadius: 8, padding: 7, fontSize: 11.5, fontWeight: 700,
+          cursor: 'pointer', fontFamily: 'inherit',
+        }}
+      >
+        + Añadir condición
+      </button>
     </div>
   );
 }

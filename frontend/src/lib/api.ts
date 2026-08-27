@@ -926,10 +926,22 @@ export interface WizardField {
   accept?: string;           // for file
   maxFiles?: number;
   /** Condicion que convierte el formulario en arbol: se muestra solo si se cumple. */
-  visibleIf?: { field: string; op: FieldConditionOp; value?: string };
+  visibleIf?: FieldConditionGroup;
 }
 
 export type FieldConditionOp = 'eq' | 'neq' | 'contains' | 'is_empty' | 'is_not_empty';
+
+export interface FieldConditionRule {
+  field: string;
+  op: FieldConditionOp;
+  value?: string;
+}
+
+/** `all` = se deben cumplir todas (Y). `any` = basta una (O). */
+export interface FieldConditionGroup {
+  match: 'all' | 'any';
+  rules: FieldConditionRule[];
+}
 
 export interface ProcessConfig {
   id: string;
